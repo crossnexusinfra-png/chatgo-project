@@ -1,0 +1,82 @@
+/* Error pages styles */
+.error-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.error-page-content {
+    max-width: 600px;
+    width: 100%;
+}
+
+.error-code {
+    font-size: 120px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 20px;
+    line-height: 1;
+}
+
+.error-code-419 {
+    color: #f59e0b;
+}
+
+.error-code-500 {
+    color: #ef4444;
+}
+
+.error-title {
+    font-size: 32px;
+    color: #333;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.error-message {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+.error-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-button-primary {
+    display: inline-block;
+    padding: 12px 32px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.error-button-primary:hover {
+    background: #5568d3;
+}
+
+.error-button-secondary {
+    padding: 12px 32px;
+    background: #e8e8e8;
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.error-button-secondary:hover {
+    background: #d0d0d0;
+}

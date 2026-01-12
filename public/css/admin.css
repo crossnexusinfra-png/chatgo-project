@@ -1,0 +1,595 @@
+/* ============================================
+   Admin Pages - Base Styles
+   ============================================ */
+
+.admin-page {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    margin: 24px;
+    background-color: #f9fafb;
+}
+
+.admin-page .wrap {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ============================================
+   Common Components
+   ============================================ */
+
+/* Links */
+.admin-link {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.admin-link:hover {
+    text-decoration: underline;
+}
+
+.admin-back-link,
+.admin-messages-back-link,
+.admin-reports-back-link,
+.admin-logs-back-link {
+    margin-bottom: 16px;
+}
+
+.admin-page .admin-logs-back-link {
+    display: inline-block;
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.admin-page .admin-logs-back-link:hover {
+    text-decoration: underline;
+}
+
+/* Titles */
+.admin-title,
+.admin-messages-title {
+    font-size: 20px;
+}
+
+/* Cards */
+.admin-page .card,
+.admin-card,
+.admin-reports-content-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fff;
+}
+
+.admin-card {
+    margin-bottom: 16px;
+}
+
+.admin-page .list-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+/* Form Elements */
+.admin-page label {
+    display: block;
+    margin: 8px 0 4px;
+}
+
+.admin-page input[type="text"],
+.admin-page textarea,
+.admin-page select,
+.admin-messages-input-full {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+.admin-page input[type="checkbox"] {
+    margin-right: 4px;
+}
+
+.admin-messages-select {
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+
+/* Buttons */
+.admin-page button {
+    padding: 8px 12px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+}
+
+.admin-page .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+.admin-page .btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.admin-page .btn-primary:hover {
+    background: #2563eb;
+}
+
+.admin-page .btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.admin-page .btn-danger:hover {
+    background: #dc2626;
+}
+
+.admin-page .btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.admin-page .btn-secondary:hover {
+    background: #4b5563;
+}
+
+.admin-messages-cancel-button {
+    padding: 6px 12px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* Form Layouts */
+.admin-page .form-row,
+.admin-messages-form-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.admin-form-margin,
+.admin-reports-form-margin {
+    margin: 12px 0;
+}
+
+.admin-form-inline {
+    display: inline;
+}
+
+.admin-label-margin {
+    margin-right: 12px;
+}
+
+.admin-messages-label-flex {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.admin-messages-filter-label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.admin-select-margin {
+    margin-right: 4px;
+}
+
+.admin-button-margin {
+    margin-left: 6px;
+}
+
+.admin-messages-cancel-form {
+    margin-left: 12px;
+}
+
+.admin-messages-submit-container {
+    text-align: right;
+    margin-top: 8px;
+}
+
+/* Messages & Alerts */
+.admin-success-message,
+.admin-messages-success {
+    margin: 8px 0;
+    color: #065f46;
+    background: #d1fae5;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.admin-page .alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+.admin-page .alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.admin-page .alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+/* Filter Section */
+.admin-page .filter-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.admin-messages-filter-title {
+    font-size: 16px;
+    margin: 0 0 8px 0;
+}
+
+.admin-messages-filter-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-messages-reply-limit-section {
+    display: none;
+    margin-left: 20px;
+}
+
+.admin-messages-reply-limit-section.active {
+    display: flex;
+}
+
+.admin-messages-span-margin {
+    margin-right: 16px;
+}
+
+/* Tables */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.admin-table th {
+    background: #f9fafb;
+}
+
+/* Utility Classes */
+.admin-muted {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.admin-message {
+    white-space: pre-wrap;
+}
+
+.admin-status-processed {
+    color: #6b7280;
+}
+
+.admin-status-processed-margin {
+    margin-left: 4px;
+}
+
+.admin-new-badge {
+    margin-left: 8px;
+    background: #10b981;
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+.admin-new-inline {
+    margin-left: 6px;
+    color: #10b981;
+    font-weight: 600;
+}
+
+/* ============================================
+   Admin Messages Specific
+   ============================================ */
+
+.admin-messages-list-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 8px;
+}
+
+.admin-messages-list-item-left {
+    flex: 1;
+}
+
+.admin-messages-list-item-title {
+    font-weight: 600;
+}
+
+.admin-messages-list-item-body {
+    white-space: pre-wrap;
+    margin-top: 4px;
+}
+
+.admin-messages-list-item-meta {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.admin-messages-reply-indicator {
+    margin-left: 8px;
+    color: #2563eb;
+}
+
+/* ============================================
+   Admin Reports Specific
+   ============================================ */
+
+.admin-reports-actions-container {
+    margin: 8px 0;
+}
+
+.admin-reports-section-title {
+    margin-top: 24px;
+}
+
+.admin-reports-content-title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.admin-reports-content-meta {
+    margin-top: 4px;
+}
+
+.admin-reports-image-section {
+    margin-top: 12px;
+}
+
+.admin-reports-image-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.admin-reports-image-container {
+    max-width: 600px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-reports-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.admin-reports-responses-container {
+    max-height: 60vh;
+    overflow: auto;
+    background: #f8f9fa;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.admin-reports-response-item {
+    background: #fff;
+    border-left: 2px solid #667eea;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.admin-reports-response-item-target {
+    border-left-color: #ffc107;
+}
+
+.admin-reports-response-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.admin-reports-no-responses {
+    padding: 8px;
+}
+
+/* ============================================
+   Admin Logs Specific
+   ============================================ */
+
+.admin-page .admin-logs-container-wrapper {
+    margin: 40px;
+}
+
+.admin-logs-container-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.admin-logs-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.admin-logs-title {
+    font-size: 24px;
+    margin: 0 0 12px;
+    color: #111827;
+}
+
+.admin-logs-info-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    flex-wrap: wrap;
+}
+
+.admin-logs-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-logs-info-label {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.admin-logs-info-value {
+    color: #111827;
+}
+
+.admin-logs-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.admin-logs-form-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-logs-form-group input {
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    width: 120px;
+}
+
+.admin-logs-form-group button {
+    padding: 6px 16px;
+}
+
+.admin-logs-search-label {
+    margin-left: 16px;
+}
+
+.admin-logs-search-input {
+    width: 200px;
+}
+
+.admin-logs-log-container {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    max-height: 800px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.admin-logs-empty-state {
+    text-align: center;
+    padding: 48px;
+    color: #6b7280;
+}
+
+.admin-page .log-line {
+    margin-bottom: 2px;
+}
+
+.admin-page .log-error {
+    color: #f87171;
+}
+
+.admin-page .log-warning {
+    color: #fbbf24;
+}
+
+.admin-page .log-info {
+    color: #60a5fa;
+}
+
+.admin-page .log-debug {
+    color: #a78bfa;
+}
+
+/* ============================================
+   Admin Index Specific
+   ============================================ */
+
+.admin-index-card {
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.admin-index-title {
+    font-size: 20px;
+    margin: 0 0 12px;
+}
+
+.admin-index-description {
+    color: #4b5563;
+    margin: 0;
+}
+
+.admin-index-access-record {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.admin-index-access-record-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.admin-index-menu {
+    margin-top: 16px;
+    padding-left: 16px;
+}

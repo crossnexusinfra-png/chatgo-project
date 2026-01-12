@@ -1,0 +1,209 @@
+テーブル名	カラム名	制限	文字数制限	内容
+users	user_id	PRIMARY KEY	-	ユーザーID（自動採番）
+users	username	UNIQUE, NOT NULL	-	ユーザー名（一意、変更不可）
+users	user_identifier	UNIQUE, NULL可	15文字	ユーザー識別子（一意、変更不可）
+users	email	UNIQUE, NOT NULL	-	メールアドレス（一意）
+users	phone	UNIQUE, NOT NULL	20文字	電話番号（一意）
+users	password	NOT NULL	-	パスワード（ハッシュ化）
+users	nationality	NOT NULL	10文字	国籍（CHECK制約: 'JP', 'US', 'GB', 'CA', 'AU', 'OTHER'）
+users	residence	NOT NULL	10文字	居住地（CHECK制約: 'JP', 'US', 'GB', 'CA', 'AU', 'OTHER'）
+users	birthdate	NULL可	-	生年月日
+users	sms_verified_at	NULL可	-	SMS認証日時
+users	email_verified_at	NULL可	-	メール認証日時
+users	is_verified	NOT NULL	-	認証済みフラグ（boolean, default: false）
+users	profile_image	NULL可	-	プロフィール画像パス
+users	bio	NULL可	100文字	自己紹介（text, CHECK制約: 100文字以内）
+users	language	NOT NULL	2文字	言語設定（'JA' | 'EN', default: 'EN'）
+users	coins	NOT NULL	-	保有コイン数（unsigned integer, default: 0）
+users	last_login_date	NULL可	-	最終ログイン日
+users	consecutive_login_days	NOT NULL	-	連続ログイン日数（unsigned integer, default: 0）
+users	invite_code	UNIQUE, NULL可	20文字	招待コード（一意）
+users	created_at	NOT NULL	-	作成日時（ユーザー登録日時）
+users	updated_at	NULL可	-	更新日時
+
+threads	thread_id	PRIMARY KEY	-	スレッドID（自動採番）
+threads	parent_thread_id	NULL可, FOREIGN KEY	-	親スレッドID（FK → threads.thread_id, onDelete: set null）
+threads	continuation_thread_id	NULL可, FOREIGN KEY	-	続きスレッドID（FK → threads.thread_id, onDelete: set null）
+threads	title	NOT NULL	50文字	スレッドタイトル
+threads	tag	NOT NULL	100文字	タグ（default: 'その他'）
+threads	is_r18	NOT NULL	-	R18コンテンツフラグ（boolean, default: false）
+threads	image_path	NULL可	-	スレッド画像パス
+threads	user_id	NOT NULL, FOREIGN KEY	-	作成者ID（FK → users.user_id, onDelete: cascade）
+threads	responses_count	NOT NULL	-	レスポンス数（unsigned integer, default: 0）
+threads	access_count	NOT NULL	-	アクセス数（integer, default: 0）
+threads	created_at	NOT NULL	-	作成日時
+threads	updated_at	NULL可	-	更新日時
+threads	deleted_at	NULL可	-	削除日時（ソフトデリート）
+
+responses	response_id	PRIMARY KEY	-	レスポンスID（自動採番）
+responses	thread_id	NOT NULL, FOREIGN KEY	-	スレッドID（FK → threads.thread_id, onDelete: cascade）
+responses	parent_response_id	NULL可, FOREIGN KEY	-	親レスポンスID（FK → responses.response_id, onDelete: cascade）
+responses	body	NOT NULL	-	レスポンス本文（text）
+responses	user_id	NOT NULL, FOREIGN KEY	-	作成者ID（FK → users.user_id, onDelete: cascade）
+responses	responses_num	NOT NULL	-	レスポンス番号（unsigned integer）
+responses	media_file	NULL可	255文字	メディアファイルパス
+responses	media_type	NULL可	255文字	メディアタイプ
+responses	created_at	NOT NULL	-	作成日時
+responses	updated_at	NULL可	-	更新日時
+
+admin_messages	id	PRIMARY KEY	-	メッセージID（自動採番）
+admin_messages	user_id	NULL可, FOREIGN KEY	-	送信先ユーザーID（FK → users.user_id, onDelete: cascade）
+admin_messages	thread_id	NULL可, FOREIGN KEY	-	関連スレッドID（FK → threads.thread_id, onDelete: cascade）
+admin_messages	title_key	NULL可	-	タイトルキー（多言語対応用）
+admin_messages	body_key	NULL可	-	本文キー（多言語対応用）
+admin_messages	title	NULL可	-	タイトル（直接保存、フォールバック用）
+admin_messages	body	NULL可	2000文字	本文（直接保存、フォールバック用, text, CHECK制約: 2000文字以内）
+admin_messages	audience	NOT NULL	-	配信対象（'all' | 'members'）
+admin_messages	published_at	NULL可	-	公開日時
+admin_messages	allows_reply	NOT NULL	-	返信許可フラグ（boolean, default: false）
+admin_messages	unlimited_reply	NOT NULL	-	無制限返信フラグ（boolean, default: false）
+admin_messages	reply_used	NOT NULL	-	返信使用済みフラグ（boolean, default: false）
+admin_messages	parent_message_id	NULL可, FOREIGN KEY	-	親メッセージID（FK → admin_messages.id, onDelete: cascade）
+admin_messages	coin_amount	NULL可	-	コイン報酬額（integer）
+admin_messages	created_at	NOT NULL	-	作成日時
+admin_messages	updated_at	NULL可	-	更新日時
+
+reports	report_id	PRIMARY KEY	-	通報ID（自動採番）
+reports	user_id	NOT NULL, FOREIGN KEY	-	通報者ID（FK → users.user_id, onDelete: cascade）
+reports	thread_id	NULL可, FOREIGN KEY	-	対象スレッドID（FK → threads.thread_id, onDelete: cascade）
+reports	response_id	NULL可, FOREIGN KEY	-	対象レスポンスID（FK → responses.response_id, onDelete: cascade）
+reports	reason	NOT NULL	-	通報理由
+reports	description	NULL可	300文字	詳細説明（text, CHECK制約: 300文字以内）
+reports	is_approved	NOT NULL	-	承認フラグ（boolean, default: false）
+reports	approved_at	NULL可	-	承認日時
+reports	flagged	NOT NULL, INDEX	-	重要フラグ（boolean, default: false）
+reports	created_at	NOT NULL	-	作成日時
+reports	updated_at	NULL可	-	更新日時
+reports	UNIQUE制約	(user_id, thread_id)	-	同一ユーザーは同一スレッドに1回のみ通報可能
+reports	UNIQUE制約	(user_id, response_id)	-	同一ユーザーは同一レスポンスに1回のみ通報可能
+
+suggestions	id	PRIMARY KEY	-	提案ID（自動採番）
+suggestions	user_id	NULL可, INDEX	-	提案者ID（FK → users.user_id）
+suggestions	message	NOT NULL	1000文字	提案内容（text, CHECK制約: 1000文字以内）
+suggestions	completed	NOT NULL, INDEX	-	処理完了フラグ（boolean, default: false）
+suggestions	starred	NOT NULL, INDEX	-	スター付与フラグ（boolean, default: false）
+suggestions	coin_amount	NULL可	-	報酬コイン額（unsigned tiny integer）
+suggestions	created_at	NOT NULL	-	作成日時
+suggestions	updated_at	NULL可	-	更新日時
+
+friendships	id	PRIMARY KEY	-	フレンド関係ID（自動採番）
+friendships	user_id	NOT NULL, FOREIGN KEY, INDEX	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+friendships	friend_id	NOT NULL, FOREIGN KEY, INDEX	-	フレンドID（FK → users.user_id, onDelete: cascade）
+friendships	friendship_date	NOT NULL	-	フレンドになった日時（timestamp）
+friendships	created_at	NOT NULL	-	作成日時
+friendships	updated_at	NULL可	-	更新日時
+friendships	UNIQUE制約	(user_id, friend_id)	-	同一ユーザー間のフレンド関係は1つのみ
+
+friend_requests	id	PRIMARY KEY	-	申請ID（自動採番）
+friend_requests	from_user_id	NOT NULL, FOREIGN KEY, INDEX	-	申請者ID（FK → users.user_id, onDelete: cascade）
+friend_requests	to_user_id	NOT NULL, FOREIGN KEY, INDEX	-	受信者ID（FK → users.user_id, onDelete: cascade）
+friend_requests	status	NOT NULL, INDEX	-	申請状態（enum: 'pending', 'accepted', 'rejected', default: 'pending'）
+friend_requests	requested_at	NOT NULL	-	申請日時（timestamp）
+friend_requests	responded_at	NULL可	-	応答日時
+friend_requests	created_at	NOT NULL	-	作成日時
+friend_requests	updated_at	NULL可	-	更新日時
+friend_requests	UNIQUE制約	(from_user_id, to_user_id)	-	同一ユーザー間の申請は1つのみ
+
+coin_sends	id	PRIMARY KEY	-	送信ID（自動採番）
+coin_sends	from_user_id	NOT NULL, FOREIGN KEY, INDEX	-	送信者ID（FK → users.user_id, onDelete: cascade）
+coin_sends	to_user_id	NOT NULL, FOREIGN KEY, INDEX	-	受信者ID（FK → users.user_id, onDelete: cascade）
+coin_sends	coins	NOT NULL	-	送信コイン数（unsigned integer）
+coin_sends	sent_at	NOT NULL, INDEX	-	送信日時（timestamp）
+coin_sends	next_available_at	NULL可	-	次回送信可能日時
+coin_sends	created_at	NOT NULL	-	作成日時
+coin_sends	updated_at	NULL可	-	更新日時
+
+thread_favorites	favorite_id	PRIMARY KEY	-	お気に入りID（自動採番）
+thread_favorites	user_id	NOT NULL, FOREIGN KEY	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+thread_favorites	thread_id	NOT NULL, FOREIGN KEY	-	スレッドID（FK → threads.thread_id, onDelete: cascade）
+thread_favorites	created_at	NOT NULL	-	作成日時
+thread_favorites	updated_at	NULL可	-	更新日時
+thread_favorites	UNIQUE制約	(user_id, thread_id)	-	同一ユーザーは同一スレッドを1回のみお気に入り登録可能
+
+thread_interactions	id	PRIMARY KEY	-	やり取りID（自動採番）
+thread_interactions	thread_id	NOT NULL, FOREIGN KEY, INDEX	-	スレッドID（FK → threads.thread_id, onDelete: cascade）
+thread_interactions	user_id	NOT NULL, FOREIGN KEY, INDEX	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+thread_interactions	other_user_id	NOT NULL, FOREIGN KEY, INDEX	-	相手ユーザーID（FK → users.user_id, onDelete: cascade）
+thread_interactions	message_count	NOT NULL	-	メッセージ数（unsigned integer, default: 0）
+thread_interactions	total_characters	NOT NULL	-	総文字数（unsigned integer, default: 0）
+thread_interactions	last_interaction_at	NULL可	-	最後のやり取り日時
+thread_interactions	created_at	NOT NULL	-	作成日時
+thread_interactions	updated_at	NULL可	-	更新日時
+thread_interactions	UNIQUE制約	(thread_id, user_id, other_user_id)	-	同一スレッド内の同一ユーザー間のやり取りは1つのみ
+
+thread_accesses	access_id	PRIMARY KEY	-	アクセスID（自動採番）
+thread_accesses	user_name	NULL可	-	ユーザー名（ゲストの場合）
+thread_accesses	user_id	NULL可, FOREIGN KEY	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+thread_accesses	thread_id	NOT NULL, FOREIGN KEY	-	スレッドID（FK → threads.thread_id, onDelete: cascade）
+thread_accesses	accessed_at	NOT NULL	-	アクセス日時（timestamp）
+
+thread_continuation_requests	request_id	PRIMARY KEY	-	要望ID（自動採番）
+thread_continuation_requests	thread_id	NOT NULL, FOREIGN KEY	-	スレッドID（FK → threads.thread_id, onDelete: cascade）
+thread_continuation_requests	user_id	NOT NULL, FOREIGN KEY	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+thread_continuation_requests	created_at	NOT NULL	-	作成日時
+thread_continuation_requests	updated_at	NULL可	-	更新日時
+thread_continuation_requests	UNIQUE制約	(thread_id, user_id)	-	同一ユーザーは同一スレッドに1回のみ要望可能
+
+admin_message_reads	id	PRIMARY KEY	-	既読ID（自動採番）
+admin_message_reads	user_id	NULL可, FOREIGN KEY	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+admin_message_reads	admin_message_id	NOT NULL, FOREIGN KEY	-	管理者メッセージID（FK → admin_messages.id, onDelete: cascade）
+admin_message_reads	read_at	NOT NULL	-	既読日時（timestamp）
+admin_message_reads	created_at	NOT NULL	-	作成日時
+admin_message_reads	updated_at	NULL可	-	更新日時
+admin_message_reads	UNIQUE制約	(user_id, admin_message_id)	-	同一ユーザーは同一メッセージを1回のみ既読記録可能
+
+admin_message_coin_rewards	id	PRIMARY KEY	-	報酬ID（自動採番）
+admin_message_coin_rewards	user_id	NOT NULL, FOREIGN KEY, INDEX	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+admin_message_coin_rewards	admin_message_id	NOT NULL, FOREIGN KEY, INDEX	-	管理者メッセージID（FK → admin_messages.id, onDelete: cascade）
+admin_message_coin_rewards	coin_amount	NOT NULL	-	報酬コイン額（integer）
+admin_message_coin_rewards	received_at	NOT NULL	-	受け取り日時（timestamp）
+admin_message_coin_rewards	created_at	NOT NULL	-	作成日時
+admin_message_coin_rewards	updated_at	NULL可	-	更新日時
+admin_message_coin_rewards	UNIQUE制約	(user_id, admin_message_id)	-	同一ユーザーは同一メッセージから1回のみコイン受け取り可能
+
+consecutive_login_rewards	id	PRIMARY KEY	-	報酬ID（自動採番）
+consecutive_login_rewards	user_id	NOT NULL, FOREIGN KEY, INDEX	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+consecutive_login_rewards	reward_date	NOT NULL, INDEX	-	報酬日（date）
+consecutive_login_rewards	coins_rewarded	NOT NULL	-	報酬コイン数（unsigned integer）
+consecutive_login_rewards	consecutive_days	NOT NULL	-	連続日数（unsigned integer）
+consecutive_login_rewards	created_at	NOT NULL	-	作成日時
+consecutive_login_rewards	updated_at	NULL可	-	更新日時
+
+ad_watch_histories	id	PRIMARY KEY	-	履歴ID（自動採番）
+ad_watch_histories	user_id	NOT NULL, FOREIGN KEY, INDEX	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+ad_watch_histories	watch_date	NOT NULL, INDEX	-	視聴日（date）
+ad_watch_histories	watch_count	NOT NULL	-	視聴回数（unsigned integer, default: 0）
+ad_watch_histories	created_at	NOT NULL	-	作成日時
+ad_watch_histories	updated_at	NULL可	-	更新日時
+ad_watch_histories	UNIQUE制約	(user_id, watch_date)	-	同一ユーザーは同一日に1つのみ記録
+
+user_invites	id	PRIMARY KEY	-	招待ID（自動採番）
+user_invites	inviter_id	NOT NULL, FOREIGN KEY, INDEX	-	招待者ID（FK → users.user_id, onDelete: cascade）
+user_invites	invitee_id	NOT NULL, FOREIGN KEY, UNIQUE, INDEX	-	被招待者ID（FK → users.user_id, onDelete: cascade, 一意）
+user_invites	invite_code	NOT NULL, INDEX	20文字	招待コード
+user_invites	coins_given	NOT NULL	-	報酬コイン付与フラグ（boolean, default: false）
+user_invites	friend_request_auto_created	NOT NULL	-	自動フレンド申請作成フラグ（boolean, default: false）
+user_invites	invited_at	NOT NULL	-	招待日時（timestamp）
+user_invites	created_at	NOT NULL	-	作成日時
+user_invites	updated_at	NULL可	-	更新日時
+
+residence_histories	id	PRIMARY KEY	-	履歴ID（自動採番）
+residence_histories	user_id	NOT NULL, FOREIGN KEY	-	ユーザーID（FK → users.user_id, onDelete: cascade）
+residence_histories	old_residence	NULL可	10文字	変更前の居住地
+residence_histories	new_residence	NOT NULL	10文字	変更後の居住地
+residence_histories	changed_at	NOT NULL	-	変更日時（timestamp）
+residence_histories	created_at	NOT NULL	-	作成日時
+residence_histories	updated_at	NULL可	-	更新日時
+
+access_logs	id	PRIMARY KEY	-	ログID（自動採番）
+access_logs	type	NOT NULL	-	アクセスタイプ（'guest_visit' | 'login'）
+access_logs	user_id	NULL可, INDEX	-	ユーザーID（ログイン時のみ）
+access_logs	path	NULL可	-	アクセスパス
+access_logs	ip	NULL可	-	IPアドレス
+access_logs	created_at	NOT NULL	-	作成日時（アクセス日時）
+access_logs	updated_at	NULL可	-	更新日時
+
+password_reset_tokens	email	PRIMARY KEY	-	メールアドレス（主キー）
+password_reset_tokens	token	NOT NULL	-	リセットトークン
+password_reset_tokens	created_at	NULL可	-	作成日時（トークン発行日時）
+

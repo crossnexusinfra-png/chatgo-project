@@ -1,0 +1,437 @@
+/* お知らせ画面のスタイル */
+
+.notifications-container {
+    max-width: 800px;
+    margin: 12px auto 12px auto;
+    padding: 0 15px 12px 15px;
+    display: block;
+}
+
+.notifications-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.notifications-title {
+    font-size: 20px;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.notifications-pagination-header {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification-item {
+    display: block;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.notification-item[data-is-read="false"] {
+    border: 1px solid #3b82f6;
+    background: #eff6ff;
+}
+
+.notification-item[data-is-read="true"] {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.unread-mark {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-title {
+    font-size: 16px;
+    margin: 0 0 4px 0;
+    word-wrap: break-word;
+}
+
+.notification-item[data-is-read="false"] .notification-title {
+    font-weight: 600;
+}
+
+.notification-item[data-is-read="true"] .notification-title {
+    font-weight: 400;
+}
+
+.notification-date {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.toggle-icon {
+    color: #9ca3af;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.message-body {
+    display: none;
+    white-space: pre-wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+.reply-section {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.reply-form {
+    width: 100%;
+}
+
+.reply-textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.reply-submit-container {
+    margin-top: 8px;
+    text-align: right;
+}
+
+.reply-submit-btn {
+    padding: 6px 12px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.reply-submit-btn:hover {
+    background: #1d4ed8;
+}
+
+.reply-success-message {
+    padding: 8px;
+    background: #d1fae5;
+    border-radius: 6px;
+    color: #065f46;
+    font-size: 14px;
+}
+
+.notification-empty {
+    color: #6b7280;
+}
+
+.load-more-container {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.load-more-btn {
+    padding: 10px 24px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.load-more-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.load-more-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.notifications-pagination-header {
+    font-size: 11px;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+    display: flex !important;
+    align-items: center;
+    flex-shrink: 0;
+    visibility: visible !important;
+    opacity: 1 !important;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+/* ページネーション内のすべての要素を横並びに */
+.notifications-pagination-header * {
+    white-space: nowrap;
+}
+
+/* ページネーションの説明テキストを非表示 */
+.notifications-pagination-header > p,
+.notifications-pagination-header p:not(.pagination),
+.notifications-pagination-header .pagination-info,
+.notifications-pagination-header .showing {
+    display: none !important;
+}
+
+/* Laravelのページネーションラッパーdivを表示 */
+.notifications-pagination-header > div {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    white-space: nowrap;
+    gap: 2px;
+}
+
+/* 複数のul要素がある場合も横並びに */
+.notifications-pagination-header > div > ul {
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+}
+
+/* ページネーションのul要素を確実に表示 */
+.notifications-pagination-header .pagination,
+.notifications-pagination-header ul.pagination {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 2px;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.notifications-pagination-header .pagination li {
+    margin: 0;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.notifications-pagination-header .pagination a,
+.notifications-pagination-header .pagination span {
+    display: block !important;
+    padding: 1px 4px !important;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    border-radius: 2px !important;
+    color: #0275d8;
+    transition: all 0.2s;
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+    min-width: 16px !important;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.notifications-pagination-header .pagination a:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.notifications-pagination-header .pagination .active span {
+    background: #0275d8;
+    border-color: #0275d8;
+    color: #fff;
+}
+
+.notifications-pagination-header .pagination .disabled span {
+    color: #6c757d;
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+/* Previous/Next ボタンを非表示 - rel属性で判定 */
+.notifications-pagination-header .pagination a[rel="prev"],
+.notifications-pagination-header .pagination a[rel="next"],
+.notifications-pagination-header .pagination span[rel="prev"],
+.notifications-pagination-header .pagination span[rel="next"],
+.notifications-pagination-header .pagination li:has(a[rel="prev"]),
+.notifications-pagination-header .pagination li:has(a[rel="next"]),
+.notifications-pagination-header .pagination li:has(span[rel="prev"]),
+.notifications-pagination-header .pagination li:has(span[rel="next"]) {
+    display: none !important;
+}
+
+/* 親のli要素も非表示（:has()が使えない場合は、最初と最後を非表示） */
+.notifications-pagination-header .pagination li:first-child,
+.notifications-pagination-header .pagination li:last-child {
+    display: none !important;
+}
+
+/* aria-labelで判定 */
+.notifications-pagination-header .pagination a[aria-label*="Previous"],
+.notifications-pagination-header .pagination a[aria-label*="Next"],
+.notifications-pagination-header .pagination span[aria-label*="Previous"],
+.notifications-pagination-header .pagination span[aria-label*="Next"],
+.notifications-pagination-header .pagination li:has(a[aria-label*="Previous"]),
+.notifications-pagination-header .pagination li:has(a[aria-label*="Next"]),
+.notifications-pagination-header .pagination li:has(span[aria-label*="Previous"]),
+.notifications-pagination-header .pagination li:has(span[aria-label*="Next"]) {
+    display: none !important;
+}
+
+/* コイン表示とボタンのスタイル */
+.coin-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #92400e;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.coin-reward-section {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.coin-receive-btn {
+    padding: 8px 16px;
+    background: #fbbf24;
+    color: #78350f;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.coin-receive-btn:hover {
+    background: #f59e0b;
+    color: #78350f;
+}
+
+.coin-receive-btn:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.coin-received-message {
+    padding: 8px;
+    background: #d1fae5;
+    border-radius: 6px;
+    color: #065f46;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* R18変更セクションのスタイル */
+.r18-change-section {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.r18-change-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.r18-approve-btn {
+    padding: 8px 16px;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.r18-approve-btn:hover:not(:disabled) {
+    background: #059669;
+}
+
+.r18-approve-btn:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.r18-reject-btn {
+    padding: 8px 16px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.r18-reject-btn:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+.r18-reject-btn:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.r18-change-success-message {
+    padding: 8px;
+    background: #d1fae5;
+    border-radius: 6px;
+    color: #065f46;
+    font-size: 14px;
+    text-align: center;
+}
+

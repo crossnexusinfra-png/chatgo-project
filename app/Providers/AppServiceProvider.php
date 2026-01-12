@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\View;
+use App\Models\AdminMessage;
+use App\Models\AdminMessageRead;
+use App\Models\CoinSend;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        // キャッシュドライバーの安全性チェック
+        $this->ensureSafeCacheDriver();
+        
+        // パフォーマンス設定の初期化
+        $this->initializePerformanceSettings();
+        
+        // ViewComposerは一時的に無効化（無限ループの問題を回避）
+        // 各ビューで直接$langを取得する方式に戻す
+        /*
+        View::composer('*', function ($view) {
+            try {
+                $data = $view->getData();
+                if (!isset($data['lang'])) {
+                    $lang = session('current_language', 'ja');
+                    if ($lang === 'ja' && auth()->check()) {
+                        $user = auth()->user();
+                        $lang = $user->language ?? 'ja';
+                    }
+                    $view->with('lang', $lang);
+                }
+            } catch (\Exception $e) {
+                $view->with('lang', 'ja');
+            }
+        });
+        */
+        
+        // ヘッダーに未読お知らせ数を共有（パフォーマンス最適化版）
+        View::composer('layouts.header', function ($view) {
+            try {
+                $unreadCount = 0;
+                
+                if (auth()->check()) {
+                    $userId = auth()->id();
+                    
+                    // メッセージIDを一括取得（最大50件に制限してパフォーマンス向上）
+                    $messageIds = AdminMessage::query()
+                        ->whereNotNull('published_at') // 送信済みのみ
+                        ->whereNull('parent_message_id') // 返信メッセージは除外
+                        ->where(function($q) use ($userId) {
+                            $q->where('user_id', $userId) // 個人向け
+                              ->orWhere(function($qq) {
+                                  $qq->whereNull('user_id')
+                                     ->where('audience', 'members'); // 会員向け（個人向けでない）
+                              });
+                        })
+                        ->pluck('id')
+                        ->take(50)
+                        ->toArray();
+                    
+                    if (!empty($messageIds)) {
+                        // 開封済みメッセージIDを一括取得
+                        $readMessageIds = AdminMessageRead::where('user_id', $userId)
+                            ->whereIn('admin_message_id', $messageIds)
+                            ->pluck('admin_message_id')
+                            ->toArray();
+                        
+                        // 未読数を計算
+                        $unreadCount = count($messageIds) - count($readMessageIds);
+                    }
+                } else {
+                    // 非ログインユーザーは非会員向けメッセージ（個人向けでない）を未読としてカウント
+                    // パフォーマンス向上のため、最大50件に制限
+                    $unreadCount = AdminMessage::whereNotNull('published_at')
+                        ->whereNull('parent_message_id') // 返信メッセージは除外
+                        ->whereNull('user_id')
+                        ->where('audience', 'guests')
+                        ->take(50)
+                        ->count();
+                }
+                
+                $view->with('unreadNotificationCount', $unreadCount);
+            } catch (\Exception $e) {
+                // エラーが発生した場合は0を返す（パフォーマンス問題を回避）
+                $view->with('unreadNotificationCount', 0);
+            }
+        });
+        
+        // フレンドからのコイン受け取り通知をチェック
+        View::composer('layouts.app', function ($view) {
+            try {
+                if (auth()->check()) {
+                    $userId = auth()->id();
+                    $lastCheckTime = session('last_coin_receive_check', now()->subDays(1));
+                    
+                    // 最後のチェック以降に受け取ったコイン送信を取得
+                    $recentCoinReceives = CoinSend::where('to_user_id', $userId)
+                        ->where('sent_at', '>', $lastCheckTime)
+                        ->with('fromUser')
+                        ->orderBy('sent_at', 'desc')
+                        ->get();
+                    
+                    if ($recentCoinReceives->isNotEmpty()) {
+                        // 最新のコイン受け取りを取得
+                        $latestReceive = $recentCoinReceives->first();
+                        $fromUser = $latestReceive->fromUser;
+                        
+                        if ($fromUser) {
+                            $lang = \App\Services\LanguageService::getCurrentLanguage();
+                            $username = $fromUser->username ?? '';
+                            $userIdentifier = $fromUser->user_identifier ?? $fromUser->user_id;
+                            $displayName = $username . '@' . $userIdentifier;
+                            
+                            $message = \App\Services\LanguageService::trans('friend_coin_received', $lang, [
+                                'name' => $displayName,
+                            ]);
+                            
+                            session()->flash('friend_coin_received_message', $message);
+                        }
+                    }
+                    
+                    // チェック時刻を更新
+                    session(['last_coin_receive_check' => now()]);
+                }
+            } catch (\Exception $e) {
+                // エラーは無視
+            }
+        });
+    }
+
+    /**
+     * 安全なキャッシュドライバーを確保
+     */
+    private function ensureSafeCacheDriver(): void
+    {
+        $driver = config('cache.default');
+        
+        // Memcachedが設定されているが利用できない場合、fileにフォールバック
+        if ($driver === 'memcached' && !extension_loaded('memcached')) {
+            config(['cache.default' => 'file']);
+        }
+        
+        // Redisが設定されているが利用できない場合、fileにフォールバック
+        if ($driver === 'redis' && !extension_loaded('redis')) {
+            config(['cache.default' => 'file']);
+        }
+    }
+
+    /**
+     * パフォーマンス設定の初期化
+     */
+    private function initializePerformanceSettings(): void
+    {
+        // キャッシュのTTL設定
+        if (!config('cache.ttl')) {
+            config(['cache.ttl' => 300]);
+        }
+
+        // データベース設定の最適化
+        $defaultConnection = config('database.default');
+        
+        if ($defaultConnection === 'sqlite') {
+            $this->optimizeSqliteSettings();
+        } elseif ($defaultConnection === 'pgsql') {
+            $this->optimizePostgresSettings();
+        }
+    }
+
+    /**
+     * SQLite設定の最適化
+     */
+    private function optimizeSqliteSettings(): void
+    {
+        $connection = config('database.connections.sqlite');
+        
+        if (!isset($connection['journal_mode'])) {
+            config(['database.connections.sqlite.journal_mode' => 'WAL']);
+        }
+        
+        if (!isset($connection['synchronous'])) {
+            config(['database.connections.sqlite.synchronous' => 'NORMAL']);
+        }
+        
+        if (!isset($connection['cache_size'])) {
+            config(['database.connections.sqlite.cache_size' => 10000]);
+        }
+        
+        if (!isset($connection['temp_store'])) {
+            config(['database.connections.sqlite.temp_store' => 'MEMORY']);
+        }
+    }
+
+    /**
+     * PostgreSQL設定の最適化
+     */
+    private function optimizePostgresSettings(): void
+    {
+        $connection = config('database.connections.pgsql');
+        
+        // 接続タイムアウトの設定
+        if (!isset($connection['options'])) {
+            config(['database.connections.pgsql.options' => [
+                PDO::ATTR_TIMEOUT => 30,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]]);
+        }
+        
+        // 文字エンコーディングの確認
+        if (!isset($connection['charset'])) {
+            config(['database.connections.pgsql.charset' => 'utf8']);
+        }
+    }
+}
