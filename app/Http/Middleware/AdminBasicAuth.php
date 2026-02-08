@@ -5,24 +5,32 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\Admin;
+use Illuminate\Support\Facades\Hash;
 
 class AdminBasicAuth
 {
     /**
-     * 共有ユーザー名/パスワードでBasic認証を行う。
+     * DBに保存された管理者アカウントでBasic認証を行う。
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $expectedUser = (string) config('admin.user');
-        $expectedPass = (string) config('admin.password');
-
         $providedUser = $request->getUser();
         $providedPass = $request->getPassword();
 
-        $valid = hash_equals($expectedUser, (string) $providedUser)
-            && hash_equals($expectedPass, (string) $providedPass);
+        if (!$providedUser || !$providedPass) {
+            return response('Unauthorized', 401, [
+                'WWW-Authenticate' => 'Basic realm="Admin Area"',
+            ]);
+        }
 
-        if (!$valid) {
+        // ユーザー名またはメールアドレスで管理者を検索
+        $admin = Admin::where('username', $providedUser)
+            ->orWhere('email', $providedUser)
+            ->first();
+
+        // 管理者が見つからない、またはパスワードが一致しない場合
+        if (!$admin || !Hash::check($providedPass, $admin->password)) {
             return response('Unauthorized', 401, [
                 'WWW-Authenticate' => 'Basic realm="Admin Area"',
             ]);

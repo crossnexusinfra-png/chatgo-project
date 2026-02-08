@@ -7,6 +7,7 @@ use Illuminate\Http\Request; // Requestクラスを使用するためにイン�
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Intervention\Image\Laravel\Facades\Image;
 use App\Models\ThreadFavorite;
 use App\Models\ResidenceHistory;
@@ -208,7 +209,7 @@ class ThreadController extends Controller
         }
 
         // IDOR防止: お気に入りに追加する権限をチェック
-        $this->authorize('favorite', $thread);
+        Gate::authorize('favorite', $thread);
 
         $userId = auth()->user()->user_id;
         $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -573,25 +574,30 @@ class ThreadController extends Controller
             
             // ファイルを保存
             $file = $request->file('image');
-            $filename = 'thread_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            // ユーザー入力のファイル名を直接使わず、hashでリネーム
+            $hashedFilename = hash('sha256', time() . $file->getClientOriginalName());
+            // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
+            $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
+            $filename = $hashedFilename . '.' . $extension;
             $path = $file->storeAs('thread_images', $filename, 'public');
             $imagePath = $path;
             
-            // ファイルが実際に保存されているか確認
-            $fullPath = storage_path('app/public/' . $path);
-            $fileExists = file_exists($fullPath);
+            // ファイルが実際に保存されているか確認（Storageファサードを使用してS3対応）
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            $fileExists = $disk->exists($path);
+            $fileSize = $fileExists ? $disk->size($path) : 0;
             
             \Log::info('ThreadController: Image uploaded successfully (store)', [
-                'full_path' => $fullPath,
+                'path' => $path,
                 'file_exists' => $fileExists,
-                'file_size' => $fileExists ? filesize($fullPath) : 0,
-                'storage_url' => Storage::url($path),
+                'file_size' => $fileSize,
+                'storage_url' => Storage::disk('public')->url($path),
             ]);
 
             // 画像ファイルの再エンコード
             if ($fileExists) {
                 $processingService = new \App\Services\MediaFileProcessingService();
-                $processingResult = $processingService->reencodeImage($fullPath, 'image');
+                $processingResult = $processingService->reencodeImage($path, 'image', 'public');
                 
                 if (!$processingResult['success']) {
                     \Log::warning('ThreadController: Image re-encoding failed (store)', [
@@ -599,8 +605,9 @@ class ThreadController extends Controller
                     ]);
                     // 処理に失敗しても続行（ログに記録のみ）
                 } else {
+                    $newFileSize = $disk->exists($path) ? $disk->size($path) : 0;
                     \Log::info('ThreadController: Image re-encoded successfully (store)', [
-                        'new_size' => filesize($fullPath),
+                        'new_size' => $newFileSize,
                     ]);
                 }
             }
@@ -1074,7 +1081,7 @@ class ThreadController extends Controller
         // スレッド画像のURLを取得
         $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
         if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-            $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+            $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
         } else {
             $threadImageUrl = $threadImage;
         }
@@ -1313,6 +1320,202 @@ class ThreadController extends Controller
             'hasMore' => $hasMore,
             'offset' => $offset + $limit,
             'total' => $totalResponses,
+        ]);
+    }
+
+    /**
+     * 新しいレスポンスを取得する（リアルタイム更新用APIエンドポイント）
+     * 指定されたレスポンスID以降の新しいレスポンスを取得
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getNewResponses($id, Request $request)
+    {
+        // AJAXリクエストでない場合はスレッド詳細ページにリダイレクト
+        if (!$request->ajax() && !$request->wantsJson()) {
+            return redirect()->route('threads.show', $id);
+        }
+        
+        $thread = Thread::findOrFail($id);
+        
+        // IDOR防止: R18スレッドの閲覧権限をチェック（18歳未満のユーザーは閲覧不可）
+        $currentUser = auth()->user();
+        if (!\Illuminate\Support\Facades\Gate::forUser($currentUser)->allows('view', $thread)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return response()->json([
+                'error' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang)
+            ], 403);
+        }
+        
+        // 最新のレスポンスID（既に表示されている最新のレスポンスID）
+        $lastResponseId = (int)$request->get('last_response_id', 0);
+        
+        // 指定されたレスポンスID以降の新しいレスポンスを取得（created_at昇順で取得）
+        $query = $thread->responses()
+            ->with('user')
+            ->orderBy('created_at', 'asc');
+        
+        if ($lastResponseId > 0) {
+            $query->where('response_id', '>', $lastResponseId);
+        }
+        
+        $responses = $query->get();
+        
+        if ($responses->isEmpty()) {
+            return response()->json([
+                'html' => '',
+                'responses' => [],
+                'latest_response_id' => $lastResponseId,
+            ]);
+        }
+        
+        // ユーザー情報を取得
+        $userIds = $responses->pluck('user_id')->unique()->filter()->values();
+        $users = $this->buildUserMapByUserIds($userIds);
+        
+        // ログインユーザーの情報を取得
+        $currentUser = auth()->user();
+        $userReportedResponses = collect();
+        $userReportedResponseRejected = [];
+        
+        if ($currentUser) {
+            $responseReports = \App\Models\Report::where('user_id', $currentUser->user_id)
+                ->whereIn('response_id', $responses->pluck('response_id'))
+                ->get();
+            
+            $reportedResponseIds = [];
+            foreach ($responseReports as $report) {
+                $reportedResponseIds[] = $report->response_id;
+                if ($report->approved_at && $report->is_approved === false) {
+                    $userReportedResponseRejected[$report->response_id] = true;
+                }
+            }
+            $userReportedResponses = collect($reportedResponseIds);
+        }
+        
+        // レスポンスの制限情報を取得
+        $responseIds = $responses->pluck('response_id')->toArray();
+        $responseRestrictionData = [];
+        
+        if (!empty($responseIds)) {
+            $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
+                ->where('is_approved', true)
+                ->pluck('response_id')
+                ->toArray();
+            
+            $sixMonthsAgo = now()->subMonths(6);
+            $restrictedReasonList = [
+                'スパム・迷惑行為',
+                '攻撃的・不適切な内容',
+                '不適切なリンク・外部誘導',
+                'コンテンツ規制違反',
+                'その他'
+            ];
+            
+            $reports = \App\Models\Report::whereIn('response_id', $responseIds)
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->get()
+                ->groupBy('response_id');
+            
+            $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
+            $userReportScores = [];
+            foreach ($uniqueUserIds as $userId) {
+                $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
+            }
+            
+            foreach ($responseIds as $responseId) {
+                $responseReports = $reports->get($responseId, collect());
+                $isDeleted = in_array($responseId, $deletedResponseIds);
+                
+                $restrictedScore = 0.0;
+                $ideologyScore = 0.0;
+                $adultContentScore = 0.0;
+                $restrictionReasons = [];
+                
+                if ($responseReports->isNotEmpty()) {
+                    $restrictedReports = $responseReports->whereIn('reason', $restrictedReasonList)
+                        ->filter(function($report) {
+                            return $report->is_approved === true || $report->approved_at === null;
+                        });
+                    
+                    foreach ($restrictedReports as $report) {
+                        $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
+                    }
+                    
+                    $ideologyReports = $responseReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
+                        ->filter(function($report) {
+                            return $report->is_approved === true || $report->approved_at === null;
+                        });
+                    
+                    foreach ($ideologyReports as $report) {
+                        $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
+                    }
+                    
+                    $adultContentReports = $responseReports->where('reason', '成人向けコンテンツが含まれる')
+                        ->filter(function($report) {
+                            return $report->is_approved === true || $report->approved_at === null;
+                        });
+                    
+                    foreach ($adultContentReports as $report) {
+                        $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
+                    }
+                    
+                    $restrictedReportsForReasons = $responseReports->whereIn('reason', $restrictedReasonList);
+                    foreach ($restrictedReportsForReasons as $report) {
+                        if (!in_array($report->reason, $restrictionReasons)) {
+                            $restrictionReasons[] = $report->reason;
+                        }
+                    }
+                    
+                    if ($ideologyScore >= 3.0) {
+                        $restrictionReasons[] = '異なる思想に関しての意見の押し付け、妨害';
+                    }
+                    
+                    if ($adultContentScore >= 2.0) {
+                        $restrictionReasons[] = '成人向けコンテンツが含まれる';
+                    }
+                }
+                
+                $shouldBeHidden = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
+                
+                $responseRestrictionData[$responseId] = [
+                    'shouldBeHidden' => $shouldBeHidden,
+                    'isDeletedByReport' => $isDeleted,
+                    'restrictionReasons' => $restrictionReasons,
+                ];
+            }
+        }
+        
+        // HTMLを生成
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $html = '';
+        foreach ($responses as $response) {
+            $isReported = $userReportedResponses->contains($response->response_id);
+            $isReportRejected = isset($userReportedResponseRejected[$response->response_id]) && $userReportedResponseRejected[$response->response_id];
+            
+            $html .= view('threads.partials.response-item', [
+                'response' => $response,
+                'users' => $users,
+                'thread' => $thread,
+                'isReported' => $isReported,
+                'isReportRejected' => $isReportRejected,
+                'lang' => $lang,
+                'responseRestrictionData' => $responseRestrictionData,
+                'currentUser' => $currentUser,
+            ])->render();
+        }
+        
+        // 最新のレスポンスIDを取得
+        $latestResponseId = $responses->max('response_id') ?? $lastResponseId;
+        
+        return response()->json([
+            'html' => $html,
+            'responses' => $responses->map(function($response) {
+                return ['id' => $response->response_id, 'created_at' => $response->created_at->toIso8601String()];
+            })->toArray(),
+            'latest_response_id' => $latestResponseId,
         ]);
     }
 
@@ -2597,6 +2800,46 @@ class ThreadController extends Controller
         
         // デフォルト（スコアが範囲外の場合）
         return 0;
+    }
+
+    /**
+     * MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
+     *
+     * @param string $mimeType
+     * @param string $mediaType
+     * @return string
+     */
+    private function getExtensionFromMimeType(string $mimeType, string $mediaType): string
+    {
+        $mimeTypeMap = [
+            'image' => [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+            ],
+            'video' => [
+                'video/mp4' => 'mp4',
+                'video/webm' => 'webm',
+            ],
+            'audio' => [
+                'audio/mpeg' => 'mp3',
+                'audio/mp4' => 'm4a',
+                'audio/webm' => 'webm',
+            ],
+        ];
+
+        $mimeTypeLower = strtolower($mimeType);
+        if (isset($mimeTypeMap[$mediaType][$mimeTypeLower])) {
+            return $mimeTypeMap[$mediaType][$mimeTypeLower];
+        }
+
+        // フォールバック: メディアタイプに応じたデフォルト拡張子
+        return match($mediaType) {
+            'image' => 'jpg',
+            'video' => 'mp4',
+            'audio' => 'mp3',
+            default => 'bin',
+        };
     }
 
 }

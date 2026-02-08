@@ -32,6 +32,7 @@ return [
             "'self'",
             'data:',
             'blob:',
+            'https://flagcdn.com',
         ],
         'font-src' => [
             "'self'",

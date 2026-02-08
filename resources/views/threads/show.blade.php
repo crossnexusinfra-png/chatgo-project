@@ -68,9 +68,13 @@
                             <span class="user-link user-link-inline-flex">
                                 @if($threadUser->profile_image)
                                     @php
-                                        $imageUrl = (strpos($threadUser->profile_image, 'avatars/') !== false || strpos($threadUser->profile_image, 'images/avatars/') !== false)
-                                            ? asset($threadUser->profile_image) 
-                                            : asset('storage/' . $threadUser->profile_image);
+                                        // アバター画像（public/images/avatars/）の場合はasset()を使用
+                                        // それ以外（storage/）の場合はStorage::url()を使用（S3対応）
+                                        if (strpos($threadUser->profile_image, 'avatars/') !== false || strpos($threadUser->profile_image, 'images/avatars/') !== false) {
+                                            $imageUrl = asset($threadUser->profile_image);
+                                        } else {
+                                            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($threadUser->profile_image);
+                                        }
                                     @endphp
                                     <img src="{{ $imageUrl }}" alt="{{ $threadUser->username }}" class="user-avatar">
                                 @else
@@ -82,9 +86,13 @@
                             <a href="{{ route('profile.show', $threadUser->user_id) }}" class="user-link">
                                 @if($threadUser->profile_image)
                                     @php
-                                        $imageUrl = (strpos($threadUser->profile_image, 'avatars/') !== false || strpos($threadUser->profile_image, 'images/avatars/') !== false)
-                                            ? asset($threadUser->profile_image) 
-                                            : asset('storage/' . $threadUser->profile_image);
+                                        // アバター画像（public/images/avatars/）の場合はasset()を使用
+                                        // それ以外（storage/）の場合はStorage::url()を使用（S3対応）
+                                        if (strpos($threadUser->profile_image, 'avatars/') !== false || strpos($threadUser->profile_image, 'images/avatars/') !== false) {
+                                            $imageUrl = asset($threadUser->profile_image);
+                                        } else {
+                                            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($threadUser->profile_image);
+                                        }
                                     @endphp
                                     <img src="{{ $imageUrl }}" alt="{{ $threadUser->username }}" class="user-avatar">
                                 @else
@@ -153,7 +161,7 @@
             </div>
         </div>
 
-        <!-- レスポンス一覧（スクロール可能）または警告メッセージ -->
+        <!-- リプライ一覧（スクロール可能）または警告メッセージ -->
         @if(!empty($isThreadDeletedByReport))
             <div class="responses-container thread-restriction-warning-container">
                 <div class="thread-restriction-warning-content">
@@ -232,7 +240,7 @@
             </div>
         </div>
 
-        <!-- レスポンス送信フォーム（固定） -->
+        <!-- リプライ送信フォーム（固定） -->
         <section class="chat-input">
             @if(isset($isThreadRestricted) && $isThreadRestricted)
                 @if(!session('acknowledged_thread_' . $thread->thread_id))
@@ -247,7 +255,7 @@
             @else
             @auth
                 @if(isset($isResponseLimitReached) && $isResponseLimitReached && !isset($continuationThread))
-                <!-- 続きスレッド要望アンケート -->
+                <!-- 続きルーム要望アンケート -->
                 <div id="continuation-request-panel" class="continuation-request-panel">
                     <h3 class="continuation-request-title">
                         {{ \App\Services\LanguageService::trans('continuation_request_title', $lang) }}
@@ -380,7 +388,7 @@
     </div>
 
     @auth
-    <!-- このスレッドページ専用の広告動画モーダル -->
+    <!-- このルームページ専用の広告動画モーダル -->
     <div id="adVideoModalThread" class="ad-video-modal">
         <div class="ad-video-container">
             <button onclick="closeAdVideoFromThread()" class="ad-video-close-button">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
@@ -464,19 +472,22 @@
             'searchError' => \App\Services\LanguageService::trans('searchError', $lang)
         ]
     ]) }}">
-    <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script nonce="{{ $csp_nonce ?? '' }}">
-        // metaタグから設定を読み込む
+        // metaタグから設定を読み込む（thread-show.jsの前に実行）
         (function() {
             const meta = document.querySelector('meta[name="thread-show-config"]');
             if (meta) {
                 try {
                     window.threadShowConfig = JSON.parse(meta.getAttribute('content'));
+                    console.log('[設定読み込み] threadId:', window.threadShowConfig.threadId);
                 } catch (e) {
                     console.error('Failed to parse thread-show-config:', e);
                     window.threadShowConfig = {};
                 }
+            } else {
+                console.error('meta[name="thread-show-config"] not found');
             }
         })();
     </script>
+    <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection 

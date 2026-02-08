@@ -64,6 +64,7 @@ Route::get('/threads/{thread}', [ThreadController::class, 'show'])->name('thread
 
 // スレッドのレスポンスを取得するAPIエンドポイント
 Route::get('/threads/{thread}/responses', [ThreadController::class, 'getResponses'])->name('threads.responses');
+Route::get('/threads/{thread}/responses/new', [ThreadController::class, 'getNewResponses'])->name('threads.responses.new');
 Route::get('/threads/{thread}/responses/search', [ThreadController::class, 'searchResponses'])->name('threads.responses.search');
 
 // お気に入り（認証が必要）

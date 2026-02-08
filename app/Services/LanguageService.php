@@ -97,7 +97,7 @@ class LanguageService
                 'detected_language' => session('detected_language', 'N/A'),
                 'has_current_language' => session()->has('current_language'),
                 'current_language' => session('current_language', 'N/A'),
-                'ip' => request()->ip()
+                'country_code' => self::getCountryCodeFromRequest()
             ]);
             
             $language = 'EN'; // デフォルト（英語コード）
@@ -125,53 +125,48 @@ class LanguageService
                         }
                     }
                 } else {
-                    // 未ログインユーザーはIP判定を実行
-                    // セッションにdetected_languageがある場合は再利用（パフォーマンス向上）
-                    // ただし、セッションがない場合は必ずIP判定を実行
+                    // 未ログインユーザー：国コード（CF-IPCountry）を最優先。IPは使わない
+                    $countryCode = self::getCountryCodeFromRequest();
+
+                    // 国コードが取得できた場合は常に国コードで言語を決定（セッションより優先）
+                    if ($countryCode !== null) {
+                        $language = ($countryCode === 'JP') ? 'JA' : 'EN';
+                        if (session('current_language') !== $language) {
+                            session(['current_language' => $language]);
+                        }
+                        if (session('detected_language') !== $language) {
+                            session(['detected_language' => $language]);
+                        }
+                        \Log::info('未ログインユーザー：国コードを最優先で言語を決定', [
+                            'country_code' => $countryCode,
+                            'language' => $language,
+                            'session_id' => session()->getId()
+                        ]);
+                        return $language;
+                    }
+
+                    // 国コードが取れない場合のみセッションのキャッシュを使用
                     if (session()->has('detected_language')) {
                         $lang = session('detected_language');
-                        // 既存データとの互換性：小文字の場合は大文字に変換
                         if ($lang === 'ja') $lang = 'JA';
                         if ($lang === 'en') $lang = 'EN';
-                        
-                        // current_languageも更新（互換性のため）
                         if (session('current_language') !== $lang) {
                             session(['current_language' => $lang]);
                         }
-                        
-                        \Log::info('未ログインユーザー：セッションから検出済み言語を取得（IP判定をスキップ）', [
+                        \Log::info('未ログインユーザー：国コードなしのためセッションの言語を使用', [
                             'language' => $lang,
-                            'session_id' => session()->getId(),
-                            'ip' => request()->ip()
+                            'session_id' => session()->getId()
                         ]);
-                        
                         return $lang;
                     }
-                    
-                    // セッションにdetected_languageがない場合はIP判定を実行
-                    \Log::info('未ログインユーザー：IP判定を開始（セッションにdetected_languageなし）', [
-                        'ip' => request()->ip(),
-                        'session_id' => session()->getId(),
-                        'has_current_language' => session()->has('current_language'),
-                        'current_language' => session('current_language', 'N/A')
-                    ]);
-                    
-                    $language = self::getLanguageFromIp();
-                    
-                    // セッションに保存（次回以降のAPI呼び出しを回避）
+
+                    // 国コードもセッションもない場合：開発用フォールバックのみ（IPは使わない）
+                    $language = self::getLanguageFromCountryCode();
                     try {
                         session(['current_language' => $language]);
                         session(['detected_language' => $language]);
-                        \Log::info('未ログインユーザー：言語をセッションに保存', [
-                            'language' => $language,
-                            'session_id' => session()->getId(),
-                            'ip' => request()->ip()
-                        ]);
                     } catch (\Exception $e) {
-                        \Log::warning('セッション保存に失敗', [
-                            'error' => $e->getMessage(),
-                            'language' => $language
-                        ]);
+                        \Log::warning('セッション保存に失敗', ['error' => $e->getMessage(), 'language' => $language]);
                     }
                 }
             } catch (\Exception $e) {
@@ -195,140 +190,73 @@ class LanguageService
     }
 
     /**
-     * IPアドレスから言語を判定（パフォーマンス最適化）
+     * Cloudflare の CF-IPCountry から国コードを取得（信頼できる国コードのみ使用）
+     * XX=不明, T1=Tor の場合は null を返す
+     * サーバーによっては HTTP ヘッダが $_SERVER['HTTP_CF_IPCOUNTRY'] で渡るため両方参照する
      */
-    private static function getLanguageFromIp()
+    private static function getCountryCodeFromRequest()
     {
-        $ip = request()->ip();
-        
-        // IPアドレスの取得をログに記録（infoレベルで確実に記録）
-        \Log::info('IPアドレスからの言語判定開始', [
-            'ip' => $ip,
-            'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? 'N/A',
-            'http_x_forwarded_for' => $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'N/A',
-            'http_client_ip' => $_SERVER['HTTP_CLIENT_IP'] ?? 'N/A',
-            'session_id' => session()->getId(),
-            'has_detected_language' => session()->has('detected_language'),
-            'detected_language' => session('detected_language', 'N/A')
-        ]);
-        
-        // プライベートIPの判定
-        $isPrivateIp = empty($ip) || $ip === '127.0.0.1' || $ip === '::1' || 
-                       strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0 ||
-                       strpos($ip, '172.16.') === 0 || strpos($ip, '172.17.') === 0 ||
-                       strpos($ip, '172.18.') === 0 || strpos($ip, '172.19.') === 0 ||
-                       strpos($ip, '172.20.') === 0 || strpos($ip, '172.21.') === 0 ||
-                       strpos($ip, '172.22.') === 0 || strpos($ip, '172.23.') === 0 ||
-                       strpos($ip, '172.24.') === 0 || strpos($ip, '172.25.') === 0 ||
-                       strpos($ip, '172.26.') === 0 || strpos($ip, '172.27.') === 0 ||
-                       strpos($ip, '172.28.') === 0 || strpos($ip, '172.29.') === 0 ||
-                       strpos($ip, '172.30.') === 0 || strpos($ip, '172.31.') === 0;
-        
-        // プライベートIPの場合は、開発環境設定を確認
-        if ($isPrivateIp) {
-            \Log::info('プライベートIPを検出', [
-                'ip' => $ip,
-                'note' => '開発環境設定を確認します'
-            ]);
-            
-            // 開発環境で強制的に日本語を返す設定がある場合
-            if (env('FORCE_JA_ON_PRIVATE_IP', false)) {
-                \Log::info('プライベートIPで強制的に日本語を返す（開発環境設定）', ['ip' => $ip]);
-                $language = 'JA';
-                session(['detected_language' => $language]);
-                return $language;
-            }
-            
-            // プライベートIPの場合は、APIを呼び出しても失敗する可能性が高いため、デフォルト（英語）を返す
-            \Log::info('プライベートIPのため、デフォルト（英語）を返す', ['ip' => $ip]);
-            return 'EN';
+        $req = request();
+        $code = $req->header('CF-IPCountry');
+        if ($code === null || $code === '') {
+            $code = $req->server('HTTP_CF_IPCOUNTRY');
         }
-        
-        // パブリックIPの場合は、IPアドレスから言語を判定（外部API呼び出し）
-        try {
-            $countryCode = self::getCountryCodeFromIp($ip);
-            $language = ($countryCode === 'JP') ? 'JA' : 'EN'; // 英語コードで返す
-            
-            \Log::info('IPアドレスから言語を判定成功', [
-                'ip' => $ip,
-                'countryCode' => $countryCode,
-                'language' => $language
-            ]);
-            
-            // セッションに保存（次回以降のAPI呼び出しを回避）
-            session(['detected_language' => $language]);
-            return $language;
-        } catch (\Exception $e) {
-            \Log::warning('IPアドレスからの言語判定に失敗', [
-                'ip' => $ip,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            // エラー時はデフォルト（英語）を返す
-            return 'EN';
+        if ($code === null || $code === '') {
+            return null;
         }
+        $code = strtoupper(trim((string) $code));
+        // Cloudflare の特殊コードは無視（XX=不明, T1=Tor）
+        if ($code === 'XX' || $code === 'T1' || strlen($code) !== 2) {
+            return null;
+        }
+        return $code;
     }
 
     /**
-     * IPアドレスから国コードを取得
+     * 国コード（Cloudflare CF-IPCountry）から言語を判定
+     * IPは信頼しないため外部APIは使わず、CF-IPCountry のみ使用
      */
-    private static function getCountryCodeFromIp($ip)
+    private static function getLanguageFromCountryCode()
     {
-        // ip-api.comの無料APIを使用（1分間に45リクエストまで）
-        // fieldsパラメータで必要な情報のみ取得（status, message, countryCode）
-        $url = "http://ip-api.com/json/{$ip}?fields=status,message,countryCode";
-        
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 3, // 3秒でタイムアウト（少し長めに設定）
-                'ignore_errors' => true,
-                'user_agent' => 'Mozilla/5.0 (compatible; LanguageService/1.0)',
-            ]
+        $countryCode = self::getCountryCodeFromRequest();
+        $req = request();
+        $rawHeader = $req->header('CF-IPCountry');
+        $rawServer = $req->server('HTTP_CF_IPCOUNTRY');
+
+        \Log::info('国コードからの言語判定', [
+            'country_code' => $countryCode ?? 'N/A',
+            'raw_header_CF_IPCountry' => $rawHeader !== null ? $rawHeader : '(null)',
+            'raw_server_HTTP_CF_IPCOUNTRY' => $rawServer !== null ? $rawServer : '(null)',
+            'session_id' => session()->getId(),
+            'has_detected_language' => session()->has('detected_language'),
         ]);
-        
-        $response = @file_get_contents($url, false, $context);
-        
-        if ($response === false) {
-            \Log::warning('IP Geolocation APIへの接続に失敗', [
-                'ip' => $ip,
-                'url' => $url,
-                'error' => error_get_last()
+
+        // Cloudflare 経由で有効な国コードがある場合：国コードで判定
+        if ($countryCode !== null) {
+            $language = ($countryCode === 'JP') ? 'JA' : 'EN';
+            \Log::info('国コードから言語を判定成功', [
+                'country_code' => $countryCode,
+                'language' => $language
             ]);
-            throw new \Exception('IP Geolocation APIへの接続に失敗しました');
+            session(['detected_language' => $language]);
+            return $language;
         }
-        
-        $data = json_decode($response, true);
-        
-        // APIレスポンスのエラーチェック
-        if (!is_array($data)) {
-            \Log::warning('IP Geolocation APIのレスポンスが不正', [
-                'ip' => $ip,
-                'response' => $response
-            ]);
-            throw new \Exception('IP Geolocation APIのレスポンスが不正です');
+
+        // CF-IPCountry がない場合（Cloudflare 未経由・ローカル等）：IPは使わずデフォルト扱い
+        // 開発環境でプライベートIPのときのみ FORCE_JA_ON_PRIVATE_IP を参照
+        $ip = request()->header('CF-Connecting-IP') ?: (request()->ip() ?? '');
+        $isPrivateIp = empty($ip) || $ip === '127.0.0.1' || $ip === '::1' ||
+            strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0 ||
+            (preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip) === 1);
+
+        if ($isPrivateIp && env('FORCE_JA_ON_PRIVATE_IP', false)) {
+            \Log::info('Cloudflare未経由・プライベートIPのため開発環境設定で日本語を返す', ['ip' => $ip]);
+            session(['detected_language' => 'JA']);
+            return 'JA';
         }
-        
-        // statusがfailの場合はエラー
-        if (isset($data['status']) && $data['status'] === 'fail') {
-            $message = $data['message'] ?? '不明なエラー';
-            \Log::warning('IP Geolocation APIがエラーを返しました', [
-                'ip' => $ip,
-                'message' => $message
-            ]);
-            throw new \Exception("IP Geolocation APIエラー: {$message}");
-        }
-        
-        // countryCodeが存在するか確認
-        if (isset($data['countryCode']) && !empty($data['countryCode'])) {
-            return $data['countryCode'];
-        }
-        
-        \Log::warning('国コードが取得できませんでした', [
-            'ip' => $ip,
-            'data' => $data
-        ]);
-        throw new \Exception('国コードの取得に失敗しました');
+
+        \Log::info('国コードが取得できないためデフォルト（英語）を返す', ['reason' => 'CF-IPCountryなしまたは無効']);
+        return 'EN';
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\ResponseChangeLog;
 
 class Response extends Model
 {
@@ -154,6 +155,27 @@ class Response extends Model
     }
 
     /**
+     * このレスポンスの変更ログを取得
+     */
+    public function changeLogs()
+    {
+        return $this->hasMany(ResponseChangeLog::class, 'response_id', 'response_id')
+            ->orderBy('changed_at', 'desc');
+    }
+
+    /**
+     * 非表示ログを記録
+     * 
+     * @param bool $isHidden 非表示かどうか
+     * @param string|null $reason 理由
+     * @return void
+     */
+    public function logHideStatus(bool $isHidden, ?string $reason = null): void
+    {
+        ResponseChangeLog::logHideStatus($this, $isHidden, $reason);
+    }
+
+    /**
      * ブートメソッド - モデルのイベントを設定
      */
     protected static function boot()
@@ -168,6 +190,8 @@ class Response extends Model
         // レスポンスが削除された時にスレッドのレスポンス数を更新
         static::deleted(function ($response) {
             $response->thread->updateResponsesCountDown();
+            // 削除ログを記録
+            ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
         });
     }
 }

@@ -231,7 +231,7 @@
     };
 
     /**
-     * 無限スクロールでスレッドを読み込む共通関数
+     * 無限スクロールでルームを読み込む共通関数
      * @param {Object} options - 設定オプション
      * @param {string} options.url - 読み込み先URL
      * @param {Object} options.params - URLパラメータ

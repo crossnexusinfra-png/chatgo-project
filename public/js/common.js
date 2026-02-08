@@ -127,7 +127,7 @@
             }
         });
 
-        // スレッド作成モーダルの制御
+        // ルーム作成モーダルの制御
         const openCreateThreadModal = document.getElementById('openCreateThreadModal');
         const createThreadModal = document.getElementById('createThreadModal');
         const closeCreateThreadModal = document.getElementById('closeCreateThreadModal');
@@ -254,11 +254,11 @@
                     reportReasonSelect.appendChild(option);
                 });
             } else {
-                // スレッド・レスポンス通報の場合
+                // ルーム・リプライ通報の場合
                 const threadImageReasons = [
-                    { value: 'スレッド画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
-                    { value: 'スレッド画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
-                    { value: 'スレッド画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
+                    { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
+                    { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
+                    { value: 'ルーム画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
                 ];
                 
                 const adultContentReason = {

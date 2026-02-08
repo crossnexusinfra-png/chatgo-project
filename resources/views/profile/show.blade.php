@@ -72,9 +72,13 @@
             <div class="profile-image-section">
                 @if($user->profile_image)
                     @php
-                        $imageUrl = (strpos($user->profile_image, 'avatars/') !== false || strpos($user->profile_image, 'images/avatars/') !== false)
-                            ? asset($user->profile_image) 
-                            : asset('storage/' . $user->profile_image);
+                        // アバター画像（public/images/avatars/）の場合はasset()を使用
+                        // それ以外（storage/）の場合はStorage::url()を使用（S3対応）
+                        if (strpos($user->profile_image, 'avatars/') !== false || strpos($user->profile_image, 'images/avatars/') !== false) {
+                            $imageUrl = asset($user->profile_image);
+                        } else {
+                            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_image);
+                        }
                     @endphp
                     <img src="{{ $imageUrl }}" alt="{{ \App\Services\LanguageService::trans('profile_image_alt', $lang) }}" class="profile-image">
                 @else
@@ -124,7 +128,7 @@
             </div>
         </div>
 
-        <!-- ユーザーが作成したスレッド一覧 -->
+        <!-- ユーザーが作成したルーム一覧 -->
         <div class="threads-section">
             <h2 class="threads-title">{{ \App\Services\LanguageService::trans('profile_threads_created', $lang) }}</h2>
             @if($threads->count() > 0)
@@ -138,9 +142,9 @@
                             $isImageBlurred = $imageReportData['isBlurred'] ?? false;
                             $isDeletedByImageReport = $imageReportData['isDeletedByImageReport'] ?? false;
                             $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                            // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                            // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                             if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                             } else {
                                 $threadImageUrl = $threadImage;
                             }

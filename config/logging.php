@@ -132,6 +132,31 @@ return [
             'level' => env('LOG_LEVEL', 'error'),
         ],
 
+        // 異常ログ専用チャンネル（エラー以上のみ）
+        'error_file' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/error.log'),
+            'level' => env('LOG_LEVEL', 'error'),
+            'days' => env('LOG_ERROR_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
+        // 警告ログ専用チャンネル
+        'warning_file' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/warning.log'),
+            'level' => 'warning',
+            'days' => env('LOG_WARNING_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        // 異常ログ用スタック（エラーと警告をまとめて記録）
+        'error_stack' => [
+            'driver' => 'stack',
+            'channels' => ['error_file', 'warning_file'],
+            'ignore_exceptions' => false,
+        ],
+
     ],
 
 ];

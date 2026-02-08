@@ -1,5 +1,5 @@
 // thread-show.js
-// スレッド詳細ページ用のJavaScript
+// ルーム詳細ページ用のJavaScript
 
 (function() {
     'use strict';
@@ -24,6 +24,11 @@
     let hasMoreResponses = true;
     let currentOffset = initialResponseCount;
 
+    // リアルタイム更新用の変数
+    let lastResponseId = 0;
+    let pollingInterval = null;
+    let isPollingActive = true;
+
     // 検索機能用の変数
     let isSearchMode = false;
     let searchInput, searchResults, searchResultsArea, searchResultsList, responsesContainer, chatInput;
@@ -36,7 +41,7 @@
         }
     }
 
-    // レスポンスを読み込む関数
+    // リプライを読み込む関数
     async function loadMoreResponses() {
         if (isLoadingResponses || !hasMoreResponses) {
             console.log('loadMoreResponses skipped:', {
@@ -129,6 +134,8 @@
     // 検索モードに入る
     function enterSearchMode() {
         isSearchMode = true;
+        isPollingActive = false;
+        stopPolling();
         if (responsesContainer) {
             responsesContainer.style.display = 'none';
         }
@@ -143,6 +150,10 @@
     // 検索モードを終了
     function exitSearchMode() {
         isSearchMode = false;
+        isPollingActive = true;
+        if (!document.hidden) {
+            startPolling();
+        }
         if (responsesContainer) {
             responsesContainer.style.display = 'block';
         }
@@ -375,7 +386,7 @@
         textarea.value = '';
     };
 
-    // レスポンス元をクリックしたときに該当のレスポンスにスクロール
+    // リプライ元をクリックしたときに該当のリプライにスクロール
     window.scrollToResponse = function(responseId) {
         const targetResponse = document.querySelector(`[data-response-id="${responseId}"]`);
         if (targetResponse) {
@@ -390,7 +401,7 @@
         }
     };
 
-    // 検索結果から該当レスポンスにスクロール（グローバル関数）
+    // 検索結果から該当リプライにスクロール（グローバル関数）
     window.scrollToSearchResult = async function(responseId, responseOrder) {
         console.log('scrollToSearchResult called:', { responseId, responseOrder });
         
@@ -888,7 +899,7 @@
         video.currentTime = 0;
     };
 
-    // 続きスレッド要望のトグル
+    // 続きルーム要望のトグル
     window.toggleContinuationRequest = function(threadId) {
         const btn = document.getElementById('continuation-request-btn');
         const countEl = document.getElementById('continuation-request-count');
@@ -993,6 +1004,175 @@
         });
     }
 
+    // 最新のレスポンスIDを取得
+    function getLatestResponseId() {
+        const responsesContainer = document.getElementById('responsesContainer');
+        if (!responsesContainer) return 0;
+        
+        const responseItems = responsesContainer.querySelectorAll('[data-response-id]');
+        let maxId = 0;
+        
+        responseItems.forEach(item => {
+            const responseId = parseInt(item.getAttribute('data-response-id'), 10);
+            if (responseId && responseId > maxId) {
+                maxId = responseId;
+            }
+        });
+        
+        return maxId;
+    }
+
+    // 新しいレスポンスを取得して表示
+    async function checkForNewResponses() {
+        if (!isPollingActive || isLoadingForSearch || isSearchMode) {
+            return;
+        }
+
+        // threadIdが0の場合は設定が読み込まれていないので停止
+        if (!threadId || threadId === 0) {
+            console.error('[リアルタイム更新] エラー: threadIdが設定されていません');
+            stopPolling();
+            return;
+        }
+
+        // lastResponseIdが0の場合は、初回なので現在の最新IDを設定
+        if (lastResponseId === 0) {
+            const currentLatestId = getLatestResponseId();
+            if (currentLatestId > 0) {
+                lastResponseId = currentLatestId;
+                console.log('[リアルタイム更新] 初期化: 最新レスポンスID =', lastResponseId);
+            } else {
+                console.log('[リアルタイム更新] 初期化: レスポンスが見つかりませんでした');
+            }
+            // 初回はサーバーに問い合わせない（次回から開始）
+            return;
+        }
+
+        try {
+            console.log('[リアルタイム更新] 新しいレスポンスをチェック中... (threadId:', threadId, ', lastResponseId:', lastResponseId, ')');
+            const response = await fetch(`/threads/${threadId}/responses/new?last_response_id=${lastResponseId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                console.error('[リアルタイム更新] エラー: HTTP', response.status);
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.html && data.html.trim() !== '') {
+                console.log('[リアルタイム更新] 新しいレスポンスが見つかりました');
+                const responsesContainer = document.getElementById('responsesContainer');
+                if (!responsesContainer) return;
+
+                // 現在のスクロール位置を記録
+                const wasAtBottom = responsesContainer.scrollHeight - responsesContainer.scrollTop <= responsesContainer.clientHeight + 100;
+                const scrollHeightBefore = responsesContainer.scrollHeight;
+
+                // 新しいレスポンスを追加
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.html;
+                const children = Array.from(tempDiv.children);
+                
+                children.forEach(child => {
+                    responsesContainer.appendChild(child);
+                });
+
+                // 返信ボタンの初期化
+                if (typeof initReplyButtons === 'function') {
+                    initReplyButtons();
+                }
+
+                // 動画サムネイルの生成
+                const newVideoThumbnails = responsesContainer.querySelectorAll('.media-video-thumbnail');
+                newVideoThumbnails.forEach(function(video) {
+                    generateVideoThumbnail(video);
+                });
+
+                // スクロール位置を調整
+                if (wasAtBottom) {
+                    // 元々一番下にいた場合は、新しいレスポンスの後にスクロール
+                    responsesContainer.scrollTop = responsesContainer.scrollHeight;
+                } else {
+                    // それ以外の場合は、スクロール位置を維持
+                    const scrollHeightAfter = responsesContainer.scrollHeight;
+                    const heightDiff = scrollHeightAfter - scrollHeightBefore;
+                    responsesContainer.scrollTop += heightDiff;
+                }
+
+                // 最新のレスポンスIDを更新
+                if (data.latest_response_id) {
+                    lastResponseId = data.latest_response_id;
+                    console.log('[リアルタイム更新] 最新レスポンスIDを更新:', lastResponseId);
+                } else {
+                    lastResponseId = getLatestResponseId();
+                    console.log('[リアルタイム更新] DOMから最新レスポンスIDを取得:', lastResponseId);
+                }
+            } else if (data.latest_response_id && data.latest_response_id > lastResponseId) {
+                // HTMLがなくても、最新のレスポンスIDを更新（他のユーザーが削除した場合など）
+                lastResponseId = data.latest_response_id;
+                console.log('[リアルタイム更新] 最新レスポンスIDを更新（HTMLなし）:', lastResponseId);
+            } else {
+                console.log('[リアルタイム更新] 新しいレスポンスはありません');
+            }
+        } catch (error) {
+            console.error('[リアルタイム更新] エラー:', error);
+        }
+    }
+
+    // ポーリングを開始
+    function startPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+        
+        // threadIdが0の場合は設定が読み込まれていないので停止
+        if (!threadId || threadId === 0) {
+            console.error('[リアルタイム更新] エラー: threadIdが設定されていません。ポーリングを開始できません。');
+            return;
+        }
+        
+        console.log('[リアルタイム更新] ポーリングを開始します (threadId:', threadId, ')');
+        
+        // 初回の最新レスポンスIDを設定（DOMが読み込まれた後）
+        setTimeout(() => {
+            const currentLatestId = getLatestResponseId();
+            if (currentLatestId > 0 && lastResponseId === 0) {
+                lastResponseId = currentLatestId;
+                console.log('[リアルタイム更新] 初期化: 最新レスポンスID =', lastResponseId);
+            }
+        }, 500);
+        
+        // 3秒ごとに新しいレスポンスをチェック
+        pollingInterval = setInterval(checkForNewResponses, 3000);
+    }
+
+    // ポーリングを停止
+    function stopPolling() {
+        if (pollingInterval) {
+            console.log('[リアルタイム更新] ポーリングを停止します');
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // ページの可視性が変わったときにポーリングを制御
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            isPollingActive = false;
+            stopPolling();
+        } else {
+            isPollingActive = true;
+            startPolling();
+        }
+    });
+
     // DOMContentLoaded時の初期化
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(scrollToBottom, 100);
@@ -1095,9 +1275,21 @@
         videoThumbnails.forEach(function(video) {
             generateVideoThumbnail(video);
         });
+
+        // リアルタイム更新のポーリングを開始
+        startPolling();
     });
 
     window.addEventListener('load', function() {
         setTimeout(scrollToBottom, 100);
+        // ページ読み込み後にポーリングを開始
+        if (!pollingInterval) {
+            startPolling();
+        }
+    });
+
+    // ページを離れる前にポーリングを停止
+    window.addEventListener('beforeunload', function() {
+        stopPolling();
     });
 })();

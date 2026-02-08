@@ -17,7 +17,7 @@
                 @endif
                 
                 <a href="{{ route('threads.index') }}" class="logo">
-                    <img src="{{ asset('images/logo.png') }}" alt="LOGO" class="logo-image">
+                    <img src="{{ asset('images/logo.jpg') }}" alt="LOGO" class="logo-image">
                 </a>
             </div>
             

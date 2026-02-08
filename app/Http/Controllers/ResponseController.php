@@ -7,6 +7,7 @@ use App\Models\Thread;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 use App\Services\SafeBrowsingService;
 use App\Services\MediaFileValidationService;
 use App\Services\SpamDetectionService;
@@ -28,7 +29,7 @@ class ResponseController extends Controller
             session(['intended_url' => $intendedUrl]);
             return redirect()->route('auth.choice');
         }
-        $this->authorize('create', Response::class);
+        Gate::authorize('create', Response::class);
 
         // $_FILESを直接チェック（PHPの設定が原因でファイルが到達しない場合の診断用）
         $filesSuperglobal = isset($_FILES['media_file']) ? [
@@ -232,28 +233,32 @@ class ResponseController extends Controller
             
             // ファイルを保存
             $file = $request->file('media_file');
-            $filename = 'response_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            // ユーザー入力のファイル名を直接使わず、hashでリネーム
+            $hashedFilename = hash('sha256', time() . $file->getClientOriginalName());
+            // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
+            $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
+            $filename = $hashedFilename . '.' . $extension;
             $path = $file->storeAs('response_media', $filename, 'public');
             $mediaFile = $path;
             $mediaType = $validationResult['media_type'];
             
-            // ファイルが実際に保存されているか確認
-            $fullPath = storage_path('app/public/' . $path);
-            $fileExists = file_exists($fullPath);
+            // ファイルが実際に保存されているか確認（Storageファサードを使用してS3対応）
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            $fileExists = $disk->exists($path);
+            $fileSize = $fileExists ? $disk->size($path) : 0;
             
             \Log::info('ResponseController: File uploaded successfully (store)', [
                 'path' => $path,
-                'full_path' => $fullPath,
                 'file_exists' => $fileExists,
-                'file_size' => $fileExists ? filesize($fullPath) : 0,
+                'file_size' => $fileSize,
                 'media_type' => $mediaType,
-                'storage_url' => Storage::url($path),
+                'storage_url' => Storage::disk('public')->url($path),
             ]);
 
             // メディアファイルの処理（画像：再エンコード、動画・音声：メタデータ削除）
             if ($fileExists) {
                 $processingService = new \App\Services\MediaFileProcessingService();
-                $processingResult = $processingService->processMediaFile($fullPath, $mediaType);
+                $processingResult = $processingService->processMediaFile($path, $mediaType, 'public');
                 
                 if (!$processingResult['success']) {
                     \Log::warning('ResponseController: Media file processing failed (store)', [
@@ -262,9 +267,10 @@ class ResponseController extends Controller
                     ]);
                     // 処理に失敗しても続行（ログに記録のみ）
                 } else {
+                    $newFileSize = $disk->exists($path) ? $disk->size($path) : 0;
                     \Log::info('ResponseController: Media file processed successfully (store)', [
                         'media_type' => $mediaType,
-                        'new_size' => filesize($fullPath),
+                        'new_size' => $newFileSize,
                     ]);
                 }
             }
@@ -426,7 +432,7 @@ class ResponseController extends Controller
             session(['intended_url' => $intendedUrl]);
             return redirect()->route('auth.choice');
         }
-        $this->authorize('create', Response::class);
+        Gate::authorize('create', Response::class);
 
         // $_FILESを直接チェック（PHPの設定が原因でファイルが到達しない場合の診断用）
         $filesSuperglobal = isset($_FILES['media_file']) ? [
@@ -582,28 +588,32 @@ class ResponseController extends Controller
             
             // ファイルを保存
             $file = $request->file('media_file');
-            $filename = 'response_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            // ユーザー入力のファイル名を直接使わず、hashでリネーム
+            $hashedFilename = hash('sha256', time() . $file->getClientOriginalName());
+            // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
+            $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
+            $filename = $hashedFilename . '.' . $extension;
             $path = $file->storeAs('response_media', $filename, 'public');
             $mediaFile = $path;
             $mediaType = $validationResult['media_type'];
             
-            // ファイルが実際に保存されているか確認
-            $fullPath = storage_path('app/public/' . $path);
-            $fileExists = file_exists($fullPath);
+            // ファイルが実際に保存されているか確認（Storageファサードを使用してS3対応）
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            $fileExists = $disk->exists($path);
+            $fileSize = $fileExists ? $disk->size($path) : 0;
             
             \Log::info('ResponseController: File uploaded successfully (reply)', [
                 'path' => $path,
-                'full_path' => $fullPath,
                 'file_exists' => $fileExists,
-                'file_size' => $fileExists ? filesize($fullPath) : 0,
+                'file_size' => $fileSize,
                 'media_type' => $mediaType,
-                'storage_url' => Storage::url($path),
+                'storage_url' => Storage::disk('public')->url($path),
             ]);
 
             // メディアファイルの処理（画像：再エンコード、動画・音声：メタデータ削除）
             if ($fileExists) {
                 $processingService = new \App\Services\MediaFileProcessingService();
-                $processingResult = $processingService->processMediaFile($fullPath, $mediaType);
+                $processingResult = $processingService->processMediaFile($path, $mediaType, 'public');
                 
                 if (!$processingResult['success']) {
                     \Log::warning('ResponseController: Media file processing failed (reply)', [
@@ -612,9 +622,10 @@ class ResponseController extends Controller
                     ]);
                     // 処理に失敗しても続行（ログに記録のみ）
                 } else {
+                    $newFileSize = $disk->exists($path) ? $disk->size($path) : 0;
                     \Log::info('ResponseController: Media file processed successfully (reply)', [
                         'media_type' => $mediaType,
-                        'new_size' => filesize($fullPath),
+                        'new_size' => $newFileSize,
                     ]);
                 }
             }
@@ -865,5 +876,45 @@ class ResponseController extends Controller
         }
         
         return $value;
+    }
+
+    /**
+     * MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
+     *
+     * @param string $mimeType
+     * @param string $mediaType
+     * @return string
+     */
+    private function getExtensionFromMimeType(string $mimeType, string $mediaType): string
+    {
+        $mimeTypeMap = [
+            'image' => [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+            ],
+            'video' => [
+                'video/mp4' => 'mp4',
+                'video/webm' => 'webm',
+            ],
+            'audio' => [
+                'audio/mpeg' => 'mp3',
+                'audio/mp4' => 'm4a',
+                'audio/webm' => 'webm',
+            ],
+        ];
+
+        $mimeTypeLower = strtolower($mimeType);
+        if (isset($mimeTypeMap[$mediaType][$mimeTypeLower])) {
+            return $mimeTypeMap[$mediaType][$mimeTypeLower];
+        }
+
+        // フォールバック: メディアタイプに応じたデフォルト拡張子
+        return match($mediaType) {
+            'image' => 'jpg',
+            'video' => 'mp4',
+            'audio' => 'mp3',
+            default => 'bin',
+        };
     }
 }

@@ -16,6 +16,12 @@ class CspMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // TelescopeのパスではCSPを適用しない（Telescopeのアセットが正しく読み込まれるように）
+        $telescopePath = config('telescope.path', 'telescope');
+        if ($request->is($telescopePath . '*')) {
+            return $next($request);
+        }
+        
         // nonceを生成（リクエストごとに生成）
         $nonce = base64_encode(Str::random(32));
         
@@ -28,6 +34,10 @@ class CspMiddleware
         view()->share('csp_nonce', $nonce);
         
         $response = $next($request);
+
+        // Clickjacking対策: X-Frame-Optionsヘッダーを設定
+        // 古いブラウザとの互換性のため、CSPのframe-ancestorsと併用
+        $response->headers->set('X-Frame-Options', 'DENY');
 
         // CSPが有効な場合のみヘッダーを追加
         if (config('csp.enabled', true)) {

@@ -7,6 +7,7 @@ use App\Models\AdminMessageRead;
 use App\Models\AdminMessageCoinReward;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 
 class NotificationsController extends Controller
 {
@@ -136,7 +137,7 @@ class NotificationsController extends Controller
         }
         
         // IDOR防止: メッセージを開封済みにする権限をチェック
-        $this->authorize('markAsRead', $adminMessage);
+        Gate::authorize('markAsRead', $adminMessage);
         
         $userId = auth()->id();
 
@@ -184,7 +185,7 @@ class NotificationsController extends Controller
         }
         
         // IDOR防止: メッセージに返信する権限をチェック
-        $this->authorize('reply', $message);
+        Gate::authorize('reply', $message);
         
         $request->validate([
             'body' => 'required|string|max:2000',
@@ -261,7 +262,7 @@ class NotificationsController extends Controller
         }
 
         // IDOR防止: メッセージからコインを受け取る権限をチェック
-        $this->authorize('receiveCoin', $message);
+        Gate::authorize('receiveCoin', $message);
         
         // 既にコインを受け取っているかチェック
         if ($message->hasReceivedCoin($userId)) {
@@ -311,7 +312,7 @@ class NotificationsController extends Controller
         }
         
         // IDOR防止: R18変更リクエストを承認する権限をチェック
-        $this->authorize('approveR18Change', $message);
+        Gate::authorize('approveR18Change', $message);
         
         // R18変更リクエストのお知らせかチェック（Policyでチェック済みだが、念のため）
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
@@ -379,7 +380,7 @@ class NotificationsController extends Controller
         }
         
         // IDOR防止: R18変更リクエストを拒否する権限をチェック
-        $this->authorize('rejectR18Change', $message);
+        Gate::authorize('rejectR18Change', $message);
         
         // R18変更リクエストのお知らせかチェック（Policyでチェック済みだが、念のため）
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {

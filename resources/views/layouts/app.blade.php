@@ -14,7 +14,9 @@
     @stack('styles')
 </head>
 <body>
-    @include('layouts.header', ['lang' => $lang])
+    @if(!request()->routeIs('admin.*'))
+        @include('layouts.header', ['lang' => $lang])
+    @endif
     
     <main class="main-content">
         @if (session('login_reward_message'))
@@ -30,7 +32,7 @@
         @yield('content')
     </main>
     
-    <!-- スレッド作成モーダル -->
+    <!-- ルーム作成モーダル -->
     <div class="modal-overlay" id="createThreadModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -39,7 +41,7 @@
             </div>
             
             <div class="modal-body">
-                <!-- 新規スレッドフォーム -->
+                <!-- 新規ルームフォーム -->
                 <section class="post-form">
                     <form action="{{ route('threads.store') }}" method="POST" enctype="multipart/form-data">
                         <!-- CSRF保護 -->

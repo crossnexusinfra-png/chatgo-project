@@ -72,7 +72,7 @@
                 </form>
             </div>
             
-            <!-- 検索結果のスレッド一覧 -->
+            <!-- 検索結果のルーム一覧 -->
             <section class="search-threads">
                 <h2>{{ str_replace('{query}', $query ?? '', \App\Services\LanguageService::trans('search_results_for', $lang)) }}</h2>
                 <div class="posts-grid">
@@ -173,9 +173,9 @@
                             <article class="post-item {{ $isRestricted ? 'restricted-thread' : '' }}">
                                 @php
                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                                    // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                                    // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                                     } else {
                                         $threadImageUrl = $threadImage;
                                     }

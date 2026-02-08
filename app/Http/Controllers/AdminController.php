@@ -1027,8 +1027,9 @@ class AdminController extends Controller
             $user->frozen_until = null;
             $user->save();
             
-            // 垢バン時のお知らせ送信（初回のみ）
+            // 永久凍結ログを記録（初回のみ）
             if (!$wasBanned) {
+                $user->logPermanentBan('アウト数が4以上に達したため永久凍結');
                 $this->sendPermanentBanNotice($user);
             }
             return;
@@ -1039,12 +1040,14 @@ class AdminController extends Controller
             $wasFrozen = $user->frozen_until && $user->frozen_until->isFuture();
             $freezeDuration = $user->calculateFreezeDuration();
             if ($freezeDuration) {
+                $oldFrozenUntil = $user->frozen_until;
                 $user->frozen_until = $freezeDuration;
                 $user->freeze_count++;
                 $user->save();
                 
-                // 凍結時のお知らせ送信（新規凍結の場合のみ）
+                // 凍結ログを記録（新規凍結の場合のみ）
                 if (!$wasFrozen) {
+                    $user->logFreeze($freezeDuration, 'アウト数が2以上に達したため一時凍結');
                     $this->sendFreezeNotice($user, $freezeDuration);
                 }
             }
@@ -1063,10 +1066,12 @@ class AdminController extends Controller
             }
             
             // アウト数が0になった場合は凍結回数もリセット
-            if ($outCount < 1.0) {
+            if ($outCount < 1.0 && $user->frozen_until) {
                 $user->freeze_count = 0;
                 $user->frozen_until = null;
                 $user->save();
+                // 凍結解除ログを記録
+                $user->logFreeze(null, 'アウト数が0になったため凍結解除');
             }
         }
     }

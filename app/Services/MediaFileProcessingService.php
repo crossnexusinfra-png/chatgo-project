@@ -3,23 +3,31 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 class MediaFileProcessingService
 {
     /**
      * 画像ファイルを再エンコード（Intervention Image使用）
+     * S3対応: ファイルパスではなくストレージパスとディスク名を受け取る
      *
-     * @param string $filePath ファイルのフルパス
+     * @param string $storagePath ストレージ内のファイルパス（例: 'response_media/xxx.jpg'）
      * @param string $mediaType メディアタイプ（'image'）
+     * @param string $disk ディスク名（'public' など）
      * @return array ['success' => bool, 'error' => string|null]
      */
-    public function reencodeImage(string $filePath, string $mediaType = 'image'): array
+    public function reencodeImage(string $storagePath, string $mediaType = 'image', string $disk = 'public'): array
     {
+        $diskInstance = Storage::disk($disk);
+        $tempFilePath = null;
+        
         try {
-            if (!file_exists($filePath)) {
+            // ファイルの存在確認
+            if (!$diskInstance->exists($storagePath)) {
                 Log::error('MediaFileProcessingService: File not found', [
-                    'file_path' => $filePath,
+                    'storage_path' => $storagePath,
+                    'disk' => $disk,
                 ]);
                 return [
                     'success' => false,
@@ -37,36 +45,61 @@ class MediaFileProcessingService
             }
 
             Log::info('MediaFileProcessingService: Starting image re-encoding', [
-                'file_path' => $filePath,
+                'storage_path' => $storagePath,
+                'disk' => $disk,
             ]);
 
+            // ストレージドライバーの種類を確認
+            $driver = config("filesystems.disks.{$disk}.driver", 'local');
+            $isLocal = $driver === 'local';
+            
+            // S3などのリモートストレージの場合は一時ファイルにダウンロード
+            if (!$isLocal) {
+                $tempFilePath = tempnam(sys_get_temp_dir(), 'img_process_');
+                $tempFilePath .= '.' . pathinfo($storagePath, PATHINFO_EXTENSION);
+                $diskInstance->get($storagePath, $tempFilePath);
+            } else {
+                // ローカルストレージの場合は直接パスを使用
+                $tempFilePath = $diskInstance->path($storagePath);
+            }
+
             // 元のファイルを読み込んで再エンコード
-            $image = \Intervention\Image\Laravel\Facades\Image::read($filePath);
+            $image = \Intervention\Image\Laravel\Facades\Image::read($tempFilePath);
             
             // 元の拡張子を取得
-            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            $extension = strtolower(pathinfo($storagePath, PATHINFO_EXTENSION));
             
             // 拡張子に応じて適切な形式で再エンコードして保存
             switch ($extension) {
                 case 'jpg':
                 case 'jpeg':
-                    $image->toJpeg(90)->save($filePath); // JPEG品質90%
+                    $image->toJpeg(90)->save($tempFilePath); // JPEG品質90%
                     break;
                 case 'png':
-                    $image->toPng()->save($filePath);
+                    $image->toPng()->save($tempFilePath);
                     break;
                 case 'webp':
-                    $image->toWebp(90)->save($filePath); // WebP品質90%
+                    $image->toWebp(90)->save($tempFilePath); // WebP品質90%
                     break;
                 default:
                     // デフォルトはJPEG
-                    $image->toJpeg(90)->save($filePath);
+                    $image->toJpeg(90)->save($tempFilePath);
                     break;
             }
 
+            // リモートストレージの場合は処理済みファイルをアップロード
+            if (!$isLocal) {
+                $diskInstance->put($storagePath, file_get_contents($tempFilePath));
+                // 一時ファイルを削除
+                if (file_exists($tempFilePath)) {
+                    unlink($tempFilePath);
+                }
+            }
+
+            $newSize = $diskInstance->size($storagePath);
             Log::info('MediaFileProcessingService: Image re-encoded successfully', [
-                'file_path' => $filePath,
-                'new_size' => filesize($filePath),
+                'storage_path' => $storagePath,
+                'new_size' => $newSize,
             ]);
 
             return [
@@ -78,8 +111,14 @@ class MediaFileProcessingService
             Log::error('MediaFileProcessingService: Exception during image re-encoding', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'file_path' => $filePath,
+                'storage_path' => $storagePath,
+                'disk' => $disk,
             ]);
+
+            // 一時ファイルをクリーンアップ
+            if ($tempFilePath && file_exists($tempFilePath) && !$isLocal) {
+                @unlink($tempFilePath);
+            }
 
             return [
                 'success' => false,
@@ -90,17 +129,25 @@ class MediaFileProcessingService
 
     /**
      * 動画・音声ファイルからメタデータを削除（ffmpeg使用）
+     * S3対応: ファイルパスではなくストレージパスとディスク名を受け取る
      *
-     * @param string $filePath ファイルのフルパス
+     * @param string $storagePath ストレージ内のファイルパス（例: 'response_media/xxx.mp4'）
      * @param string $mediaType メディアタイプ（'video' or 'audio'）
+     * @param string $disk ディスク名（'public' など）
      * @return array ['success' => bool, 'error' => string|null]
      */
-    public function removeMetadata(string $filePath, string $mediaType): array
+    public function removeMetadata(string $storagePath, string $mediaType, string $disk = 'public'): array
     {
+        $diskInstance = Storage::disk($disk);
+        $tempFilePath = null;
+        $tempOutputPath = null;
+        
         try {
-            if (!file_exists($filePath)) {
+            // ファイルの存在確認
+            if (!$diskInstance->exists($storagePath)) {
                 Log::error('MediaFileProcessingService: File not found', [
-                    'file_path' => $filePath,
+                    'storage_path' => $storagePath,
+                    'disk' => $disk,
                 ]);
                 return [
                     'success' => false,
@@ -109,21 +156,38 @@ class MediaFileProcessingService
             }
 
             Log::info('MediaFileProcessingService: Starting metadata removal', [
-                'file_path' => $filePath,
+                'storage_path' => $storagePath,
                 'media_type' => $mediaType,
+                'disk' => $disk,
             ]);
 
-            // 一時ファイル名を生成
-            $tempFilePath = $filePath . '.tmp.' . pathinfo($filePath, PATHINFO_EXTENSION);
+            // ストレージドライバーの種類を確認
+            $driver = config("filesystems.disks.{$disk}.driver", 'local');
+            $isLocal = $driver === 'local';
+            
+            // S3などのリモートストレージの場合は一時ファイルにダウンロード
+            if (!$isLocal) {
+                $tempFilePath = tempnam(sys_get_temp_dir(), 'media_input_');
+                $tempFilePath .= '.' . pathinfo($storagePath, PATHINFO_EXTENSION);
+                $diskInstance->get($storagePath, $tempFilePath);
+            } else {
+                // ローカルストレージの場合は直接パスを使用
+                $tempFilePath = $diskInstance->path($storagePath);
+            }
+
+            // 一時出力ファイル名を生成
+            $extension = pathinfo($storagePath, PATHINFO_EXTENSION);
+            $tempOutputPath = tempnam(sys_get_temp_dir(), 'media_output_');
+            $tempOutputPath .= '.' . $extension;
             
             // ffmpegコマンドを実行してメタデータを削除
             $process = new Process([
                 'ffmpeg',
-                '-i', $filePath,
+                '-i', $tempFilePath,
                 '-map_metadata', '-1', // すべてのメタデータを削除
                 '-c', 'copy', // コーデックをコピー（再エンコードしない）
                 '-y', // 上書き確認なし
-                $tempFilePath,
+                $tempOutputPath,
             ]);
 
             $process->setTimeout(300); // 5分のタイムアウト
@@ -134,12 +198,15 @@ class MediaFileProcessingService
                 Log::warning('MediaFileProcessingService: ffmpeg failed', [
                     'error' => $errorOutput,
                     'exit_code' => $process->getExitCode(),
-                    'file_path' => $filePath,
+                    'storage_path' => $storagePath,
                 ]);
 
-                // 一時ファイルが作成されていたら削除
-                if (file_exists($tempFilePath)) {
-                    unlink($tempFilePath);
+                // 一時ファイルをクリーンアップ
+                if ($tempOutputPath && file_exists($tempOutputPath)) {
+                    @unlink($tempOutputPath);
+                }
+                if ($tempFilePath && file_exists($tempFilePath) && !$isLocal) {
+                    @unlink($tempFilePath);
                 }
 
                 // ffmpegがインストールされていない場合
@@ -164,24 +231,49 @@ class MediaFileProcessingService
                 ];
             }
 
-            // 元のファイルを削除して、一時ファイルをリネーム
-            if (file_exists($tempFilePath)) {
-                unlink($filePath);
-                rename($tempFilePath, $filePath);
+            // 処理済みファイルをストレージにアップロード
+            if (file_exists($tempOutputPath)) {
+                if (!$isLocal) {
+                    // リモートストレージの場合はアップロード
+                    $diskInstance->put($storagePath, file_get_contents($tempOutputPath));
+                } else {
+                    // ローカルストレージの場合は直接置き換え
+                    if (file_exists($tempFilePath)) {
+                        @unlink($tempFilePath);
+                    }
+                    rename($tempOutputPath, $tempFilePath);
+                }
+                
+                // 一時出力ファイルを削除（既にアップロード/移動済み）
+                if (file_exists($tempOutputPath)) {
+                    @unlink($tempOutputPath);
+                }
             } else {
-                Log::warning('MediaFileProcessingService: Temporary file not created', [
-                    'file_path' => $filePath,
-                    'temp_file_path' => $tempFilePath,
+                Log::warning('MediaFileProcessingService: Temporary output file not created', [
+                    'storage_path' => $storagePath,
+                    'temp_output_path' => $tempOutputPath,
                 ]);
+                
+                // 一時ファイルをクリーンアップ
+                if ($tempFilePath && file_exists($tempFilePath) && !$isLocal) {
+                    @unlink($tempFilePath);
+                }
+                
                 return [
                     'success' => false,
                     'error' => 'Temporary file was not created.',
                 ];
             }
 
+            // 一時入力ファイルをクリーンアップ（リモートストレージの場合のみ）
+            if ($tempFilePath && file_exists($tempFilePath) && !$isLocal) {
+                @unlink($tempFilePath);
+            }
+
+            $newSize = $diskInstance->size($storagePath);
             Log::info('MediaFileProcessingService: Metadata removed successfully', [
-                'file_path' => $filePath,
-                'new_size' => filesize($filePath),
+                'storage_path' => $storagePath,
+                'new_size' => $newSize,
             ]);
 
             return [
@@ -193,13 +285,16 @@ class MediaFileProcessingService
             Log::error('MediaFileProcessingService: Exception during metadata removal', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'file_path' => $filePath,
+                'storage_path' => $storagePath,
+                'disk' => $disk,
             ]);
 
-            // 一時ファイルが残っていたら削除
-            $tempFilePath = $filePath . '.tmp.' . pathinfo($filePath, PATHINFO_EXTENSION);
-            if (file_exists($tempFilePath)) {
-                unlink($tempFilePath);
+            // 一時ファイルをクリーンアップ
+            if ($tempOutputPath && file_exists($tempOutputPath)) {
+                @unlink($tempOutputPath);
+            }
+            if ($tempFilePath && file_exists($tempFilePath) && !$isLocal) {
+                @unlink($tempFilePath);
             }
 
             return [
@@ -211,17 +306,19 @@ class MediaFileProcessingService
 
     /**
      * メディアファイルを処理（画像は再エンコード、動画・音声はメタデータ削除）
+     * S3対応: ファイルパスではなくストレージパスとディスク名を受け取る
      *
-     * @param string $filePath ファイルのフルパス
+     * @param string $storagePath ストレージ内のファイルパス（例: 'response_media/xxx.jpg'）
      * @param string $mediaType メディアタイプ（'image', 'video', 'audio'）
+     * @param string $disk ディスク名（'public' など）
      * @return array ['success' => bool, 'error' => string|null]
      */
-    public function processMediaFile(string $filePath, string $mediaType): array
+    public function processMediaFile(string $storagePath, string $mediaType, string $disk = 'public'): array
     {
         if ($mediaType === 'image') {
-            return $this->reencodeImage($filePath, $mediaType);
+            return $this->reencodeImage($storagePath, $mediaType, $disk);
         } elseif ($mediaType === 'video' || $mediaType === 'audio') {
-            return $this->removeMetadata($filePath, $mediaType);
+            return $this->removeMetadata($storagePath, $mediaType, $disk);
         } else {
             Log::warning('MediaFileProcessingService: Unknown media type', [
                 'media_type' => $mediaType,

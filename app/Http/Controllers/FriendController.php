@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use App\Services\FriendService;
 use App\Services\LanguageService;
 use App\Models\User;
@@ -151,7 +152,7 @@ class FriendController extends Controller
         $user = Auth::user();
         
         // IDOR防止: 申請の受信者のみ承認可能
-        $this->authorize('accept', $friendRequest);
+        Gate::authorize('accept', $friendRequest);
         
         $result = $this->friendService->acceptFriendRequest($friendRequest);
         
@@ -172,7 +173,7 @@ class FriendController extends Controller
         $user = Auth::user();
         
         // IDOR防止: 申請の受信者のみ拒否可能
-        $this->authorize('reject', $friendRequest);
+        Gate::authorize('reject', $friendRequest);
         
         $result = $this->friendService->rejectFriendRequest($friendRequest);
         

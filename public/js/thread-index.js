@@ -1,5 +1,5 @@
 // thread-index.js
-// スレッド一覧ページ用のJavaScript
+// ルーム一覧ページ用のJavaScript
 
 (function() {
     'use strict';

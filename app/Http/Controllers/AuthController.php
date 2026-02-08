@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use App\Models\User;
+use App\Models\Admin;
 use App\Services\PhoneNumberService;
 use App\Services\VeriphoneService;
 
@@ -32,6 +33,7 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        // まず通常のユーザーとしてログインを試みる
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             
@@ -68,6 +70,48 @@ class AuthController extends Controller
             }
             
             return redirect($intendedUrl);
+        }
+
+        // ユーザーとしてログインできなかった場合、管理者アカウントを確認
+        $admin = Admin::where('email', $credentials['email'])->first();
+        
+        if ($admin && Hash::check($credentials['password'], $admin->password)) {
+            // 管理者アカウントが見つかった場合、同じメールアドレスでユーザーアカウントを検索
+            $user = User::where('email', $credentials['email'])->first();
+            
+            if ($user) {
+                // ユーザーアカウントも存在する場合、そのユーザーとしてログイン
+                Auth::login($user);
+                
+                // セッションIDを再生成（セキュリティ対策）
+                if ($request->hasSession()) {
+                    $request->session()->regenerate();
+                }
+                
+                // 垢バンされたユーザーの場合、ログアウトページにリダイレクト
+                if ($user->is_permanently_banned) {
+                    $lang = \App\Services\LanguageService::getCurrentLanguage();
+                    return redirect()->route('logout')->withErrors([
+                        'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
+                    ]);
+                }
+                
+                // セッションに保存されたURLがあればそこにリダイレクト、なければトップページ
+                $intendedUrl = session('intended_url', '/');
+                session()->forget('intended_url');
+                
+                // 承認待ちのレスポンスがあれば承認フラグを設定
+                $allSessionData = session()->all();
+                foreach ($allSessionData as $key => $value) {
+                    if (strpos($key, 'pending_acknowledge_response_') === 0) {
+                        $responseId = str_replace('pending_acknowledge_response_', '', $key);
+                        session(['acknowledged_response_' . $responseId => true]);
+                        session()->forget($key);
+                    }
+                }
+                
+                return redirect($intendedUrl);
+            }
         }
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();

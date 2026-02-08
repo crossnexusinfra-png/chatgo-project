@@ -1,5 +1,5 @@
 // thread-search.js
-// スレッド検索ページ用のJavaScript
+// ルーム検索ページ用のJavaScript
 
 (function() {
     'use strict';

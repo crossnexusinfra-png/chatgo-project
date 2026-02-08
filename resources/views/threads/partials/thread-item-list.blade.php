@@ -95,7 +95,7 @@
         @php
             $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
             if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
             } else {
                 $threadImageUrl = $threadImage;
             }

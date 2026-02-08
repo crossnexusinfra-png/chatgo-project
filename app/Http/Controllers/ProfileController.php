@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\ResidenceHistory;
@@ -47,7 +48,7 @@ class ProfileController extends Controller
         $user = Auth::user();
         
         // IDOR防止: 自分のプロフィールのみ表示可能
-        $this->authorize('view', $user);
+        Gate::authorize('view', $user);
         
         // 国コードを日本語名に変換
         $user->residence_display = $this->getCountryName($user->residence);
@@ -126,7 +127,7 @@ class ProfileController extends Controller
         $user = Auth::user();
         
         // IDOR防止: 自分のプロフィールのみ編集可能
-        $this->authorize('update', $user);
+        Gate::authorize('update', $user);
         
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -142,7 +143,7 @@ class ProfileController extends Controller
         $user = Auth::user();
         
         // IDOR防止: 自分のプロフィールのみ更新可能
-        $this->authorize('update', $user);
+        Gate::authorize('update', $user);
         
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $messages = [
@@ -413,13 +414,13 @@ class ProfileController extends Controller
             }
             $user = Auth::user();
             // IDOR防止: 自分のスレッド一覧のみ取得可能
-            $this->authorize('viewThreads', $user);
+            Gate::authorize('viewThreads', $user);
         } else {
             $user = User::findOrFail($userId);
             // IDOR防止: 公開プロフィールのスレッド一覧は誰でも閲覧可能
             // ただし、ログインユーザーの場合は自分のスレッドのみ取得可能
             if (Auth::check() && Auth::user()->user_id === $user->user_id) {
-                $this->authorize('viewThreads', $user);
+                Gate::authorize('viewThreads', $user);
             }
         }
         

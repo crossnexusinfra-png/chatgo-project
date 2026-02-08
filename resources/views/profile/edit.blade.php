@@ -101,9 +101,13 @@
                         @if($user->profile_image)
                             <div class="current-image">
                                 @php
-                                    $imageUrl = (strpos($user->profile_image, 'avatars/') !== false || strpos($user->profile_image, 'images/avatars/') !== false)
-                                        ? asset($user->profile_image) 
-                                        : asset('storage/' . $user->profile_image);
+                                    // アバター画像（public/images/avatars/）の場合はasset()を使用
+                                    // それ以外（storage/）の場合はStorage::url()を使用（S3対応）
+                                    if (strpos($user->profile_image, 'avatars/') !== false || strpos($user->profile_image, 'images/avatars/') !== false) {
+                                        $imageUrl = asset($user->profile_image);
+                                    } else {
+                                        $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_image);
+                                    }
                                 @endphp
                                 <img src="{{ $imageUrl }}" alt="{{ \App\Services\LanguageService::trans('profile_image', $lang) }}" class="preview-image">
                                 <p class="current-image-text">{{ \App\Services\LanguageService::trans('current_image', $lang) }}</p>

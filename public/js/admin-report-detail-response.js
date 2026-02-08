@@ -7,7 +7,7 @@
     const config = window.adminReportDetailResponseConfig || {};
     const targetResponseId = config.targetResponseId || null;
 
-    // ページ読み込み時に対象レスポンスまでスクロール
+    // ページ読み込み時に対象リプライまでスクロール
     document.addEventListener('DOMContentLoaded', function() {
         if (!targetResponseId) return;
 
@@ -21,7 +21,7 @@
             const scrollTop = responsesContainer.scrollTop;
             const targetOffsetTop = targetRect.top - containerRect.top + scrollTop;
             
-            // 対象レスポンスが中央付近に来るようにスクロール（少し上に余白を取る）
+            // 対象リプライが中央付近に来るようにスクロール（少し上に余白を取る）
             const scrollPosition = targetOffsetTop - (responsesContainer.clientHeight / 3);
             responsesContainer.scrollTop = Math.max(0, scrollPosition);
         }

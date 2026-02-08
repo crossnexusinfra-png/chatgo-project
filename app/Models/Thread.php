@@ -7,10 +7,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\ThreadChangeLog;
 
 class Thread extends Model
 {
     use HasFactory, SoftDeletes;
+
+    /**
+     * モデルのブートメソッド
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        // 削除時のログ記録
+        static::deleting(function ($thread) {
+            ThreadChangeLog::logDelete($thread, 'スレッドが削除されました');
+        });
+    }
 
     /**
      * 主キーのカラム名を指定
@@ -615,5 +629,26 @@ class Thread extends Model
     public function getCleanTitle(): string
     {
         return preg_replace('/\s*\(続き\)\s*$/', '', $this->title);
+    }
+
+    /**
+     * このスレッドの変更ログを取得
+     */
+    public function changeLogs()
+    {
+        return $this->hasMany(ThreadChangeLog::class, 'thread_id', 'thread_id')
+            ->orderBy('changed_at', 'desc');
+    }
+
+    /**
+     * 非表示ログを記録
+     * 
+     * @param bool $isHidden 非表示かどうか
+     * @param string|null $reason 理由
+     * @return void
+     */
+    public function logHideStatus(bool $isHidden, ?string $reason = null): void
+    {
+        ThreadChangeLog::logHideStatus($this, $isHidden, $reason);
     }
 }

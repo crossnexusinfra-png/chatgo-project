@@ -1,5 +1,5 @@
     @php
-    // 自分のレスポンスかどうかを判定
+    // 自分のリプライかどうかを判定
     $responseUser = $users->get($response->user_id);
     $isMyResponse = $currentUser && $responseUser && $currentUser->user_id === $response->user_id;
     
@@ -18,7 +18,7 @@
         $displayUserName = $baseName . '@' . ($responseUser->user_identifier ?? $responseUser->user_id);
     }
     
-    // レスポンスが非表示にすべきかを判定（コントローラーから渡されたデータを使用）
+    // リプライが非表示にすべきかを判定（コントローラーから渡されたデータを使用）
     $restrictionData = $responseRestrictionData[$response->response_id] ?? [
         'shouldBeHidden' => false,
         'isDeletedByReport' => false,
@@ -77,7 +77,7 @@
         <div class="response-time" data-utc-datetime="{{ $response->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $response->created_at->format('Y-m-d H:i') }}</div>
     </article>
 @elseif($shouldBeHidden && !$isAcknowledged)
-    <!-- レスポンス制限警告 -->
+    <!-- リプライ制限警告 -->
     <article class="response-item restriction-warning">
         <div class="response-restriction-warning-content">
             <h4 class="response-restriction-warning-title">{{ \App\Services\LanguageService::trans('response_restricted_warning', $lang) }}</h4>
@@ -103,7 +103,7 @@
     </article>
 @else
 <article class="response-item {{ $isMyResponse ? 'my-response' : '' }} {{ $shouldBeHidden ? 'reported-response' : '' }}" data-search-text="{{ strtolower($response->body) }}" data-user="{{ strtolower($username) }}" data-response-id="{{ $response->response_id }}">
-    <!-- 返信元のレスポンス簡略表示 -->
+    <!-- 返信元のリプライ簡略表示 -->
     @if($response->parentResponse)
         @php
             $parentResponseUser = $users->get($response->parentResponse->user_id);
@@ -129,13 +129,17 @@
     <div class="response-meta">
         @if($responseUser)
             @if($isMyResponse)
-                {{-- 自分のレスポンスの場合はリンクなしで表示 --}}
+                {{-- 自分のリプライの場合はリンクなしで表示 --}}
                 <div class="user-link-disabled">
                     @if($responseUser->profile_image)
                         @php
-                            $imageUrl = (strpos($responseUser->profile_image, 'avatars/') !== false || strpos($responseUser->profile_image, 'images/avatars/') !== false)
-                                ? asset($responseUser->profile_image) 
-                                : asset('storage/' . $responseUser->profile_image);
+                            // アバター画像（public/images/avatars/）の場合はasset()を使用
+                            // それ以外（storage/）の場合はStorage::url()を使用（S3対応）
+                            if (strpos($responseUser->profile_image, 'avatars/') !== false || strpos($responseUser->profile_image, 'images/avatars/') !== false) {
+                                $imageUrl = asset($responseUser->profile_image);
+                            } else {
+                                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($responseUser->profile_image);
+                            }
                         @endphp
                         <img src="{{ $imageUrl }}" alt="{{ $responseUser->username }}" class="user-avatar">
                     @else
@@ -253,24 +257,23 @@
                     if (strpos($mediaFileDb, 'storage/') === 0) {
                         // 過去のデータ形式: storage/response_media/...
                         $storagePath = str_replace('storage/', '', $mediaFileDb);
-                        $imageUrl = asset('storage/' . $storagePath);
                     } else {
                         // 新しいデータ形式: response_media/...
                         $storagePath = $mediaFileDb;
-                        // Storage::url()を使用（APP_URL/storage/response_media/...を生成）
-                        $imageUrl = \Illuminate\Support\Facades\Storage::url($storagePath);
                     }
                     
-                    // ファイルの存在確認
-                    $fullPath = storage_path('app/public/' . $storagePath);
-                    $fileExists = file_exists($fullPath);
+                    // Storage::url()を使用（S3対応、APP_URL/storage/response_media/...を生成）
+                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
+                    
+                    // ファイルの存在確認（Storageファサードを使用してS3対応）
+                    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+                    $fileExists = $disk->exists($storagePath);
                     
                     // デバッグ用ログ（常に出力）
                     \Log::info('Response image debug', [
                         'response_id' => $response->response_id,
                         'media_file_db' => $mediaFileDb,
                         'storage_path' => $storagePath,
-                        'full_path' => $fullPath,
                         'file_exists' => $fileExists,
                         'image_url' => $imageUrl,
                     ]);
@@ -281,7 +284,6 @@
                             'response_id' => $response->response_id,
                             'media_file_db' => $mediaFileDb,
                             'storage_path' => $storagePath,
-                            'full_path' => $fullPath,
                         ]);
                     }
                 @endphp
@@ -303,12 +305,13 @@
                     if (strpos($mediaFileDb, 'storage/') === 0) {
                         // 過去のデータ形式: storage/response_media/...
                         $storagePath = str_replace('storage/', '', $mediaFileDb);
-                        $videoUrl = asset('storage/' . $storagePath);
                     } else {
                         // 新しいデータ形式: response_media/...
                         $storagePath = $mediaFileDb;
-                        $videoUrl = \Illuminate\Support\Facades\Storage::url($storagePath);
                     }
+                    
+                    // Storage::url()を使用（S3対応）
+                    $videoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
                 @endphp
                 <div class="media-preview-video">
                     <video class="media-video-thumbnail" preload="metadata" onclick="toggleVideoPlay(this)" data-video-src="{{ $videoUrl }}">
@@ -330,12 +333,13 @@
                     if (strpos($mediaFileDb, 'storage/') === 0) {
                         // 過去のデータ形式: storage/response_media/...
                         $storagePath = str_replace('storage/', '', $mediaFileDb);
-                        $audioUrl = asset('storage/' . $storagePath);
                     } else {
                         // 新しいデータ形式: response_media/...
                         $storagePath = $mediaFileDb;
-                        $audioUrl = \Illuminate\Support\Facades\Storage::url($storagePath);
                     }
+                    
+                    // Storage::url()を使用（S3対応）
+                    $audioUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
                 @endphp
                 <div class="media-preview-audio">
                     <audio controls class="audio-player" preload="metadata">

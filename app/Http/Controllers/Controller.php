@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+// Laravel 11ではAuthorizesRequestsトレイトが削除されているため、
+// $this->authorize()の代わりにGate::authorize()を使用してください
+// use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 abstract class Controller
 {
-    use AuthorizesRequests;
+    // use AuthorizesRequests; // Laravel 11では削除されました
 }

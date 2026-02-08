@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 use App\Models\ResidenceHistory;
+use App\Models\UserChangeLog;
 
 class User extends Authenticatable
 {
@@ -70,7 +71,15 @@ class User extends Authenticatable
                 if (isset($original['user_identifier']) && $user->user_identifier !== $original['user_identifier']) {
                     $user->user_identifier = $original['user_identifier'];
                 }
+                
+                // 変更ログを記録
+                $user->logChanges($original);
             }
+        });
+        
+        // 削除時のログ記録
+        static::deleting(function ($user) {
+            UserChangeLog::logDelete($user, 'ユーザーが削除されました');
         });
     }
 
@@ -451,5 +460,104 @@ class User extends Authenticatable
         ];
         
         return $countryMap[$this->residence] ?? $this->residence ?? 'OTHER';
+    }
+
+    /**
+     * このユーザーの変更ログを取得
+     */
+    public function changeLogs()
+    {
+        return $this->hasMany(UserChangeLog::class, 'user_id', 'user_id')
+            ->orderBy('changed_at', 'desc');
+    }
+
+    /**
+     * 変更をログに記録
+     * 
+     * @param array $original 変更前の値
+     * @return void
+     */
+    protected function logChanges(array $original): void
+    {
+        $trackedFields = [
+            'email',
+            'phone',
+            'password',
+            'bio',
+            'profile_image',
+            'nationality',
+            'residence',
+            'birthdate',
+            'language',
+            'frozen_until',
+            'is_permanently_banned',
+            'is_verified',
+            'sms_verified_at',
+            'email_verified_at',
+        ];
+
+        foreach ($trackedFields as $field) {
+            if (array_key_exists($field, $original) && $this->isDirty($field)) {
+                $oldValue = $original[$field];
+                $newValue = $this->getAttribute($field);
+                
+                // パスワードの場合はハッシュ化されているため、変更のみ記録
+                if ($field === 'password') {
+                    $oldValue = '[HASHED]';
+                    $newValue = '[HASHED]';
+                }
+                
+                // 日付型の場合は文字列に変換
+                if ($oldValue instanceof \DateTimeInterface) {
+                    $oldValue = $oldValue->format('Y-m-d H:i:s');
+                }
+                if ($newValue instanceof \DateTimeInterface) {
+                    $newValue = $newValue->format('Y-m-d H:i:s');
+                }
+                
+                UserChangeLog::logUpdate(
+                    $this,
+                    $field,
+                    $oldValue,
+                    $newValue,
+                    "ユーザー情報の{$field}が変更されました"
+                );
+            }
+        }
+    }
+
+    /**
+     * 凍結ログを記録
+     * 
+     * @param \Carbon\Carbon|null $frozenUntil 凍結期限
+     * @param string|null $reason 凍結理由
+     * @return void
+     */
+    public function logFreeze(?\Carbon\Carbon $frozenUntil = null, ?string $reason = null): void
+    {
+        UserChangeLog::logFreeze($this, $frozenUntil, $reason);
+    }
+
+    /**
+     * 永久凍結ログを記録
+     * 
+     * @param string|null $reason 凍結理由
+     * @return void
+     */
+    public function logPermanentBan(?string $reason = null): void
+    {
+        UserChangeLog::logPermanentBan($this, $reason);
+    }
+
+    /**
+     * 非表示ログを記録
+     * 
+     * @param bool $isHidden 非表示かどうか
+     * @param string|null $reason 理由
+     * @return void
+     */
+    public function logHideStatus(bool $isHidden, ?string $reason = null): void
+    {
+        UserChangeLog::logHideStatus($this, $isHidden, $reason);
     }
 }

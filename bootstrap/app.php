@@ -41,6 +41,14 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+
+        $middleware->trustProxies(
+            proxies: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
         // CSPヘッダー追加（nonce対応）
         $middleware->append(\App\Http\Middleware\CspMiddleware::class);
         
@@ -58,6 +66,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // ゲストアクセス記録
         $middleware->append(\App\Http\Middleware\AccessLogger::class);
+        
+        // Cloudflareログ記録（本番環境のみ）
+        // 環境変数を直接チェック（app()は依存性注入のコンテキストで問題を起こす可能性があるため）
+        $env = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?: 'production';
+        if ($env === 'production') {
+            $middleware->append(\App\Http\Middleware\CloudflareLogMiddleware::class);
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Sentryに例外を送信
@@ -66,6 +81,42 @@ return Application::configure(basePath: dirname(__DIR__))
                 app('sentry')->captureException($e);
             });
         }
+        
+        // 異常ログを記録（エラー以上）
+        $exceptions->report(function (\Throwable $e) {
+            try {
+                if (class_exists(\App\Services\LogService::class)) {
+                    \App\Services\LogService::logException($e);
+                } else {
+                    // LogServiceが存在しない場合は直接ログに記録
+                    \Log::channel('error_file')->error('Exception occurred', [
+                        'message' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString(),
+                        'url' => request()->fullUrl(),
+                        'method' => request()->method(),
+                        'ip' => request()->ip(),
+                        'user_id' => auth()->id(),
+                    ]);
+                }
+                
+                // Cloudflare異常検出
+                // 環境変数を直接チェック（app()は依存性注入のコンテキストで問題を起こす可能性があるため）
+                $env = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?: 'production';
+                if ($env === 'production' && class_exists(\App\Services\CloudflareLogService::class)) {
+                    \App\Services\CloudflareLogService::detectAnomaly('Exception occurred', [
+                        'message' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]);
+                }
+            } catch (\Throwable $logError) {
+                // ログ記録自体が失敗した場合はerror_logを使用
+                error_log('Failed to log exception: ' . $logError->getMessage());
+                error_log('Original exception: ' . $e->getMessage());
+            }
+        });
         
         // カスタムエラービューを使用する設定
         // 開発環境でもカスタムエラービューを表示する場合は、以下のコメントを外してください

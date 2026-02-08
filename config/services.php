@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'veriphone' => [
+        'api_key' => env('VERIPHONE_API_KEY'),
+    ],
+
+    'safebrowsing' => [
+        'api_key' => env('SAFEBROWSING_API_KEY'),
+    ],
+
 ];

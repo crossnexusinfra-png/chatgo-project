@@ -8,6 +8,7 @@ use App\Models\Response;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class ReportController extends Controller
 {
@@ -60,7 +61,7 @@ class ReportController extends Controller
         
         // IDOR防止: 自分の通報のみ表示可能
         if ($report) {
-            $this->authorize('view', $report);
+            \Illuminate\Support\Facades\Gate::authorize('view', $report);
         }
 
         // R18タグ（3種類）を定義
@@ -105,7 +106,7 @@ class ReportController extends Controller
         }
         
         // IDOR防止: 通報を作成する権限をチェック
-        $this->authorize('create', Report::class);
+        \Illuminate\Support\Facades\Gate::authorize('create', Report::class);
 
         // バリデーション
         $validated = $request->validate([

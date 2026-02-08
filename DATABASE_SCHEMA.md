@@ -310,21 +310,66 @@
 
 ---
 
-## 20. access_logs（アクセスログ）
+## 21. password_reset_tokens（パスワードリセットトークン）
+
+## 21. user_change_logs（ユーザー変更ログ）
 
 | カラム名 | 制限 | 文字数制限 | 内容 |
 |---------|------|-----------|------|
-| id | PRIMARY KEY | - | ログID（自動採番） |
-| type | NOT NULL | - | アクセスタイプ（'guest_visit' | 'login'） |
-| user_id | NULL可, INDEX | - | ユーザーID（ログイン時のみ） |
-| path | NULL可 | - | アクセスパス |
-| ip | NULL可 | - | IPアドレス |
-| created_at | NOT NULL | - | 作成日時（アクセス日時） |
-| updated_at | NULL可 | - | 更新日時 |
+| log_id | PRIMARY KEY | - | ログID（自動採番） |
+| user_id | NOT NULL, FOREIGN KEY, INDEX | - | 対象ユーザーID（FK → users.user_id, onDelete: cascade） |
+| action_type | NOT NULL, INDEX | 50文字 | アクションタイプ（'update' | 'delete' | 'freeze' | 'unfreeze' | 'permanent_ban' | 'hide' | 'unhide'） |
+| field_name | NULL可 | 100文字 | 変更されたフィールド名（update操作の場合） |
+| old_value | NULL可 | - | 変更前の値（テキスト形式） |
+| new_value | NULL可 | - | 変更後の値（テキスト形式） |
+| changed_by_user_id | NULL可, FOREIGN KEY, INDEX | - | 変更を実行したユーザーID（FK → users.user_id, onDelete: set null） |
+| ip_address | NULL可, INDEX | 45文字 | 操作を実行したIPアドレス |
+| user_agent | NULL可 | - | 操作を実行したユーザーエージェント（text） |
+| reason | NULL可 | - | 変更理由（text） |
+| metadata | NULL可 | - | 追加情報（JSON形式） |
+| changed_at | NOT NULL, INDEX | - | 変更日時（timestamp） |
+| created_at | NOT NULL | - | レコード作成日時 |
+| updated_at | NULL可 | - | レコード更新日時 |
 
 ---
 
-## 21. password_reset_tokens（パスワードリセットトークン）
+## 22. thread_change_logs（スレッド変更ログ）
+
+| カラム名 | 制限 | 文字数制限 | 内容 |
+|---------|------|-----------|------|
+| log_id | PRIMARY KEY | - | ログID（自動採番） |
+| thread_id | NOT NULL, FOREIGN KEY, INDEX | - | 対象スレッドID（FK → threads.thread_id, onDelete: cascade） |
+| action_type | NOT NULL, INDEX | 50文字 | アクションタイプ（'delete' | 'hide' | 'unhide'） |
+| changed_by_user_id | NULL可, FOREIGN KEY, INDEX | - | 変更を実行したユーザーID（FK → users.user_id, onDelete: set null） |
+| ip_address | NULL可, INDEX | 45文字 | 操作を実行したIPアドレス |
+| user_agent | NULL可 | - | 操作を実行したユーザーエージェント（text） |
+| reason | NULL可 | - | 変更理由（text） |
+| metadata | NULL可 | - | 追加情報（JSON形式） |
+| changed_at | NOT NULL, INDEX | - | 変更日時（timestamp） |
+| created_at | NOT NULL | - | レコード作成日時 |
+| updated_at | NULL可 | - | レコード更新日時 |
+
+---
+
+## 23. response_change_logs（レスポンス変更ログ）
+
+| カラム名 | 制限 | 文字数制限 | 内容 |
+|---------|------|-----------|------|
+| log_id | PRIMARY KEY | - | ログID（自動採番） |
+| response_id | NOT NULL, FOREIGN KEY, INDEX | - | 対象レスポンスID（FK → responses.response_id, onDelete: cascade） |
+| action_type | NOT NULL, INDEX | 50文字 | アクションタイプ（'delete' | 'hide' | 'unhide'） |
+| changed_by_user_id | NULL可, FOREIGN KEY, INDEX | - | 変更を実行したユーザーID（FK → users.user_id, onDelete: set null） |
+| ip_address | NULL可, INDEX | 45文字 | 操作を実行したIPアドレス |
+| user_agent | NULL可 | - | 操作を実行したユーザーエージェント（text） |
+| reason | NULL可 | - | 変更理由（text） |
+| metadata | NULL可 | - | 追加情報（JSON形式） |
+| changed_at | NOT NULL, INDEX | - | 変更日時（timestamp） |
+| created_at | NOT NULL | - | レコード作成日時 |
+| updated_at | NULL可 | - | レコード更新日時 |
+
+---
+
+## 24. password_reset_tokens（パスワードリセットトークン）
 
 | カラム名 | 制限 | 文字数制限 | 内容 |
 |---------|------|-----------|------|
@@ -334,7 +379,7 @@
 
 ---
 
-## 22. sessions（セッション）
+## 25. sessions（セッション）
 
 | カラム名 | 制限 | 文字数制限 | 内容 |
 |---------|------|-----------|------|
@@ -370,6 +415,10 @@
 - `residence_histories.user_id` → `users.user_id` (cascade)
 - `reports.user_id` → `users.user_id` (cascade)
 - `admin_messages.user_id` → `users.user_id` (cascade)
+- `user_change_logs.user_id` → `users.user_id` (cascade)
+- `user_change_logs.changed_by_user_id` → `users.user_id` (set null)
+- `thread_change_logs.changed_by_user_id` → `users.user_id` (set null)
+- `response_change_logs.changed_by_user_id` → `users.user_id` (set null)
 
 ### threadsテーブルを参照する外部キー
 - `responses.thread_id` → `threads.thread_id` (cascade)
@@ -381,10 +430,12 @@
 - `admin_messages.thread_id` → `threads.thread_id` (cascade)
 - `threads.parent_thread_id` → `threads.thread_id` (set null)
 - `threads.continuation_thread_id` → `threads.thread_id` (set null)
+- `thread_change_logs.thread_id` → `threads.thread_id` (cascade)
 
 ### responsesテーブルを参照する外部キー
 - `responses.parent_response_id` → `responses.response_id` (cascade)
 - `reports.response_id` → `responses.response_id` (cascade)
+- `response_change_logs.response_id` → `responses.response_id` (cascade)
 
 ### admin_messagesテーブルを参照する外部キー
 - `admin_message_reads.admin_message_id` → `admin_messages.id` (cascade)
@@ -429,6 +480,21 @@
 - `access_logs.user_id` (INDEX)
 - `sessions.user_id` (INDEX)
 - `sessions.last_activity` (INDEX)
+- `user_change_logs.user_id` (INDEX)
+- `user_change_logs.action_type` (INDEX)
+- `user_change_logs.changed_by_user_id` (INDEX)
+- `user_change_logs.changed_at` (INDEX)
+- `user_change_logs.ip_address` (INDEX)
+- `thread_change_logs.thread_id` (INDEX)
+- `thread_change_logs.action_type` (INDEX)
+- `thread_change_logs.changed_by_user_id` (INDEX)
+- `thread_change_logs.changed_at` (INDEX)
+- `thread_change_logs.ip_address` (INDEX)
+- `response_change_logs.response_id` (INDEX)
+- `response_change_logs.action_type` (INDEX)
+- `response_change_logs.changed_by_user_id` (INDEX)
+- `response_change_logs.changed_at` (INDEX)
+- `response_change_logs.ip_address` (INDEX)
 
 ### 複合ユニーク制約
 - `(friendships.user_id, friendships.friend_id)`

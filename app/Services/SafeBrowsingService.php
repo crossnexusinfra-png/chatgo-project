@@ -4,11 +4,19 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\SecureHttpClientService;
 
 class SafeBrowsingService
 {
     private const API_URL = 'https://safebrowsing.googleapis.com/v4/threatMatches:find';
-    private const API_KEY = 'AIzaSyCRuxLAOnUN_L6FAxpxbbj2E-6fLn-kkTc';
+
+    /**
+     * APIキーを取得
+     */
+    private function getApiKey(): string
+    {
+        return (string) config('services.safebrowsing.api_key', '');
+    }
 
     /**
      * URLが安全かどうかをチェック
@@ -19,6 +27,18 @@ class SafeBrowsingService
     public function checkUrl(string $url): array
     {
         try {
+            // APIキーが空の場合のチェック
+            $apiKey = $this->getApiKey();
+            if (empty($apiKey)) {
+                Log::warning('SafeBrowsingService: APIキーが設定されていません');
+                // APIキーがない場合は安全側に倒して拒否
+                return [
+                    'safe' => false,
+                    'error' => 'api_key_not_configured',
+                    'threats' => []
+                ];
+            }
+
             Log::info('SafeBrowsingService: URL check started', ['url' => $url]);
             
             // URLを正規化
@@ -61,7 +81,22 @@ class SafeBrowsingService
                 'url' => $normalizedUrl
             ]);
 
-            $response = Http::timeout(10)->post(self::API_URL . '?key=' . self::API_KEY, $requestData);
+            // セキュアなHTTPクライアントを使用
+            $url = self::API_URL . '?key=' . $this->getApiKey();
+            $response = SecureHttpClientService::post($url, $requestData, [
+                'timeout' => 10,
+            ]);
+            
+            if (!$response) {
+                Log::warning('SafeBrowsingService: Secure HTTP client returned null', [
+                    'url' => $normalizedUrl
+                ]);
+                return [
+                    'safe' => false,
+                    'error' => 'api_error',
+                    'threats' => []
+                ];
+            }
 
             Log::info('SafeBrowsingService: API response received', [
                 'status' => $response->status(),

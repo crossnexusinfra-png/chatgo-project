@@ -131,8 +131,9 @@ body {
 }
 
 .logo-image {
-    height: 40px;
+    height: 50px;
     width: auto;
+    border-radius: 8px;
 }
 
 .header-center {
@@ -1138,7 +1139,8 @@ body {
     }
     
     .logo-image {
-        height: 32px;
+        height: 40px;
+        border-radius: 6px;
     }
     
     .header-right {
@@ -1204,7 +1206,8 @@ body {
     }
     
     .logo-image {
-        height: 28px;
+        height: 35px;
+        border-radius: 5px;
     }
     
     .header-right {
@@ -1990,7 +1993,7 @@ body {
 }
 
 .terms-content {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     margin-bottom: 30px;
     padding: 20px;
@@ -2013,8 +2016,50 @@ body {
 }
 
 .terms-text {
-    line-height: 1.6;
+    line-height: 1.7;
     color: #555;
+}
+
+.terms-article {
+    margin-bottom: 1.5em;
+}
+
+.terms-article-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5em;
+}
+
+.terms-article-text {
+    margin-left: 0;
+    white-space: pre-line;
+}
+
+.terms-section-privacy {
+    margin-top: 2em;
+    padding-top: 1.5em;
+    border-top: 1px solid #e9ecef;
+}
+
+.terms-text .terms-privacy-intro {
+    margin-bottom: 1.25em;
+}
+
+.terms-privacy-block {
+    margin-bottom: 1.25em;
+}
+
+.terms-privacy-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.4em;
+}
+
+.terms-privacy-text {
+    margin-left: 0;
+    white-space: pre-line;
 }
 
 .terms-text p {

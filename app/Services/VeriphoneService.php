@@ -4,15 +4,23 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\SecureHttpClientService;
 
 class VeriphoneService
 {
     private const API_BASE_URL = 'https://api.veriphone.io/v2/verify';
-    private const API_KEY = 'ACA713A36B1A448497776A4415E10D32';
     
     // 開発環境でAPIリクエストをスキップする場合にtrueに設定
     // 仮想サーバーやWSL環境で外部APIにアクセスできない場合はtrueに設定
     private const SKIP_API_IN_DEV = true;
+
+    /**
+     * APIキーを取得
+     */
+    private static function getApiKey(): string
+    {
+        return (string) config('services.veriphone.api_key', '');
+    }
 
     /**
      * 電話番号を検証し、VOIP番号かどうかをチェック
@@ -23,6 +31,17 @@ class VeriphoneService
     public static function verifyPhone(string $phoneNumber): array
     {
         try {
+            // APIキーが空の場合のチェック
+            $apiKey = self::getApiKey();
+            if (empty($apiKey)) {
+                Log::warning('VeriphoneService: APIキーが設定されていません');
+                return [
+                    'is_valid' => false,
+                    'is_voip' => false,
+                    'message' => '電話番号の検証に失敗しました。設定を確認してください。',
+                ];
+            }
+
             // 開発環境でAPIリクエストをスキップする場合
             if (self::SKIP_API_IN_DEV && app()->environment('local')) {
                 Log::info('VeriphoneService: APIリクエストをスキップ（開発環境）', [
@@ -69,10 +88,23 @@ class VeriphoneService
             
             // APIリクエスト（タイムアウトを5秒に短縮）
             try {
-                $response = Http::timeout(5)->get(self::API_BASE_URL, [
-                    'key' => self::API_KEY,
-                    'phone' => $cleanPhone,
+                // セキュアなHTTPクライアントを使用
+                // URLパラメータは適切にエンコード
+                $url = self::API_BASE_URL . '?key=' . urlencode(self::getApiKey()) . '&phone=' . urlencode($cleanPhone);
+                $response = SecureHttpClientService::get($url, [
+                    'timeout' => 5,
                 ]);
+                
+                if (!$response) {
+                    Log::error('Veriphone API secure client returned null', [
+                        'phone' => $cleanPhone,
+                    ]);
+                    return [
+                        'is_valid' => false,
+                        'is_voip' => false,
+                        'message' => '電話番号の検証に失敗しました。しばらくしてから再度お試しください。',
+                    ];
+                }
             } catch (\Illuminate\Http\Client\ConnectionException $e) {
                 Log::error('Veriphone API connection timeout', [
                     'phone' => $cleanPhone,

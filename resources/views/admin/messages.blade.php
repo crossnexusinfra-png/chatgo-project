@@ -22,17 +22,29 @@
     @endif
 
         <div class="card admin-card">
-        <form method="post" action="{{ route('admin.messages.store') }}">
+        <form method="post" action="{{ route('admin.messages.store') }}" id="admin-messages-form">
             @csrf
+            @php
+                $templates = config('admin.message_templates', []);
+            @endphp
+            @if(!empty($templates))
+                <label>テンプレート</label>
+                <select id="message-template-select">
+                    <option value="">テンプレートを選択してください</option>
+                    @foreach($templates as $key => $template)
+                        <option value="{{ $key }}">{{ $template['name'] }}</option>
+                    @endforeach
+                </select>
+            @endif
             <label>{{ \App\Services\LanguageService::trans('admin_messages_target', $lang) }}</label>
-            <select name="audience" required>
+            <select name="audience" id="audience" required>
                 <option value="members">{{ \App\Services\LanguageService::trans('admin_messages_target_members', $lang) }}</option>
                 <option value="guests">{{ \App\Services\LanguageService::trans('admin_messages_target_guests', $lang) }}</option>
             </select>
             <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
-            <input type="text" name="title" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+            <input type="text" name="title" id="title" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
             <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}</label>
-            <textarea name="body" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
+            <textarea name="body" id="body" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
                 <div class="admin-messages-form-row">
                     <label class="admin-messages-label-flex">
                     <input type="checkbox" name="allows_reply" value="1" id="allows_reply">
@@ -50,7 +62,7 @@
                 </label>
             </div>
             <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                <input type="number" name="coin_amount" min="0" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_coin_amount_placeholder', $lang) }}" class="admin-messages-input-full">
+                <input type="number" name="coin_amount" id="coin_amount" min="0" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_coin_amount_placeholder', $lang) }}" class="admin-messages-input-full">
                 <div class="admin-messages-submit-container">
                 <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_send', $lang) }}</button>
             </div>
@@ -105,6 +117,63 @@
     </div>
 </div>
     <script src="{{ asset('js/admin-messages.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+    <script nonce="{{ $csp_nonce ?? '' }}">
+        (function() {
+            const templates = @json(config('admin.message_templates', []));
+            
+            function applyTemplate(templateKey) {
+                if (!templateKey || !templates[templateKey]) {
+                    return;
+                }
+                
+                const template = templates[templateKey];
+                
+                // フォームフィールドに値を設定
+                const titleField = document.getElementById('title');
+                const bodyField = document.getElementById('body');
+                const coinAmountField = document.getElementById('coin_amount');
+                const audienceField = document.getElementById('audience');
+                
+                if (titleField && template.title) {
+                    titleField.value = template.title;
+                }
+                
+                if (bodyField && template.body) {
+                    bodyField.value = template.body;
+                }
+                
+                if (coinAmountField && template.coin_amount !== undefined) {
+                    coinAmountField.value = template.coin_amount;
+                }
+                
+                if (audienceField && template.audience) {
+                    audienceField.value = template.audience;
+                }
+            }
+            
+            // グローバルスコープに公開
+            window.applyTemplate = applyTemplate;
+            
+            // DOMContentLoadedで初期化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const select = document.getElementById('message-template-select');
+                    if (select) {
+                        select.addEventListener('change', function() {
+                            applyTemplate(this.value);
+                        });
+                    }
+                });
+            } else {
+                const select = document.getElementById('message-template-select');
+                if (select) {
+                    select.addEventListener('change', function() {
+                        applyTemplate(this.value);
+                    });
+                }
+            }
+        })();
+    </script>
 @endsection
 
 

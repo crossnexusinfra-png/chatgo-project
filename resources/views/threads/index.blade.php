@@ -69,7 +69,7 @@
                     </div>
                 </div>
 
-                <!-- 広告動画視聴でコイン獲得（アクセス数の多いスレッドの上） -->
+                <!-- 広告動画視聴でコイン獲得（アクセス数の多いルームの上） -->
                 <section class="post-list post-list-margin">
                     <div class="thread-category">
                         <h3 class="category-title">
@@ -228,9 +228,9 @@
                                             <article class="thread-item {{ $isRestricted ? 'restricted-thread' : '' }}">
                                                 @php
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                                                    // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                                                    // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -342,7 +342,7 @@
                     
                     
 
-                    {{-- お気に入りのスレッド（ログイン時のみ） --}}
+                    {{-- お気に入りのルーム（ログイン時のみ） --}}
                     @auth
                         @if(isset($favoriteThreads) && $favoriteThreads->isNotEmpty())
                             <div class="thread-category">
@@ -366,9 +366,9 @@
                                             <article class="thread-item {{ $isRestricted ? 'restricted-thread' : '' }}">
                                                 @php
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                                                    // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                                                    // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -454,7 +454,7 @@
                         @endif
                     @endauth
 
-                    {{-- 最近アクセスしたスレッド（ログイン時のみ） --}}
+                    {{-- 最近アクセスしたルーム（ログイン時のみ） --}}
                     @auth
                         @if(isset($recentAccessThreads) && $recentAccessThreads->isNotEmpty())
                             <div class="thread-category">
@@ -478,9 +478,9 @@
                                             <article class="thread-item {{ $isRestricted ? 'restricted-thread' : '' }}">
                                                 @php
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                                                    // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                                                    // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -595,9 +595,9 @@
                                             <article class="thread-item {{ $isRestricted ? 'restricted-thread' : '' }}">
                                                 @php
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
-                                                    // Storage::url()を使用してURLを取得（image_pathがstorageパスの場合）
+                                                    // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::url($thread->image_path);
+                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }

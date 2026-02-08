@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use App\Models\AdminMessage;
 use App\Models\AdminMessageRead;
@@ -25,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 必須設定のバリデーション（起動・安全に直結する設定）
+        $this->validateRequiredConfigurations();
+        
         // キャッシュドライバーの安全性チェック
         $this->ensureSafeCacheDriver();
         
@@ -142,6 +146,89 @@ class AppServiceProvider extends ServiceProvider
                 // エラーは無視
             }
         });
+    }
+
+    /**
+     * 必須設定のバリデーション
+     * 起動・安全に直結する設定が正しく設定されているかチェック
+     */
+    private function validateRequiredConfigurations(): void
+    {
+        $errors = [];
+        
+        // 1. APP_KEY（暗号化キー）のチェック
+        $appKey = config('app.key');
+        if (empty($appKey)) {
+            $errors[] = 'APP_KEYが設定されていません。php artisan key:generate を実行してください。';
+        } elseif (strlen($appKey) < 32) {
+            $errors[] = 'APP_KEYが不正です。32文字以上のランダムな文字列である必要があります。';
+        }
+        
+        // 2. データベース接続設定のチェック（SQLite以外の場合）
+        $dbConnection = config('database.default');
+        if ($dbConnection !== 'sqlite') {
+            $dbConfig = config("database.connections.{$dbConnection}");
+            
+            if (empty($dbConfig['database'])) {
+                $errors[] = "データベース名（DB_DATABASE）が設定されていません。";
+            }
+            
+            if (empty($dbConfig['username'])) {
+                $errors[] = "データベースユーザー名（DB_USERNAME）が設定されていません。";
+            }
+            
+            // パスワードは空でも接続できる場合があるため、警告のみ
+            if (empty($dbConfig['password'])) {
+                Log::warning('データベースパスワード（DB_PASSWORD）が設定されていません。セキュリティ上のリスクがあります。');
+            }
+        }
+        
+        // 3. セッション設定のチェック
+        $sessionDriver = config('session.driver');
+        if (in_array($sessionDriver, ['database', 'redis'])) {
+            if ($sessionDriver === 'database') {
+                // データベースセッションの場合、テーブルが存在するかはマイグレーションで確認
+                // ここでは設定値のみチェック
+                if (empty(config('session.table'))) {
+                    $errors[] = 'セッションテーブル名（SESSION_TABLE）が設定されていません。';
+                }
+            } elseif ($sessionDriver === 'redis') {
+                // Redisセッションの場合、Redis設定をチェック
+                $redisHost = config('database.redis.default.host');
+                if (empty($redisHost)) {
+                    $errors[] = 'Redisホスト（REDIS_HOST）が設定されていません。';
+                }
+                // Redisパスワードは空でも接続できる場合があるため、警告のみ
+                if (empty(config('database.redis.default.password'))) {
+                    Log::warning('Redisパスワード（REDIS_PASSWORD）が設定されていません。セキュリティ上のリスクがあります。');
+                }
+            }
+        }
+        
+        // 4. 本番環境での追加チェック
+        if (app()->environment('production')) {
+            if (config('app.debug') === true) {
+                $errors[] = '本番環境でAPP_DEBUGがtrueに設定されています。セキュリティ上のリスクがあります。';
+            }
+            
+            if (empty(config('app.url')) || config('app.url') === 'http://localhost') {
+                $errors[] = '本番環境でAPP_URLが適切に設定されていません。';
+            }
+        }
+        
+        // エラーがある場合は例外をスロー
+        if (!empty($errors)) {
+            $errorMessage = "必須設定の検証に失敗しました:\n" . implode("\n", $errors);
+            Log::error($errorMessage);
+            
+            // 本番環境では例外をスローして起動を阻止
+            if (app()->environment('production')) {
+                throw new \RuntimeException($errorMessage);
+            } else {
+                // 開発環境では警告ログのみ
+                Log::warning($errorMessage);
+            }
+        }
     }
 
     /**

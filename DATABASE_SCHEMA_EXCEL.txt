@@ -203,6 +203,45 @@ access_logs	ip	NULL可	-	IPアドレス
 access_logs	created_at	NOT NULL	-	作成日時（アクセス日時）
 access_logs	updated_at	NULL可	-	更新日時
 
+user_change_logs	log_id	PRIMARY KEY	-	ログID（自動採番）
+user_change_logs	user_id	NOT NULL, FOREIGN KEY, INDEX	-	対象ユーザーID（FK → users.user_id, onDelete: cascade）
+user_change_logs	action_type	NOT NULL, INDEX	50文字	アクションタイプ（'update' | 'delete' | 'freeze' | 'unfreeze' | 'permanent_ban' | 'hide' | 'unhide'）
+user_change_logs	field_name	NULL可	100文字	変更されたフィールド名（update操作の場合）
+user_change_logs	old_value	NULL可	-	変更前の値（テキスト形式）
+user_change_logs	new_value	NULL可	-	変更後の値（テキスト形式）
+user_change_logs	changed_by_user_id	NULL可, FOREIGN KEY, INDEX	-	変更を実行したユーザーID（FK → users.user_id, onDelete: set null）
+user_change_logs	ip_address	NULL可, INDEX	45文字	操作を実行したIPアドレス
+user_change_logs	user_agent	NULL可	-	操作を実行したユーザーエージェント（text）
+user_change_logs	reason	NULL可	-	変更理由（text）
+user_change_logs	metadata	NULL可	-	追加情報（JSON形式）
+user_change_logs	changed_at	NOT NULL, INDEX	-	変更日時（timestamp）
+user_change_logs	created_at	NOT NULL	-	レコード作成日時
+user_change_logs	updated_at	NULL可	-	レコード更新日時
+
+thread_change_logs	log_id	PRIMARY KEY	-	ログID（自動採番）
+thread_change_logs	thread_id	NOT NULL, FOREIGN KEY, INDEX	-	対象スレッドID（FK → threads.thread_id, onDelete: cascade）
+thread_change_logs	action_type	NOT NULL, INDEX	50文字	アクションタイプ（'delete' | 'hide' | 'unhide'）
+thread_change_logs	changed_by_user_id	NULL可, FOREIGN KEY, INDEX	-	変更を実行したユーザーID（FK → users.user_id, onDelete: set null）
+thread_change_logs	ip_address	NULL可, INDEX	45文字	操作を実行したIPアドレス
+thread_change_logs	user_agent	NULL可	-	操作を実行したユーザーエージェント（text）
+thread_change_logs	reason	NULL可	-	変更理由（text）
+thread_change_logs	metadata	NULL可	-	追加情報（JSON形式）
+thread_change_logs	changed_at	NOT NULL, INDEX	-	変更日時（timestamp）
+thread_change_logs	created_at	NOT NULL	-	レコード作成日時
+thread_change_logs	updated_at	NULL可	-	レコード更新日時
+
+response_change_logs	log_id	PRIMARY KEY	-	ログID（自動採番）
+response_change_logs	response_id	NOT NULL, FOREIGN KEY, INDEX	-	対象レスポンスID（FK → responses.response_id, onDelete: cascade）
+response_change_logs	action_type	NOT NULL, INDEX	50文字	アクションタイプ（'delete' | 'hide' | 'unhide'）
+response_change_logs	changed_by_user_id	NULL可, FOREIGN KEY, INDEX	-	変更を実行したユーザーID（FK → users.user_id, onDelete: set null）
+response_change_logs	ip_address	NULL可, INDEX	45文字	操作を実行したIPアドレス
+response_change_logs	user_agent	NULL可	-	操作を実行したユーザーエージェント（text）
+response_change_logs	reason	NULL可	-	変更理由（text）
+response_change_logs	metadata	NULL可	-	追加情報（JSON形式）
+response_change_logs	changed_at	NOT NULL, INDEX	-	変更日時（timestamp）
+response_change_logs	created_at	NOT NULL	-	レコード作成日時
+response_change_logs	updated_at	NULL可	-	レコード更新日時
+
 password_reset_tokens	email	PRIMARY KEY	-	メールアドレス（主キー）
 password_reset_tokens	token	NOT NULL	-	リセットトークン
 password_reset_tokens	created_at	NULL可	-	作成日時（トークン発行日時）
