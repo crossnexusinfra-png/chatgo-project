@@ -24,6 +24,7 @@ class Response extends Model
         'thread_id',
         'parent_response_id',
         'body',
+        'source_lang',
         'user_id',
         'responses_num',
         'media_file',

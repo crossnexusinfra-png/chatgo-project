@@ -16,6 +16,7 @@ class SecureHttpClientService
         return [
             'safebrowsing.googleapis.com',
             'api.veriphone.io',
+            'api.openai.com',
         ];
     }
 
@@ -128,6 +129,16 @@ class SecureHttpClientService
 
             // HTTPクライアントの設定
             $client = Http::timeout($timeout);
+
+            // カスタムヘッダー（オプション）
+            if (!empty($options['headers']) && is_array($options['headers'])) {
+                $client = $client->withHeaders($options['headers']);
+            }
+
+            // JSONボディで送信（オプション）
+            if (!empty($options['json'])) {
+                $client = $client->asJson();
+            }
             
             // リダイレクトの制限
             if ($maxRedirects === 0) {

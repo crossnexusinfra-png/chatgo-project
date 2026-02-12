@@ -388,10 +388,12 @@ class ResponseController extends Controller
         }
         
         $userId = auth()->user()->user_id;
-        
+        $sendTimeLang = \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN');
+
         $createdResponse = $thread->responses()->create([
             'user_id' => $userId,
             'body' => $request->body ?? '',
+            'source_lang' => $sendTimeLang,
             'responses_num' => $responsesNum,
             'parent_response_id' => $request->parent_response_id ?? null,
             'media_file' => $mediaFile,
@@ -738,10 +740,14 @@ class ResponseController extends Controller
         ]);
         
         $userId = auth()->check() ? auth()->user()->user_id : null;
-        
+        $sendTimeLang = auth()->check()
+            ? \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN')
+            : 'EN';
+
         $createdResponse = $thread->responses()->create([
             'user_id' => $userId,
             'body' => $request->body ?? '',
+            'source_lang' => $sendTimeLang,
             'responses_num' => $responsesNum,
             'parent_response_id' => $response->response_id,
             'media_file' => $mediaFile,

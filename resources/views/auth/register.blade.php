@@ -7,8 +7,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>{{ \App\Services\LanguageService::trans('register_title', $lang) }} - BBS</title>
-    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/app.css') }}?v=2" rel="stylesheet">
     <link href="{{ asset('css/bbs.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -92,7 +95,7 @@
                 
                 <div class="form-group">
                     <label for="password">{{ \App\Services\LanguageService::trans('register_password_label', $lang) }} <span class="required">*</span></label>
-                    <input type="password" id="password" name="password" required>
+                    <input type="password" id="password" name="password" required autocomplete="new-password">
                     <small class="form-help">{{ \App\Services\LanguageService::trans('register_password_help', $lang) }}</small>
                     <div id="password-requirements" class="password-requirements">
                         <div class="requirement" id="req-length">
@@ -115,7 +118,7 @@
                 
                 <div class="form-group">
                     <label for="password_confirmation">{{ \App\Services\LanguageService::trans('register_password_confirmation_label', $lang) }} <span class="required">*</span></label>
-                    <input type="password" id="password_confirmation" name="password_confirmation" required>
+                    <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password">
                 </div>
                 
                 <div class="form-group">

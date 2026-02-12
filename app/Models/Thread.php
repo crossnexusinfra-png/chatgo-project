@@ -38,6 +38,7 @@ class Thread extends Model
      */
     protected $fillable = [
         'title',
+        'source_lang',
         'tag',
         'user_id',
         'responses_count',

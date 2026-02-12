@@ -243,8 +243,8 @@ class AuthController extends Controller
             'phone_local' => 'required|string|max:20',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:16|confirmed',
-            'nationality' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
-            'residence' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
+            'nationality' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
+            'residence' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
             'birthdate' => 'required|date|before:today',
             'invite_code' => 'nullable|string|max:20|exists:users,invite_code',
         ], $messages);

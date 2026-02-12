@@ -118,7 +118,7 @@
         @endphp
         <div class="reply-source" onclick="scrollToResponse({{ $response->parentResponse->response_id }})">
             <span class="reply-source-user">{{ $parentDisplayUserName }}</span>
-            <span class="reply-source-body">{!! linkify_urls($response->parentResponse->body) !!}</span>
+            <span class="reply-source-body">{!! linkify_urls($response->parentResponse->display_body ?? $response->parentResponse->body) !!}</span>
         </div>
     @endif
 
@@ -243,7 +243,7 @@
     </div>
     
     @if(!empty($response->body))
-        <div class="response-body">{!! linkify_urls($response->body) !!}</div>
+        <div class="response-body">{!! linkify_urls($response->display_body ?? $response->body) !!}</div>
     @endif
     
     @if($response->media_file)

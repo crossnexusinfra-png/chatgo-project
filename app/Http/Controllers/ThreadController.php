@@ -760,9 +760,12 @@ class ThreadController extends Controller
         
         $userId = auth()->user()->user_id;
 
-        // スレッドを作成
+        $sendTimeLang = \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN');
+
+        // スレッドを作成（送信時の表示言語を保存）
         $thread = Thread::create([
             'title' => $request->title,
+            'source_lang' => $sendTimeLang,
             'tag' => $request->tag,
             'user_id' => $userId,
             'responses_count' => 1, // 最初のレスポンスを含む
@@ -770,10 +773,11 @@ class ThreadController extends Controller
             'image_path' => $imagePath,
         ]);
 
-        // 最初のレスポンスを作成
+        // 最初のレスポンスを作成（送信時の表示言語を保存）
         $thread->responses()->create([
             'user_id' => $userId,
             'body' => $request->body,
+            'source_lang' => $sendTimeLang,
             'responses_num' => 1,
         ]);
 
@@ -809,9 +813,9 @@ class ThreadController extends Controller
             return view('errors.thread-deleted', compact('lang'));
         }
         
-        // 最初は最新10件のみ取得（パフォーマンス向上）
+        // 最初は最新10件のみ取得（パフォーマンス向上）（翻訳用に parentResponse も取得）
         $initialResponses = $thread->responses()
-            ->with('user')
+            ->with(['user', 'parentResponse'])
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get()
@@ -1070,7 +1074,8 @@ class ThreadController extends Controller
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        
+        $this->applyTranslationsForThreadShow($thread, $lang, $users);
+
         // 「成人向けコンテンツが含まれる」で制限がかかった場合、R18変更のお知らせを送信
         $this->sendR18ChangeNotificationIfNeeded($thread, $isThreadRestricted, $threadRestrictionReasons, $responseRestrictionData);
         
@@ -1164,9 +1169,9 @@ class ThreadController extends Controller
         $offset = $request->get('offset', 0);
         $limit = 10; // 10件ずつ
         
-        // 最新から取得（created_at降順）
+        // 最新から取得（created_at降順）（翻訳用に parentResponse も取得）
         $responses = $thread->responses()
-            ->with('user')
+            ->with(['user', 'parentResponse'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
@@ -1294,6 +1299,7 @@ class ThreadController extends Controller
         
         // HTMLを生成
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $this->applyTranslationsForResponses($responses, $lang, $users);
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -1352,9 +1358,9 @@ class ThreadController extends Controller
         // 最新のレスポンスID（既に表示されている最新のレスポンスID）
         $lastResponseId = (int)$request->get('last_response_id', 0);
         
-        // 指定されたレスポンスID以降の新しいレスポンスを取得（created_at昇順で取得）
+        // 指定されたレスポンスID以降の新しいレスポンスを取得（created_at昇順で取得）（翻訳用に parentResponse も取得）
         $query = $thread->responses()
-            ->with('user')
+            ->with(['user', 'parentResponse'])
             ->orderBy('created_at', 'asc');
         
         if ($lastResponseId > 0) {
@@ -1490,6 +1496,7 @@ class ThreadController extends Controller
         
         // HTMLを生成
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $this->applyTranslationsForResponses($responses, $lang, $users);
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -2355,6 +2362,94 @@ class ThreadController extends Controller
             'reply_used' => false,
             'unlimited_reply' => false,
         ]);
+    }
+
+    /**
+     * スレッド詳細表示用：表示ユーザーの言語に合わせてルーム名・リプライ本文を翻訳し display_title / display_body にセット
+     * 元言語は送信者の表示言語設定。翻訳はDBに1年保存。
+     *
+     * @param Thread $thread
+     * @param string $lang 表示言語（JA / EN）
+     * @param \Illuminate\Support\Collection|null $users user_id => User のマップ（レスポンス投稿者の言語取得用）
+     * @return void
+     */
+    private function applyTranslationsForThreadShow($thread, $lang, $users = null)
+    {
+        $targetLang = \App\Services\TranslationService::normalizeLang($lang);
+        // 送信時の表示言語（DB保存を優先。未設定の場合は送信者の現在の言語にフォールバック）
+        $threadSourceLang = $thread->source_lang !== null && $thread->source_lang !== ''
+            ? \App\Services\TranslationService::normalizeLang($thread->source_lang)
+            : ($thread->user ? \App\Services\TranslationService::normalizeLang($thread->user->language ?? 'EN') : 'EN');
+        $thread->display_title = \App\Services\TranslationService::getTranslatedThreadTitle(
+            $thread->thread_id,
+            $thread->getCleanTitle(),
+            $targetLang,
+            $threadSourceLang
+        );
+
+        $responses = $thread->responses ?? collect();
+        $users = $users ?? collect();
+        foreach ($responses as $response) {
+            $body = $response->body ?? '';
+            $parentBody = null;
+            if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
+                $parentBody = $response->parentResponse->body ?? '';
+            }
+            // 送信時の表示言語（DB保存を優先。送信者削除時も source_lang で判定）
+            $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
+                ? \App\Services\TranslationService::normalizeLang($response->source_lang)
+                : (\App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN'));
+            $response->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
+                $response->response_id,
+                $body,
+                $targetLang,
+                $parentBody,
+                $responseSourceLang
+            );
+        }
+    }
+
+    /**
+     * レスポンスコレクションに翻訳を適用（getResponses / getNewResponses 用）
+     * 元言語は送信者の表示言語設定。翻訳はDBに1年保存。
+     *
+     * @param \Illuminate\Support\Collection $responses
+     * @param string $lang 表示言語（JA / EN）
+     * @param \Illuminate\Support\Collection $users user_id => User のマップ
+     * @return void
+     */
+    private function applyTranslationsForResponses($responses, $lang, $users)
+    {
+        $targetLang = \App\Services\TranslationService::normalizeLang($lang);
+        foreach ($responses as $response) {
+            $body = $response->body ?? '';
+            $parentBody = null;
+            if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
+                $parentBody = $response->parentResponse->body ?? '';
+                if (!isset($response->parentResponse->display_body)) {
+                    $parentSourceLang = $response->parentResponse->source_lang !== null && $response->parentResponse->source_lang !== ''
+                        ? \App\Services\TranslationService::normalizeLang($response->parentResponse->source_lang)
+                        : \App\Services\TranslationService::normalizeLang(($users->get($response->parentResponse->user_id) ?? $response->parentResponse->user)?->language ?? 'EN');
+                    $response->parentResponse->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
+                        $response->parentResponse->response_id,
+                        $parentBody,
+                        $targetLang,
+                        null,
+                        $parentSourceLang
+                    );
+                }
+            }
+            $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
+                ? \App\Services\TranslationService::normalizeLang($response->source_lang)
+                : \App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN');
+            $response->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
+                $response->response_id,
+                $body,
+                $targetLang,
+                $parentBody,
+                $responseSourceLang
+            );
+        }
     }
 
     /**

@@ -128,9 +128,10 @@ class ThreadContinuationController extends Controller
             // タイトルから「(続き)」を削除
             $baseTitle = $parentThread->getCleanTitle();
             
-            // 続きスレッドを作成（タイトルには番号を付けない）
+            // 続きスレッドを作成（タイトルには番号を付けない。送信時言語は親スレッドを継承）
             $continuationThread = Thread::create([
                 'title' => $baseTitle,
+                'source_lang' => $parentThread->source_lang ?? \App\Services\TranslationService::normalizeLang($parentThread->user->language ?? 'EN'),
                 'tag' => $parentThread->tag,
                 'user_id' => $parentThread->user_id,
                 'responses_count' => 0,

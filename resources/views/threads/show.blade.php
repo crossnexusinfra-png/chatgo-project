@@ -7,7 +7,7 @@
 @endphp
 
 @section('title')
-    {{ $thread->title . \App\Services\LanguageService::trans('thread_detail_title', $lang ?? \App\Services\LanguageService::getCurrentLanguage()) }}
+    {{ ($thread->display_title ?? $thread->title) . \App\Services\LanguageService::trans('thread_detail_title', $lang ?? \App\Services\LanguageService::getCurrentLanguage()) }}
 @endsection
 
 @push('styles')
@@ -39,7 +39,7 @@
             </div>
             
             <div class="thread-title-header-flex">
-                <h1 class="thread-title thread-title-main-flex">{{ $thread->getCleanTitle() }}</h1>
+                <h1 class="thread-title thread-title-main-flex">{{ $thread->display_title ?? $thread->getCleanTitle() }}</h1>
                 @if(isset($continuationNumber) && $continuationNumber !== null)
                 <span class="continuation-badge-large">
                     #{{ $continuationNumber }}
