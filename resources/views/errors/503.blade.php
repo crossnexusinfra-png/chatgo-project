@@ -28,10 +28,13 @@
             <a href="{{ route('threads.index') }}" class="error-button-primary">
                 {{ \App\Services\LanguageService::trans('back_to_home', $lang) }}
             </a>
-            <button onclick="window.location.reload()" class="error-button-secondary">
+            <button type="button" class="error-button-secondary" id="error-page-reload">
                 {{ \App\Services\LanguageService::trans('reload_page', $lang) }}
             </button>
         </div>
     </div>
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.getElementById('error-page-reload')?.addEventListener('click', function() { window.location.reload(); });
+</script>
 @endsection

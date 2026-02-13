@@ -28,10 +28,13 @@
             <a href="{{ route('threads.index') }}" class="error-button-primary">
                 {{ \App\Services\LanguageService::trans('back_to_home', $lang) }}
             </a>
-            <button onclick="window.history.back()" class="error-button-secondary">
+            <button type="button" class="error-button-secondary" id="error-page-go-back">
                 {{ \App\Services\LanguageService::trans('go_back', $lang) }}
             </button>
         </div>
     </div>
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.getElementById('error-page-go-back')?.addEventListener('click', function() { window.history.back(); });
+</script>
 @endsection

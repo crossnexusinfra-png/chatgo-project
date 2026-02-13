@@ -25,7 +25,7 @@
             {{ \App\Services\LanguageService::trans('error_419_message', $lang) }}
         </p>
         <div class="error-actions">
-            <button onclick="window.location.reload()" class="error-button-primary">
+            <button type="button" class="error-button-primary" id="error-page-reload">
                 {{ \App\Services\LanguageService::trans('reload_page', $lang) }}
             </button>
             <a href="{{ route('threads.index') }}" class="error-button-secondary">
@@ -34,4 +34,7 @@
         </div>
     </div>
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.getElementById('error-page-reload')?.addEventListener('click', function() { window.location.reload(); });
+</script>
 @endsection
