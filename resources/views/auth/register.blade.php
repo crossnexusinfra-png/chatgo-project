@@ -87,7 +87,7 @@
                 
                 <div class="form-group">
                     <label for="email">{{ \App\Services\LanguageService::trans('register_email_label', $lang) }} <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required>
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email">
                     @error('email')
                         <span class="error-message">{{ $message }}</span>
                     @enderror

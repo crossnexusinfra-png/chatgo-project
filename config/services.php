@@ -37,6 +37,8 @@ return [
 
     'veriphone' => [
         'api_key' => env('VERIPHONE_API_KEY'),
+        // テスト時のみ: APIキー未設定でも電話番号を許可（本番では true にしないこと）
+        'skip_when_no_key' => env('VERIPHONE_SKIP_WHEN_NO_KEY', false),
     ],
 
     'safebrowsing' => [

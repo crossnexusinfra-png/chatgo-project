@@ -35,10 +35,12 @@ class VeriphoneService
             $apiKey = self::getApiKey();
             if (empty($apiKey)) {
                 Log::warning('VeriphoneService: APIキーが設定されていません');
-                // テスト・開発環境ではAPI未設定でも電話番号を許可（サーバーでのテストを可能にする）
-                if (app()->environment(['local', 'testing'])) {
-                    Log::info('VeriphoneService: API未設定のため検証をスキップ（環境: ' . app()->environment() . '）', [
+                // テスト・開発環境、または VERIPHONE_SKIP_WHEN_NO_KEY=true のときはAPI未設定でも電話番号を許可
+                $skipWhenNoKey = config('services.veriphone.skip_when_no_key', false);
+                if (app()->environment(['local', 'testing']) || $skipWhenNoKey) {
+                    Log::info('VeriphoneService: API未設定のため検証をスキップ', [
                         'phone' => $phoneNumber,
+                        'reason' => $skipWhenNoKey ? 'VERIPHONE_SKIP_WHEN_NO_KEY' : 'environment=' . app()->environment(),
                     ]);
                     return [
                         'is_valid' => true,
