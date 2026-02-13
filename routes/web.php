@@ -17,12 +17,12 @@ use App\Http\Controllers\ThreadContinuationController;
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| 管理者ルートは先に登録し、ADMIN_PREFIX のURLが他ルートに奪われないようにする。
 |
 */
+
+// 管理者専用ルート（必ず最初に登録）
+require __DIR__.'/admin.php';
 
 // トップページにアクセスされたら、ThreadControllerのindexメソッドを呼び出す
 Route::get('/', [ThreadController::class, 'index'])->name('threads.index');

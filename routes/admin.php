@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 
 $prefix = trim((string) config('admin.prefix'), '/');
+if ($prefix === '') {
+    $prefix = 'admin';
+}
 
 Route::middleware(['web', 'admin.basic', 'admin.visit'])
     ->prefix($prefix)

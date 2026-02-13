@@ -16,9 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // 管理者専用ルートを別ファイルから読み込む
-            require __DIR__.'/../routes/admin.php';
-            
+            // 管理者ルートは routes/web.php の先頭で読み込み（優先マッチのため）
+
             // レート制限の設定
             RateLimiter::for('api', function (Request $request) {
                 return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
