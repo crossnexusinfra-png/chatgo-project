@@ -18,11 +18,12 @@
                 @php
                     $registrationData = session('registration_data', []);
                     $email = $registrationData['email'] ?? '';
-                    $emailVerificationCode = app()->environment('local') ? Cache::get("email_verification_{$email}") : null;
+                    $showCode = app()->environment('local') || config('app.show_verification_code_on_screen');
+                    $emailVerificationCode = $showCode ? Cache::get("email_verification_{$email}") : null;
                 @endphp
                 <p>{{ str_replace('{email}', $email, \App\Services\LanguageService::trans('email_verification_description', $lang)) }}</p>
                 
-                @if(app()->environment('local'))
+                @if($showCode)
                 <div class="dev-notice">
                     <h3>{{ \App\Services\LanguageService::trans('dev_environment_title', $lang) }}</h3>
                     <p>{{ \App\Services\LanguageService::trans('verification_code_label', $lang) }}: <strong>{{ $emailVerificationCode ?? \App\Services\LanguageService::trans('verification_code_not_available', $lang) }}</strong></p>

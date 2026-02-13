@@ -18,12 +18,13 @@
                 @php
                     $registrationData = session('registration_data', []);
                     $phone = $registrationData['phone'] ?? '';
-                    $smsVerificationCode = app()->environment('local') ? Cache::get("sms_verification_{$phone}") : null;
+                    $showCode = app()->environment('local') || config('app.show_verification_code_on_screen');
+                    $smsVerificationCode = $showCode ? Cache::get("sms_verification_{$phone}") : null;
                 @endphp
                 <p>{{ str_replace('{phone}', $phone, \App\Services\LanguageService::trans('sms_verification_description', $lang)) }}</p>
                 <p class="verification-note">{{ \App\Services\LanguageService::trans('sms_verification_note', $lang) }}</p>
                 
-                @if(app()->environment('local'))
+                @if($showCode)
                 <div class="dev-notice">
                     <h3>{{ \App\Services\LanguageService::trans('dev_environment_title', $lang) }}</h3>
                     <p>{{ \App\Services\LanguageService::trans('verification_code_label', $lang) }}: <strong>{{ $smsVerificationCode ?? \App\Services\LanguageService::trans('verification_code_not_available', $lang) }}</strong></p>

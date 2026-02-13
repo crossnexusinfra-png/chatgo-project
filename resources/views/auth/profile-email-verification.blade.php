@@ -23,7 +23,7 @@
                     </div>
                 @endif
                 
-                @if(app()->environment('local'))
+                @if(app()->environment('local') || config('app.show_verification_code_on_screen'))
                 <div class="dev-notice">
                     <h3>{{ \App\Services\LanguageService::trans('dev_environment_title', $lang) }}</h3>
                     <p>{{ \App\Services\LanguageService::trans('verification_code_label', $lang) }}: <strong>{{ Cache::get("email_verification_user_{$user->user_id}") }}</strong></p>
