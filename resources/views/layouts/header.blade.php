@@ -37,7 +37,7 @@
                 </form>
             </div>
             
-            <script>
+            <script nonce="{{ $csp_nonce ?? '' }}">
                 window.headerConfig = {
                     translations: {
                         search: '{{ \App\Services\LanguageService::trans("search", $lang) }}'

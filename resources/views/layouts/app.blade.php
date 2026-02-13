@@ -20,7 +20,7 @@
     
     <main class="main-content">
         @if (session('translation_api_called'))
-            <script>alert('テスト用: 翻訳APIが呼び出されました');</script>
+            <script nonce="{{ $csp_nonce ?? '' }}">alert('テスト用: 翻訳APIが呼び出されました');</script>
         @endif
         @if (session('login_reward_message'))
             <div class="alert alert-success alert-margin">
