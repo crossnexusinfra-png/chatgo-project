@@ -109,6 +109,14 @@
     color: #374151;
 }
 
+/* CSP対応: 開閉はクラスで制御（インラインスタイルを使わない） */
+.notification-item.is-open .message-body,
+.notification-item.is-open .reply-section,
+.notification-item.is-open .coin-reward-section,
+.notification-item.is-open .r18-change-section {
+    display: block;
+}
+
 .reply-section {
     display: none;
     margin-top: 12px;

@@ -67,7 +67,7 @@
         }
     }
 
-    // メッセージの内容を取得して表示する関数
+    // メッセージの内容を取得して表示する関数（CSP対応: インラインスタイルを使わずクラスで開閉）
     window.toggleMessage = async function(messageId, element, event) {
         if (event && event.target.closest('.reply-section')) {
             return;
@@ -80,8 +80,7 @@
         const messageBody = element.querySelector('.message-body');
         const toggleIcon = element.querySelector('.toggle-icon');
         const isUnread = element.dataset.isRead === 'false';
-        
-        const isClosed = messageBody.style.display === 'none' || !messageBody.style.display;
+        const isClosed = !element.classList.contains('is-open');
         
         if (isClosed) {
             if (!messageBody.textContent.trim()) {
@@ -93,45 +92,15 @@
                     messageBody.innerHTML = bodyText;
                 }
             }
-            messageBody.style.display = 'block';
+            element.classList.add('is-open');
             toggleIcon.textContent = '▲';
-            
-            const replySection = element.querySelector('.reply-section');
-            if (replySection) {
-                replySection.style.display = 'block';
-            }
-            
-            const r18Section = element.querySelector('.r18-change-section');
-            if (r18Section) {
-                r18Section.style.display = 'block';
-            }
-            
-            const coinSection = element.querySelector('.coin-reward-section');
-            if (coinSection) {
-                coinSection.style.display = 'block';
-            }
             
             if (isUnread) {
                 await markAsRead(messageId, element);
             }
         } else {
-            messageBody.style.display = 'none';
+            element.classList.remove('is-open');
             toggleIcon.textContent = '▼';
-            
-            const replySection = element.querySelector('.reply-section');
-            if (replySection) {
-                replySection.style.display = 'none';
-            }
-            
-            const r18Section = element.querySelector('.r18-change-section');
-            if (r18Section) {
-                r18Section.style.display = 'none';
-            }
-            
-            const coinSection = element.querySelector('.coin-reward-section');
-            if (coinSection) {
-                coinSection.style.display = 'none';
-            }
         }
     };
 
@@ -411,19 +380,15 @@
         }
     };
 
-    // 未読数のバッジを更新する関数
+    // 未読数のバッジを更新する関数（CSP対応: 表示はクラスで制御）
     function updateUnreadBadge() {
         const unreadItems = document.querySelectorAll('[data-is-read="false"]');
         const unreadCount = unreadItems.length;
         
         const badge = document.querySelector('.notification-badge');
         if (badge) {
-            if (unreadCount > 0) {
-                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.classList.toggle('is-hidden', unreadCount === 0);
         }
     }
 

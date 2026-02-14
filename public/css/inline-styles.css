@@ -34,6 +34,10 @@ body {
     display: inline-block;
 }
 
+.notification-badge.is-hidden {
+    display: none;
+}
+
 .header-button.notification-btn {
     position: relative;
 }
