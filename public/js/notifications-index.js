@@ -493,4 +493,61 @@
             isLoadingMore = false;
         }
     };
+
+    // CSP対応: インラインイベントを使わずイベント委譲でバインド
+    document.addEventListener('DOMContentLoaded', function() {
+        const listEl = document.getElementById('notificationsList');
+        if (!listEl) return;
+
+        listEl.addEventListener('click', function(e) {
+            const btn = e.target.closest('.coin-receive-btn');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = parseInt(btn.dataset.messageId, 10);
+                const amount = parseInt(btn.dataset.coinAmount, 10);
+                if (!isNaN(mid) && !isNaN(amount)) {
+                    window.receiveCoin(e, mid, amount);
+                }
+                return;
+            }
+            const approveBtn = e.target.closest('.r18-approve-btn');
+            if (approveBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = parseInt(approveBtn.dataset.messageId, 10);
+                if (!isNaN(mid)) window.approveR18Change(e, mid);
+                return;
+            }
+            const rejectBtn = e.target.closest('.r18-reject-btn');
+            if (rejectBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = parseInt(rejectBtn.dataset.messageId, 10);
+                if (!isNaN(mid)) window.rejectR18Change(e, mid);
+                return;
+            }
+            const item = e.target.closest('.notification-item');
+            if (item && !e.target.closest('.reply-section') && !e.target.closest('.r18-change-section') && !e.target.closest('.coin-reward-section')) {
+                const mid = parseInt(item.dataset.messageId, 10);
+                if (!isNaN(mid)) window.toggleMessage(mid, item, e);
+            }
+        });
+
+        listEl.addEventListener('submit', function(e) {
+            const form = e.target.closest('.reply-form');
+            if (form) {
+                e.preventDefault();
+                const mid = parseInt(form.dataset.messageId, 10);
+                if (!isNaN(mid)) window.submitReply(e, mid);
+            }
+        });
+
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function() {
+                window.loadMoreNotifications();
+            });
+        }
+    });
 })();

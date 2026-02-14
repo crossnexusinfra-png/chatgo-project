@@ -58,11 +58,14 @@ Artisan::command('admin:create', function () {
 })->purpose('管理者アカウントを作成します');
 
 Artisan::command('admin:url', function () {
+    $baseUrl = config('app.url');
     $prefix = trim((string) config('admin.prefix'), '/') ?: 'admin';
-    $url = rtrim(config('app.url'), '/') . '/' . $prefix;
+    $url = rtrim($baseUrl, '/') . '/' . $prefix;
     $this->info('管理者画面のURL: ' . $url);
-    $this->line('（.env の APP_URL と ADMIN_PREFIX から算出しています。404の場合は route:clear を実行してください）');
-})->purpose('管理者画面のURLを表示します');
+    $this->line('（算出式: APP_URL + "/" + ADMIN_PREFIX）');
+    $this->line('現在の APP_URL: ' . $baseUrl . '  |  ADMIN_PREFIX: ' . $prefix);
+    $this->line('.env を変更した場合は php artisan config:clear を実行してください。');
+})->purpose('管理者画面のURLを表示します（APP_URL + ADMIN_PREFIX）');
 
 // ログファイルの自動削除（毎日実行）
 Schedule::call(function () {
