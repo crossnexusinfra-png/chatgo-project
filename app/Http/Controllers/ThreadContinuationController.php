@@ -129,9 +129,10 @@ class ThreadContinuationController extends Controller
             $baseTitle = $parentThread->getCleanTitle();
             
             // 続きスレッドを作成（タイトルには番号を付けない。送信時言語は親スレッドを継承）
+            $contSourceLang = $parentThread->source_lang ?? \App\Services\TranslationService::normalizeLang($parentThread->user->language ?? 'EN');
             $continuationThread = Thread::create([
                 'title' => $baseTitle,
-                'source_lang' => $parentThread->source_lang ?? \App\Services\TranslationService::normalizeLang($parentThread->user->language ?? 'EN'),
+                'source_lang' => $contSourceLang,
                 'tag' => $parentThread->tag,
                 'user_id' => $parentThread->user_id,
                 'responses_count' => 0,
@@ -140,6 +141,13 @@ class ThreadContinuationController extends Controller
                 'image_path' => $parentThread->image_path,
                 'parent_thread_id' => $parentThread->thread_id,
             ]);
+
+            // ルーム作成時に他言語へ翻訳してキャッシュに保存（一覧の言語切り替え用）
+            \App\Services\TranslationService::translateAndCacheThreadTitleAtCreate(
+                $continuationThread->thread_id,
+                $continuationThread->title,
+                $contSourceLang
+            );
 
             // 親スレッドに続きスレッドIDを設定
             $parentThread->update([

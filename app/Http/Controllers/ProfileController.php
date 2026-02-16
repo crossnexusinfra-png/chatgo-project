@@ -61,6 +61,7 @@ class ProfileController extends Controller
         
         $totalCount = $threadsQuery->count();
         $threads = $threadsQuery->take(5)->get();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
         
         // スレッドの制限情報と画像通報スコアを取得
         $threadRestrictionData = [];
@@ -334,6 +335,10 @@ class ProfileController extends Controller
         $totalCount = $threadsQuery->count();
         $threads = $threadsQuery->take(5)->get();
         
+        // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
+        
         // スレッドの制限情報と画像通報スコアを取得
         $threadRestrictionData = [];
         $threadImageReportScoreData = [];
@@ -354,9 +359,6 @@ class ProfileController extends Controller
                 ];
             }
         }
-        
-        // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
 
         return view('profile.show', compact('user', 'threads', 'lang', 'totalCount', 'threadRestrictionData', 'threadImageReportScoreData'));
     }
@@ -431,6 +433,9 @@ class ProfileController extends Controller
         
         $threads = $threadsQuery->get();
         
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
+        
         // スレッドの制限情報と画像通報スコアを取得
         $threadRestrictionData = [];
         $threadImageReportScoreData = [];
@@ -451,8 +456,6 @@ class ProfileController extends Controller
                 ];
             }
         }
-        
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
         // HTMLを生成
         $html = view('threads.partials.thread-item-profile', compact('threads', 'lang', 'threadRestrictionData', 'threadImageReportScoreData'))->render();

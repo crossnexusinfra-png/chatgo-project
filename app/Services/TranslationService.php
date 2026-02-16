@@ -126,6 +126,57 @@ class TranslationService
     }
 
     /**
+     * ルーム作成時に、表示言語と異なる言語へ翻訳してキャッシュに保存する
+     * （一覧表示で言語切り替え時に利用）
+     */
+    public static function translateAndCacheThreadTitleAtCreate(int $threadId, string $title, string $sourceLang): void
+    {
+        $title = trim($title);
+        $sourceLang = self::normalizeLang($sourceLang);
+        if ($title === '') {
+            return;
+        }
+        $targetLang = $sourceLang === 'JA' ? 'EN' : 'JA';
+        if (!self::shouldTranslate($sourceLang, $targetLang)) {
+            return;
+        }
+        $translated = self::translateStandalone($title, $targetLang);
+        if ($translated === $title) {
+            return;
+        }
+        TranslationCache::updateOrCreate(
+            [
+                'thread_id' => $threadId,
+                'target_lang' => $targetLang,
+            ],
+            [
+                'response_id' => null,
+                'source_lang' => $sourceLang,
+                'translated_text' => $translated,
+                'translated_at' => now(),
+            ]
+        );
+    }
+
+    /**
+     * スレッドコレクションに表示言語に合わせた display_title を付与する（一覧表示用）
+     */
+    public static function applyTranslatedThreadTitlesToCollection($threads, string $targetLang): void
+    {
+        if ($threads === null || $threads->isEmpty()) {
+            return;
+        }
+        foreach ($threads as $thread) {
+            $thread->display_title = self::getTranslatedThreadTitle(
+                (int) $thread->thread_id,
+                $thread->getCleanTitle(),
+                $targetLang,
+                $thread->source_lang ?? 'EN'
+            );
+        }
+    }
+
+    /**
      * ルーム名の表示用テキストを取得（DBキャッシュ優先、1年で期限切れなら再翻訳）
      *
      * @param int $threadId スレッドID

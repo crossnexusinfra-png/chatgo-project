@@ -152,6 +152,23 @@ class ThreadController extends Controller
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
 
+        // 一覧表示用にルーム名を表示言語に翻訳して display_title を付与
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($popularThreads, $lang);
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($trendingThreads, $lang);
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($latestThreads, $lang);
+        if ($favoriteThreads) {
+            \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($favoriteThreads, $lang);
+        }
+        if ($recentAccessThreads) {
+            \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($recentAccessThreads, $lang);
+        }
+        foreach ($tagThreads as &$tagData) {
+            if (isset($tagData['threads'])) {
+                \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($tagData['threads'], $lang);
+            }
+        }
+        unset($tagData);
+
         // 作成したスレッド欄は削除済み（互換性のためnullを設定）
         $myThreads = null;
         $myThreadsTotalCount = 0;
@@ -289,6 +306,7 @@ class ThreadController extends Controller
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
 
         // スレッドの制限情報を一括取得（N+1問題を回避）
         $threadRestrictionData = $this->getThreadRestrictionData($threads);
@@ -438,6 +456,7 @@ class ThreadController extends Controller
         
         // 最初は20件のみ取得
         $threads = $threadsQuery->with('user')->take(20)->get();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
         
         // 実際に取得されたスレッドのタグ名を確認
         $actualTags = $threads->pluck('tag')->unique()->values()->toArray();
@@ -772,6 +791,13 @@ class ThreadController extends Controller
             'is_r18' => $isR18,
             'image_path' => $imagePath,
         ]);
+
+        // ルーム作成時に他言語へ翻訳してキャッシュに保存（一覧の言語切り替え用）
+        \App\Services\TranslationService::translateAndCacheThreadTitleAtCreate(
+            $thread->thread_id,
+            $thread->title,
+            $sendTimeLang
+        );
 
         // 最初のレスポンスを作成（送信時の表示言語を保存）
         $thread->responses()->create([
@@ -1849,6 +1875,7 @@ class ThreadController extends Controller
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
 
         // スレッドの制限情報を一括取得（N+1問題を回避）
         $threadRestrictionData = $this->getThreadRestrictionData($threads);

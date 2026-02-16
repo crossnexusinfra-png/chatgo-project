@@ -194,7 +194,7 @@
                             @endphp
                             @if(!$isDeletedByImageReport)
                             <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}" style="--thread-bg-image: url('{{ $threadImageUrl }}');">
-                                <img src="{{ $threadImageUrl }}" alt="{{ $thread->title }}">
+                                <img src="{{ $threadImageUrl }}" alt="{{ $thread->display_title ?? $thread->title }}">
                                     @if($isImageBlurred)
                                         <div class="thread-image-reported-message">{{ \App\Services\LanguageService::trans('thread_image_reported', $lang) }}</div>
                                     @endif
@@ -235,7 +235,7 @@
                                 @endif
                                 <div class="post-header thread-header-flex">
                                     <a href="{{ route('threads.show', $thread) }}" class="post-title thread-title-flex">
-                                        {{ $thread->getCleanTitle() }}
+                                        {{ $thread->display_title ?? $thread->getCleanTitle() }}
                                     </a>
                                     @php
                                         $continuationNumber = $thread->getContinuationNumber();
