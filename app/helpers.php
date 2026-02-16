@@ -9,8 +9,8 @@ if (!function_exists('linkify_urls')) {
      */
     function linkify_urls(string $text): string
     {
-        // HTMLエスケープ
-        $text = e($text);
+        // HTMLエスケープ + 改行を <br> に変換（表示で改行を保持）
+        $text = nl2br(e($text), false);
         
         // URLパターン（http/httpsで始まるURL）
         $pattern = '/(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i';
