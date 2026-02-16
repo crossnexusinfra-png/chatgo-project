@@ -284,16 +284,15 @@ class TranslationService
     }
 
     /**
-     * API返答の正規化：前後の """ を除去し、改行は保持する
+     * API返答の正規化：先頭・末尾の """ とその直後の改行/空白を除去し、改行は保持する
      */
     private static function normalizeTranslatedContent(string $content): string
     {
-        // 前後の """ で囲まれた部分のみを取り出す（改行は保持）
-        if (preg_match('/^"""\s*\n?(.*)\n?\s*"""$/s', $content, $m)) {
-            $content = trim($m[1]);
-        } elseif (preg_match('/^"""\s*\n?(.*)$/s', $content, $m)) {
-            $content = trim(preg_replace('/\s*"""\s*$/s', '', $m[1]));
-        }
+        // 先頭の """ とその直後の改行・空白を削除
+        $content = preg_replace('/^\s*"""\s*/', '', $content);
+        // 末尾の """ とその直前の改行・空白を削除
+        $content = preg_replace('/\s*"""\s*$/', '', $content);
+        $content = trim($content);
         // APIがエスケープした改行 \\n を実改行に変換
         $content = str_replace('\\n', "\n", $content);
         return $content;
