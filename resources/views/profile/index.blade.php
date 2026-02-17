@@ -81,13 +81,6 @@
 @endphp
             <div class="profile-info">
                 <h2>{{ $displayUserName }}</h2>
-                
-                @if($user->bio)
-                    <div class="bio-section">
-                        <h3>{{ \App\Services\LanguageService::trans('bio_section', $lang) }}</h3>
-                        <p class="bio-text">{{ $user->bio }}</p>
-                    </div>
-                @endif
 
                 <div class="profile-details">
                     <div class="detail-item">

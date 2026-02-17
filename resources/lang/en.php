@@ -678,7 +678,9 @@ return [
     'continuation_thread_notification_title' => 'Room #{n} created',
     'continuation_thread_notification_body' => 'Room #{n} for "{thread_title}" that you requested has been created.',
     'thread_completed' => 'Completed',
-    
+    'show_original' => 'Original',
+    'show_translation' => 'Translation',
+
     // Coin Feature
     'coins' => 'Coins',
     'coins_unit' => 'coins',

@@ -39,7 +39,12 @@
             </div>
             
             <div class="thread-title-header-flex">
-                <h1 class="thread-title thread-title-main-flex">{{ $thread->display_title ?? $thread->getCleanTitle() }}</h1>
+                <h1 class="thread-title thread-title-main-flex">
+                    <span class="thread-title-text">{{ $thread->display_title ?? $thread->getCleanTitle() }}</span>
+                    @if($thread->display_title)
+                    <button type="button" class="show-original-title-btn" data-display-title="{{ $thread->display_title }}" data-original-title="{{ $thread->getCleanTitle() }}" title="{{ \App\Services\LanguageService::trans('show_original', $lang) }}">{{ \App\Services\LanguageService::trans('show_original', $lang) }}</button>
+                    @endif
+                </h1>
                 @if(isset($continuationNumber) && $continuationNumber !== null)
                 <span class="continuation-badge-large">
                     #{{ $continuationNumber }}
@@ -469,7 +474,9 @@
             'adWatchReward' => \App\Services\LanguageService::trans('ad_watch_reward', $lang),
             'responseLoadEmpty' => \App\Services\LanguageService::trans('responseLoadEmpty', $lang),
             'responseLoadFailed' => \App\Services\LanguageService::trans('responseLoadFailed', $lang),
-            'searchError' => \App\Services\LanguageService::trans('searchError', $lang)
+            'searchError' => \App\Services\LanguageService::trans('searchError', $lang),
+            'show_original' => \App\Services\LanguageService::trans('show_original', $lang),
+            'show_translation' => \App\Services\LanguageService::trans('show_translation', $lang)
         ]
     ]) }}">
     <script nonce="{{ $csp_nonce ?? '' }}">

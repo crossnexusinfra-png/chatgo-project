@@ -1267,6 +1267,52 @@
             initReplyButtons();
         }
 
+        // ルーム名の原文/訳文トグル
+        const titleBtn = document.querySelector('.show-original-title-btn');
+        if (titleBtn) {
+            const titleText = document.querySelector('.thread-title-text');
+            const displayTitle = titleBtn.getAttribute('data-display-title');
+            const originalTitle = titleBtn.getAttribute('data-original-title');
+            if (titleText && displayTitle !== null && originalTitle !== null) {
+                titleBtn.addEventListener('click', function() {
+                    const showingOriginal = titleBtn.textContent === translations.show_translation;
+                    if (showingOriginal) {
+                        titleText.textContent = displayTitle;
+                        titleBtn.textContent = translations.show_original;
+                    } else {
+                        titleText.textContent = originalTitle;
+                        titleBtn.textContent = translations.show_translation;
+                    }
+                });
+            }
+        }
+
+        // リプライ本文の原文/訳文トグル（イベント委譲で動的追加リプライにも対応）
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.show-original-response-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const wrapper = btn.closest('.response-body-wrapper');
+            if (!wrapper) return;
+            const displayEl = wrapper.querySelector('.response-body-display');
+            const originalEl = wrapper.querySelector('.response-body-original');
+            if (!displayEl || !originalEl) return;
+            const showingOriginal = displayEl.classList.contains('response-body-hidden');
+            if (showingOriginal) {
+                displayEl.classList.remove('response-body-hidden');
+                displayEl.classList.add('response-body-visible');
+                originalEl.classList.add('response-body-hidden');
+                originalEl.classList.remove('response-body-visible');
+                btn.textContent = translations.show_original;
+            } else {
+                displayEl.classList.add('response-body-hidden');
+                displayEl.classList.remove('response-body-visible');
+                originalEl.classList.remove('response-body-hidden');
+                originalEl.classList.add('response-body-visible');
+                btn.textContent = translations.show_translation;
+            }
+        });
+
         // メディアファイルハンドラーの初期化
         initMediaFileHandlers();
 

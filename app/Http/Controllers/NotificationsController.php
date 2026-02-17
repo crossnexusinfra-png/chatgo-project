@@ -190,6 +190,9 @@ class NotificationsController extends Controller
         $request->validate([
             'body' => 'required|string|max:2000',
         ]);
+
+        // お知らせ返信本文: HTMLタグを除去して保存（XSS等の防御）
+        $body = mb_substr(strip_tags($request->body), 0, 2000);
         
         // R18変更のお知らせの場合は返信を許可しない
         if ($message->title_key === 'r18_change_request_title') {
@@ -202,7 +205,7 @@ class NotificationsController extends Controller
         
         AdminMessage::create([
             'title' => 'Re: ' . $parentTitle,
-            'body' => $request->body,
+            'body' => $body,
             'audience' => 'members',
             'user_id' => null, // 管理者向け（個人向けではない）
             'published_at' => now(),

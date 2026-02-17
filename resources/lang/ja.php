@@ -679,7 +679,9 @@ return [
     'continuation_thread_notification_title' => '#{n}ルームが作成されました',
     'continuation_thread_notification_body' => 'あなたが要望したルーム「{thread_title}」の#{n}ルームが作成されました。',
     'thread_completed' => '完結済み',
-    
+    'show_original' => '原文',
+    'show_translation' => '訳文',
+
     // コイン機能
     'coins' => 'コイン',
     'coins_unit' => 'コイン',

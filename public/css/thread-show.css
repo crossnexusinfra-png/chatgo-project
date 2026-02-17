@@ -88,6 +88,33 @@ body {
     color: white;
 }
 
+.thread-title-main-flex {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.thread-title-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.show-original-title-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+}
+
+.show-original-title-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 .thread-meta {
     display: flex;
     flex-wrap: wrap;
@@ -660,6 +687,34 @@ body {
 .response-body .response-url-link:hover {
     color: #5568d3;
     text-decoration: none;
+}
+
+.response-body-wrapper {
+    position: relative;
+}
+
+.response-body-hidden {
+    display: none !important;
+}
+
+.response-body-visible {
+    display: block;
+}
+
+.show-original-response-btn {
+    margin-top: 4px;
+    font-size: 12px;
+    padding: 2px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    color: #666;
+    cursor: pointer;
+}
+
+.show-original-response-btn:hover {
+    background: #eee;
+    color: #333;
 }
 
 /* LINE風メディアプレビュー */

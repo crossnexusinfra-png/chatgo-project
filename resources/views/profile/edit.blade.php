@@ -256,18 +256,6 @@
             </div>
 
             <div class="form-section">
-                <h2>{{ \App\Services\LanguageService::trans('bio', $lang) }}</h2>
-                
-                <div class="form-group">
-                    <label for="bio">{{ \App\Services\LanguageService::trans('bio', $lang) }}</label>
-                    <textarea id="bio" name="bio" rows="5" placeholder="{{ \App\Services\LanguageService::trans('bio_placeholder', $lang) }}">{{ old('bio', $user->bio) }}</textarea>
-                    <div class="char-count">
-                        <span id="charCount">0</span>/100{{ \App\Services\LanguageService::trans('characters', $lang) }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
                 <h2>{{ \App\Services\LanguageService::trans('language_setting', $lang) }}</h2>
                 
                 <div class="form-group">

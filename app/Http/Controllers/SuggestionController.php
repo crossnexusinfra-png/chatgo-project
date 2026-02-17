@@ -15,11 +15,14 @@ class SuggestionController extends Controller
             'message' => ['required', 'string', 'max:1000'],
         ]);
 
+        // 改善要望本文: HTMLタグを除去して保存（XSS等の防御）
+        $message = mb_substr(strip_tags($validated['message']), 0, 1000);
+
         $userId = auth()->check() ? auth()->user()->getAttribute('user_id') : null;
         
         $suggestion = Suggestion::create([
             'user_id' => $userId,
-            'message' => $validated['message'],
+            'message' => $message,
         ]);
 
         // ログインユーザーには自動メッセージを送信
@@ -28,7 +31,7 @@ class SuggestionController extends Controller
             $bodyTemplate = LanguageService::trans('suggestion_received_body');
             // \nを実際の改行文字に変換
             $bodyTemplate = str_replace('\\n', "\n", $bodyTemplate);
-            $body = str_replace('{message}', $validated['message'], $bodyTemplate);
+            $body = str_replace('{message}', $message, $bodyTemplate);
             
             AdminMessage::create([
                 'title_key' => 'suggestion_received_title',

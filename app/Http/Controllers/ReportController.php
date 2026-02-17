@@ -280,6 +280,11 @@ class ReportController extends Controller
                 ->first();
         }
 
+        // 自由入力の通報理由（description）: HTMLタグを除去して保存（XSS等の防御）
+        $description = isset($validated['description']) && $validated['description'] !== ''
+            ? mb_substr(strip_tags($validated['description']), 0, 300)
+            : null;
+
         // 既存の通報がある場合
         if ($existingReport) {
             // 承認または拒否済みの通報の場合は再通報を拒否
@@ -290,7 +295,7 @@ class ReportController extends Controller
             // 未処理の通報の場合は更新可能
             $existingReport->update([
                 'reason' => $validated['reason'],
-                'description' => $validated['description'] ?? null,
+                'description' => $description,
             ]);
             $message = \App\Services\LanguageService::trans('report_updated', $lang);
         } else {
@@ -300,7 +305,7 @@ class ReportController extends Controller
                 'response_id' => $validated['response_id'] ?? null,
                 'reported_user_id' => $validated['reported_user_id'] ?? null,
                 'reason' => $validated['reason'],
-                'description' => $validated['description'] ?? null,
+                'description' => $description,
             ]);
             $message = \App\Services\LanguageService::trans('report_submitted', $lang);
         }

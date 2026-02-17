@@ -12,8 +12,6 @@ use App\Models\User;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
 use App\Services\VeriphoneService;
-use App\Services\SpamDetectionService;
-use App\Services\SafeBrowsingService;
 
 class ProfileController extends Controller
 {
@@ -159,46 +157,18 @@ class ProfileController extends Controller
             'residence.required' => \App\Services\LanguageService::trans('validation_residence_required', $lang),
             'residence.string' => \App\Services\LanguageService::trans('validation_residence_string', $lang),
             'residence.in' => \App\Services\LanguageService::trans('validation_residence_in', $lang),
-            'bio.string' => \App\Services\LanguageService::trans('validation_bio_string', $lang),
-            'bio.max' => \App\Services\LanguageService::trans('validation_bio_max', $lang),
         ];
         
         $request->validate([
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
             'phone' => 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id',
             'residence' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
-            'bio' => 'nullable|string|max:100',
             'default_avatar' => ['nullable', 'string', 'regex:#^(none|(man|woman)\d+\.png)$#'],
             'language' => 'required|string|in:JA,EN',
         ], $messages);
 
-        // 自己紹介文（bio）のチェック
-        if (!empty($request->bio)) {
-            $bio = $request->bio;
-            
-            // URLチェック（URLが含まれている場合は拒否）
-            $safeBrowsingService = new SafeBrowsingService();
-            $urls = $safeBrowsingService->extractUrls($bio);
-            if (!empty($urls)) {
-                return back()->withInput()->withErrors(['bio' => \App\Services\LanguageService::trans('bio_url_not_allowed', $lang)]);
-            }
-            
-            // NGワード完全一致チェック
-            $spamDetectionService = new SpamDetectionService();
-            $ngWordResult = $spamDetectionService->checkNgWords($bio);
-            if ($ngWordResult['is_spam']) {
-                return back()->withInput()->withErrors(['bio' => \App\Services\LanguageService::trans('spam_ng_word_detected', $lang)]);
-            }
-            
-            // NGワード類似率チェック
-            $similarityResult = $spamDetectionService->checkBioSimilarity($bio);
-            if ($similarityResult['is_spam']) {
-                return back()->withInput()->withErrors(['bio' => \App\Services\LanguageService::trans('spam_similar_response_detected', $lang)]);
-            }
-        }
-
-        // usernameとuser_identifierは変更不可
-        $data = $request->only(['email', 'phone', 'residence', 'bio', 'language']);
+        // usernameとuser_identifierは変更不可（bioはUI廃止のためフォームから除外、DBカラムは残置）
+        $data = $request->only(['email', 'phone', 'residence', 'language']);
 
         // 言語設定が変更された場合、セッションキャッシュをクリア
         $oldLanguage = $user->language ?? 'JA';

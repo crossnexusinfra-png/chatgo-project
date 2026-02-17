@@ -79,7 +79,7 @@
                     <div class="reply-section" data-message-id="{{ $m->id }}">
                         <form class="reply-form" data-message-id="{{ $m->id }}">
                             @csrf
-                            <textarea name="reply_body" rows="3" placeholder="{{ \App\Services\LanguageService::trans('reply_placeholder', $lang) }}" class="reply-textarea" required></textarea>
+                            <textarea name="reply_body" rows="3" maxlength="2000" placeholder="{{ \App\Services\LanguageService::trans('reply_placeholder', $lang) }}" class="reply-textarea" required></textarea>
                             <div class="reply-submit-container">
                                 <button type="submit" class="reply-submit-btn">{{ \App\Services\LanguageService::trans('reply_submit', $lang) }}</button>
                             </div>

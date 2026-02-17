@@ -243,7 +243,18 @@
     </div>
     
     @if(!empty($response->body))
-        <div class="response-body">{!! linkify_urls($response->display_body ?? $response->body) !!}</div>
+        @php
+            $hasTranslatedBody = $response->display_body !== null && (string)$response->display_body !== (string)$response->body;
+        @endphp
+        @if($hasTranslatedBody)
+            <div class="response-body-wrapper">
+                <div class="response-body response-body-display response-body-visible">{!! linkify_urls($response->display_body) !!}</div>
+                <div class="response-body response-body-original response-body-hidden">{!! linkify_urls($response->body) !!}</div>
+                <button type="button" class="show-original-response-btn" data-response-id="{{ $response->response_id }}" title="{{ \App\Services\LanguageService::trans('show_original', $lang) }}">{{ \App\Services\LanguageService::trans('show_original', $lang) }}</button>
+            </div>
+        @else
+            <div class="response-body">{!! linkify_urls($response->display_body ?? $response->body) !!}</div>
+        @endif
     @endif
     
     @if($response->media_file)

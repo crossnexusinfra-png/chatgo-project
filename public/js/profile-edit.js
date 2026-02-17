@@ -106,21 +106,5 @@
             }
         });
 
-        // 文字数カウントの初期化
-        const bio = document.getElementById('bio');
-        const charCount = document.getElementById('charCount');
-        if (bio && charCount) {
-            charCount.textContent = bio.value.length;
-            
-            bio.addEventListener('input', function() {
-                charCount.textContent = this.value.length;
-                
-                if (this.value.length > 100) {
-                    charCount.style.color = '#dc3545';
-                } else {
-                    charCount.style.color = '#666';
-                }
-            });
-        }
     });
 })();

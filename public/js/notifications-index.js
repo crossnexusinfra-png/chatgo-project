@@ -67,6 +67,30 @@
         }
     }
 
+    // HTMLをエスケープしてXSSを防ぐ
+    function escapeHtml(str) {
+        if (str == null) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // お知らせ本文を安全に表示（エスケープ＋改行→br＋URLリンク化）
+    function renderMessageBodySafe(body) {
+        if (body == null || body === '') return '';
+        const urlPattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
+        const parts = body.split(urlPattern);
+        // split でキャプチャすると [非URL, URL, 非URL, URL, ...] の順になる
+        const safe = parts.map(function(p, i) {
+            const isUrl = /^https?:\/\//i.test(p);
+            if (isUrl) {
+                return '<a href="' + escapeHtml(p) + '" target="_blank" rel="noopener noreferrer" class="response-url-link">' + escapeHtml(p) + '</a>';
+            }
+            return escapeHtml(p);
+        });
+        return safe.join('').replace(/\n/g, '<br>');
+    }
+
     // メッセージの内容を取得して表示する関数（CSP対応: インラインスタイルを使わずクラスで開閉）
     window.toggleMessage = async function(messageId, element, event) {
         if (event && event.target.closest('.reply-section')) {
@@ -86,10 +110,7 @@
             if (!messageBody.textContent.trim()) {
                 const message = messagesData.find(m => m.id === messageId);
                 if (message) {
-                    let bodyText = message.body;
-                    bodyText = bodyText.replace(/\n/g, '<br>');
-                    bodyText = bodyText.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-                    messageBody.innerHTML = bodyText;
+                    messageBody.innerHTML = renderMessageBodySafe(message.body);
                 }
             }
             element.classList.add('is-open');
