@@ -476,6 +476,9 @@ class AuthController extends Controller
         
         // 招待コードを生成
         $friendService->generateInviteCode($user);
+
+        // 初回登録時お知らせを送信（管理者が設定している場合）
+        \App\Services\WelcomeNotificationService::sendWelcomeTo($user);
         
         // 招待コードが有効な場合、コインを配布
         if ($inviter) {

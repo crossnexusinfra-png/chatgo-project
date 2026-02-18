@@ -21,6 +21,23 @@
             <div class="admin-messages-success">{{ session('success') }}</div>
     @endif
 
+        {{-- 初回登録時お知らせテンプレート設定 --}}
+        <div class="card admin-card admin-messages-welcome-section">
+            <h2 class="admin-messages-section-title">{{ \App\Services\LanguageService::trans('admin_messages_welcome_title', $lang) }}</h2>
+            <form method="post" action="{{ route('admin.messages.set-welcome') }}">
+                @csrf
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
+                <input type="text" name="welcome_title" value="{{ optional($welcomeMessage)->title ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}</label>
+                <textarea name="welcome_body" rows="4" required>{{ optional($welcomeMessage)->body ?? '' }}</textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
+                <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
+                <div class="admin-messages-submit-container">
+                    <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_welcome_save', $lang) }}</button>
+                </div>
+            </form>
+        </div>
+
         <div class="card admin-card">
         <form method="post" action="{{ route('admin.messages.store') }}" id="admin-messages-form">
             @csrf
@@ -36,11 +53,30 @@
                     @endforeach
                 </select>
             @endif
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_target', $lang) }}</label>
-            <select name="audience" id="audience" required>
-                <option value="members">{{ \App\Services\LanguageService::trans('admin_messages_target_members', $lang) }}</option>
-                <option value="guests">{{ \App\Services\LanguageService::trans('admin_messages_target_guests', $lang) }}</option>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_target_type', $lang) }}</label>
+            <select name="target_type" id="target_type" required>
+                <option value="all_members">{{ \App\Services\LanguageService::trans('admin_messages_target_all_members', $lang) }}</option>
+                <option value="filtered">{{ \App\Services\LanguageService::trans('admin_messages_target_filtered', $lang) }}</option>
+                <option value="specific">{{ \App\Services\LanguageService::trans('admin_messages_target_specific', $lang) }}</option>
             </select>
+            <div id="target_filtered_fields" class="admin-messages-target-extra" style="display:none;">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult', $lang) }}</label>
+                <select name="target_is_adult">
+                    <option value="">{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult_all', $lang) }}</option>
+                    <option value="1">{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult_yes', $lang) }}</option>
+                    <option value="0">{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult_no', $lang) }}</option>
+                </select>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_target_nationalities', $lang) }}</label>
+                <input type="text" name="target_nationalities" placeholder="JP,US,GB">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_target_registered_after', $lang) }}</label>
+                <input type="datetime-local" name="target_registered_after">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_target_registered_before', $lang) }}</label>
+                <input type="datetime-local" name="target_registered_before">
+            </div>
+            <div id="target_specific_fields" class="admin-messages-target-extra" style="display:none;">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers', $lang) }}</label>
+                <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="user_identifier または 12345"></textarea>
+            </div>
             <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
             <input type="text" name="title" id="title" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
             <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}</label>
@@ -80,6 +116,7 @@
                     <option value="manual_reply" {{ ($filter ?? '') === 'manual_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_manual_reply', $lang) }}</option>
                     <option value="report_auto" {{ ($filter ?? '') === 'report_auto' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto', $lang) }}</option>
                     <option value="members" {{ ($filter ?? '') === 'members' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_members', $lang) }}</option>
+                    <option value="specific" {{ ($filter ?? '') === 'specific' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_specific', $lang) }}</option>
                     <option value="guests" {{ ($filter ?? '') === 'guests' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_guests', $lang) }}</option>
                 </select>
             </label>
@@ -94,6 +131,8 @@
                         <div class="admin-messages-list-item-meta">
                         @if($m->user_id)
                             {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{user_id}', $m->user_id, \App\Services\LanguageService::trans('admin_messages_sent_to_individual', $lang)) }}
+                        @elseif($m->recipients && $m->recipients->isNotEmpty())
+                            {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{count}', $m->recipients->count(), \App\Services\LanguageService::trans('admin_messages_sent_to_specific', $lang)) }}
                         @else
                             {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ $m->audience === 'members' ? \App\Services\LanguageService::trans('admin_messages_sent_to_members', $lang) : \App\Services\LanguageService::trans('admin_messages_sent_to_guests', $lang) }}
                         @endif
@@ -132,7 +171,6 @@
                 const titleField = document.getElementById('title');
                 const bodyField = document.getElementById('body');
                 const coinAmountField = document.getElementById('coin_amount');
-                const audienceField = document.getElementById('audience');
                 
                 if (titleField && template.title) {
                     titleField.value = template.title;
@@ -145,31 +183,36 @@
                 if (coinAmountField && template.coin_amount !== undefined) {
                     coinAmountField.value = template.coin_amount;
                 }
-                
-                if (audienceField && template.audience) {
-                    audienceField.value = template.audience;
-                }
             }
             
             // グローバルスコープに公開
             window.applyTemplate = applyTemplate;
             
-            // DOMContentLoadedで初期化
+            // target_type に応じて条件指定・特定ユーザー欄の表示切替
+            function toggleTargetExtra() {
+                const type = document.getElementById('target_type')?.value;
+                document.getElementById('target_filtered_fields').style.display = type === 'filtered' ? 'block' : 'none';
+                document.getElementById('target_specific_fields').style.display = type === 'specific' ? 'block' : 'none';
+                const ri = document.getElementById('recipient_identifiers');
+                if (ri) ri.required = (type === 'specific');
+            }
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
-                    const select = document.getElementById('message-template-select');
-                    if (select) {
-                        select.addEventListener('change', function() {
-                            applyTemplate(this.value);
-                        });
+                    const templateSelect = document.getElementById('message-template-select');
+                    if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); });
+                    const targetType = document.getElementById('target_type');
+                    if (targetType) {
+                        targetType.addEventListener('change', toggleTargetExtra);
+                        toggleTargetExtra();
                     }
                 });
             } else {
-                const select = document.getElementById('message-template-select');
-                if (select) {
-                    select.addEventListener('change', function() {
-                        applyTemplate(this.value);
-                    });
+                const templateSelect = document.getElementById('message-template-select');
+                if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); });
+                const targetType = document.getElementById('target_type');
+                if (targetType) {
+                    targetType.addEventListener('change', toggleTargetExtra);
+                    toggleTargetExtra();
                 }
             }
         })();

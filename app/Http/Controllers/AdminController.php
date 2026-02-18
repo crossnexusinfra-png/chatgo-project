@@ -9,6 +9,7 @@ use App\Models\Response;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\AdminMessage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -164,51 +165,62 @@ class AdminController extends Controller
         
         $filter = request('filter', 'all');
         
-        // 送信済み（published_atがNULLでない）のお知らせのみ表示
+        // 送信済み（published_atがNULLでない）のお知らせのみ表示（is_welcome テンプレートは除く）
+        $with = ['parentMessage'];
+        if (Schema::hasTable('admin_message_recipients')) {
+            $with[] = 'recipients';
+        }
         $query = AdminMessage::whereNotNull('published_at')
-            ->with('parentMessage'); // 親メッセージを取得してフィルター判定に使用
+            ->with($with);
+        if (Schema::hasColumn('admin_messages', 'is_welcome')) {
+            $query->where(function ($q) {
+                $q->where('is_welcome', false)->orWhereNull('is_welcome');
+            });
+        }
         
         // フィルター適用
         switch ($filter) {
             case 'report_auto_reply':
-                // 通報内容に対する自動送信へのユーザーからの返信
-                // parent_message_idがあり、親メッセージがuser_idを持つ（通報の自動送信）
                 $query->whereNotNull('parent_message_id')
                     ->whereHas('parentMessage', function($q) {
                         $q->whereNotNull('user_id');
                     });
                 break;
             case 'manual_reply':
-                // 手動送信へのユーザーからの返信
-                // parent_message_idがあり、親メッセージがuser_idがnull（手動送信）
                 $query->whereNotNull('parent_message_id')
                     ->whereHas('parentMessage', function($q) {
                         $q->whereNull('user_id');
                     });
                 break;
             case 'report_auto':
-                // 通報内容に対する自動送信
-                // user_idがあり、parent_message_idがnull
                 $query->whereNotNull('user_id')
                     ->whereNull('parent_message_id');
                 break;
             case 'members':
-                // 会員への送信
-                // user_idがnull、audienceがmembers、parent_message_idがnull
+                // 会員一斉（条件指定含む）
                 $query->whereNull('user_id')
+                    ->whereDoesntHave('recipients')
                     ->where('audience', 'members')
                     ->whereNull('parent_message_id');
                 break;
+            case 'specific':
+                // 特定の個人または複数人
+                $query->whereNull('parent_message_id');
+                if (Schema::hasTable('admin_message_recipients')) {
+                    $query->where(function ($q) {
+                        $q->whereNotNull('user_id')->orWhereHas('recipients');
+                    });
+                } else {
+                    $query->whereNotNull('user_id');
+                }
+                break;
             case 'guests':
-                // 非会員への送信
-                // user_idがnull、audienceがguests、parent_message_idがnull
                 $query->whereNull('user_id')
                     ->where('audience', 'guests')
                     ->whereNull('parent_message_id');
                 break;
             case 'all':
             default:
-                // すべて表示
                 break;
         }
         
@@ -220,16 +232,53 @@ class AdminController extends Controller
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
 
-        return view('admin.messages', compact('messages', 'filter', 'lang'));
+        // 初回登録時お知らせテンプレート（1件のみ・カラム存在時のみ）
+        $welcomeMessage = null;
+        if (Schema::hasColumn('admin_messages', 'is_welcome')) {
+            $welcomeMessage = AdminMessage::where('is_welcome', true)->whereNull('published_at')->first();
+        }
+
+        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage'));
+    }
+
+    /** 初回登録時お知らせテンプレートを設定 */
+    public function messagesSetWelcome()
+    {
+        if (!Schema::hasColumn('admin_messages', 'is_welcome')) {
+            return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
+        }
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        request()->validate([
+            'welcome_title' => 'nullable|string|max:255',
+            'welcome_body' => 'required|string|max:10000',
+            'welcome_coin_amount' => 'nullable|integer|min:0',
+        ]);
+
+        // 既存の welcome を解除
+        AdminMessage::where('is_welcome', true)->update(['is_welcome' => false]);
+
+        AdminMessage::create([
+            'title' => request('welcome_title'),
+            'body' => request('welcome_body'),
+            'audience' => 'members',
+            'published_at' => null,
+            'is_welcome' => true,
+            'allows_reply' => false,
+            'unlimited_reply' => false,
+            'reply_used' => false,
+            'coin_amount' => request('welcome_coin_amount') ? (int)request('welcome_coin_amount') : null,
+        ]);
+
+        return back()->with('success', \App\Services\LanguageService::trans('admin_messages_welcome_set', $lang));
     }
 
     /** お知らせ配信 */
     public function messagesStore()
     {
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        
+
         request()->validate([
-            'audience' => 'required|in:members,guests',
+            'target_type' => 'required|in:all_members,filtered,specific',
             'body' => 'required|string',
             'title' => 'nullable|string',
             'title_key' => 'nullable|string',
@@ -237,21 +286,88 @@ class AdminController extends Controller
             'allows_reply' => 'nullable|boolean',
             'unlimited_reply' => 'nullable|boolean',
             'coin_amount' => 'nullable|integer|min:0',
+            'target_is_adult' => 'nullable|in:0,1',
+            'target_nationalities' => 'nullable|string|max:500',
+            'target_registered_after' => 'nullable|date',
+            'target_registered_before' => 'nullable|date',
+            'recipient_identifiers' => 'nullable|string|max:2000',
         ]);
 
-        // キーが指定されている場合はキーを使用、そうでない場合は直接保存
-        AdminMessage::create([
+        $targetType = request('target_type');
+        $userId = null;
+        $recipientUserIds = [];
+
+        if ($targetType === 'specific') {
+            $raw = preg_replace('/\s+/', ',', trim((string) request('recipient_identifiers')));
+            if ($raw === '') {
+                return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_required', $lang)]);
+            }
+            $parts = array_unique(array_filter(explode(',', $raw)));
+            foreach ($parts as $part) {
+                $part = trim($part);
+                if (is_numeric($part)) {
+                    $u = User::find((int) $part);
+                    if ($u) {
+                        $recipientUserIds[] = $u->user_id;
+                    }
+                } else {
+                    $u = User::where('username', $part)->orWhere('user_identifier', $part)->first();
+                    if ($u) {
+                        $recipientUserIds[] = $u->user_id;
+                    }
+                }
+            }
+            $recipientUserIds = array_values(array_unique($recipientUserIds));
+            if (empty($recipientUserIds)) {
+                return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_no_users', $lang)]);
+            }
+            if (count($recipientUserIds) === 1) {
+                $userId = $recipientUserIds[0];
+                $recipientUserIds = [];
+            }
+        }
+
+        $targetIsAdult = null;
+        $targetNationalities = null;
+        $targetRegisteredAfter = null;
+        $targetRegisteredBefore = null;
+        if ($targetType === 'filtered') {
+            if (request()->has('target_is_adult') && request('target_is_adult') !== '') {
+                $targetIsAdult = (bool) request('target_is_adult');
+            }
+            $natRaw = trim((string) request('target_nationalities'));
+            if ($natRaw !== '') {
+                $targetNationalities = array_values(array_unique(array_filter(array_map('trim', explode(',', $natRaw)))));
+            }
+            if (request()->filled('target_registered_after')) {
+                $targetRegisteredAfter = request('target_registered_after');
+            }
+            if (request()->filled('target_registered_before')) {
+                $targetRegisteredBefore = request('target_registered_before');
+            }
+        }
+
+        $message = AdminMessage::create([
             'title_key' => request('title_key'),
             'body_key' => request('body_key'),
             'title' => request('title'),
             'body' => request('body'),
-            'audience' => request('audience'),
+            'audience' => 'members',
             'published_at' => now(),
+            'user_id' => $userId,
             'allows_reply' => request('allows_reply', false),
             'unlimited_reply' => request('unlimited_reply', false),
             'reply_used' => false,
-            'coin_amount' => request('coin_amount') ? (int)request('coin_amount') : null,
+            'coin_amount' => request('coin_amount') ? (int) request('coin_amount') : null,
+            'target_is_adult' => $targetIsAdult,
+            'target_nationalities' => $targetNationalities ?: null,
+            'target_registered_after' => $targetRegisteredAfter,
+            'target_registered_before' => $targetRegisteredBefore,
         ]);
+
+        foreach ($recipientUserIds as $uid) {
+            $message->recipients()->attach($uid);
+        }
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_messages_sent_success', $lang));
     }

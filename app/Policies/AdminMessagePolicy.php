@@ -13,18 +13,18 @@ class AdminMessagePolicy
      */
     public function view(User $user, AdminMessage $message): bool
     {
-        // 個人向けメッセージの場合、送信先ユーザーのみ閲覧可能
+        // 個人向け（1名）の場合
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
-        // 会員向けメッセージの場合、ログインユーザーは閲覧可能
+        // 特定複数人向け（recipients）の場合
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
+        // 会員向け一斉送信（条件一致は NotificationsController で判定済み）
         if ($message->audience === 'members') {
             return true;
         }
-        
-        // 非会員向けメッセージの場合、非ログインユーザーは閲覧可能
-        // ただし、このPolicyはログインユーザー用なので、ここではfalseを返す
         return false;
     }
 
@@ -33,16 +33,15 @@ class AdminMessagePolicy
      */
     public function markAsRead(User $user, AdminMessage $message): bool
     {
-        // 個人向けメッセージの場合、送信先ユーザーのみ開封可能
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
-        // 会員向けメッセージの場合、ログインユーザーは開封可能
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
         if ($message->audience === 'members') {
             return true;
         }
-        
         return false;
     }
 
@@ -51,16 +50,15 @@ class AdminMessagePolicy
      */
     public function reply(User $user, AdminMessage $message): bool
     {
-        // 返信可能でない場合は不可
         if (!$message->allows_reply) {
             return false;
         }
-        
-        // 個人向けメッセージの場合、送信先ユーザーのみ返信可能
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
         return false;
     }
 
@@ -69,21 +67,18 @@ class AdminMessagePolicy
      */
     public function receiveCoin(User $user, AdminMessage $message): bool
     {
-        // コインが付与されていない場合は不可
         if (!$message->coin_amount || $message->coin_amount <= 0) {
             return false;
         }
-        
-        // 個人向けメッセージの場合、送信先ユーザーのみ受け取り可能
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
-        // 会員向けメッセージの場合、ログインユーザーは受け取り可能
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
         if ($message->audience === 'members') {
             return true;
         }
-        
         return false;
     }
 
@@ -92,16 +87,15 @@ class AdminMessagePolicy
      */
     public function approveR18Change(User $user, AdminMessage $message): bool
     {
-        // R18変更リクエストのお知らせでない場合は不可
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
             return false;
         }
-        
-        // 個人向けメッセージの場合、送信先ユーザーのみ承認可能
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
         return false;
     }
 
@@ -110,16 +104,15 @@ class AdminMessagePolicy
      */
     public function rejectR18Change(User $user, AdminMessage $message): bool
     {
-        // R18変更リクエストのお知らせでない場合は不可
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
             return false;
         }
-        
-        // 個人向けメッセージの場合、送信先ユーザーのみ拒否可能
         if ($message->user_id !== null) {
             return $message->user_id === $user->user_id;
         }
-        
+        if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
+            return true;
+        }
         return false;
     }
 }

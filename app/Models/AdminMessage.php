@@ -11,21 +11,35 @@ class AdminMessage extends Model
 
     protected $fillable = [
         'title_key', 'body_key', 'title', 'body', 'audience', 'published_at', 'user_id', 'thread_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount',
+        'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
+        'target_registered_after' => 'datetime',
+        'target_registered_before' => 'datetime',
+        'target_nationalities' => 'array',
         'allows_reply' => 'boolean',
         'reply_used' => 'boolean',
         'unlimited_reply' => 'boolean',
+        'is_welcome' => 'boolean',
     ];
     
     /**
-     * このメッセージの送信先ユーザー（個人向けメッセージの場合）
+     * このメッセージの送信先ユーザー（個人向けメッセージの場合・1名）
      */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * 特定複数人向けの送信先（admin_message_recipients）
+     */
+    public function recipients()
+    {
+        return $this->belongsToMany(User::class, 'admin_message_recipients', 'admin_message_id', 'user_id', 'id', 'user_id')
+            ->withTimestamps();
     }
     
     /**

@@ -181,33 +181,31 @@ Route::get('/threads/{thread}/acknowledge', function($thread) {
     return redirect()->route('threads.show', $thread);
 });
 
-// お知らせ（通知）
-Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
-Route::post('/notifications/{message}/read', [NotificationsController::class, 'markAsRead'])->name('notifications.mark-as-read');
-// GETリクエストの場合はお知らせページにリダイレクト
-Route::get('/notifications/{message}/read', function() {
-    return redirect()->route('notifications.index');
+// お知らせ（通知）— ログイン時のみ利用可能
+Route::middleware('auth')->group(function () {
+    Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{message}/read', [NotificationsController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    Route::post('/notifications/{message}/reply', [NotificationsController::class, 'reply'])->name('notifications.reply');
+    Route::post('/notifications/{message}/receive-coin', [NotificationsController::class, 'receiveCoin'])->name('notifications.receive-coin');
+    Route::post('/notifications/{message}/r18-approve', [NotificationsController::class, 'approveR18Change'])->name('notifications.r18-approve');
+    Route::post('/notifications/{message}/r18-reject', [NotificationsController::class, 'rejectR18Change'])->name('notifications.r18-reject');
 });
-Route::post('/notifications/{message}/reply', [NotificationsController::class, 'reply'])->name('notifications.reply')->middleware('auth');
-// GETリクエストの場合はお知らせページにリダイレクト
+// GETで直接アクセスされた場合はお知らせページまたはログインへ
+Route::get('/notifications/{message}/read', function() {
+    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
+})->where('message', '[0-9]+');
 Route::get('/notifications/{message}/reply', function() {
-    return redirect()->route('notifications.index');
-})->middleware('auth');
-Route::post('/notifications/{message}/receive-coin', [NotificationsController::class, 'receiveCoin'])->name('notifications.receive-coin')->middleware('auth');
-// GETリクエストの場合はお知らせページにリダイレクト
+    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
+})->where('message', '[0-9]+');
 Route::get('/notifications/{message}/receive-coin', function() {
-    return redirect()->route('notifications.index');
-})->middleware('auth');
-Route::post('/notifications/{message}/r18-approve', [NotificationsController::class, 'approveR18Change'])->name('notifications.r18-approve')->middleware('auth');
-// GETリクエストの場合はお知らせページにリダイレクト
+    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
+})->where('message', '[0-9]+');
 Route::get('/notifications/{message}/r18-approve', function() {
-    return redirect()->route('notifications.index');
-})->middleware('auth');
-Route::post('/notifications/{message}/r18-reject', [NotificationsController::class, 'rejectR18Change'])->name('notifications.r18-reject')->middleware('auth');
-// GETリクエストの場合はお知らせページにリダイレクト
+    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
+})->where('message', '[0-9]+');
 Route::get('/notifications/{message}/r18-reject', function() {
-    return redirect()->route('notifications.index');
-})->middleware('auth');
+    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
+})->where('message', '[0-9]+');
 
 // コイン機能（認証が必要）
 Route::middleware('auth')->group(function () {

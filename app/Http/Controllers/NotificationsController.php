@@ -13,78 +13,71 @@ class NotificationsController extends Controller
 {
     public function index()
     {
-        // 実行時間制限を一時的に延長（パフォーマンス問題の回避）
+        // ログイン必須（ルートで auth ミドルウェア済み）。お知らせは登録日時以降のもののみ表示。
         set_time_limit(60);
-        
-        // 言語を最初に取得（セッションキャッシュを活用）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        
-        // 新しい順（上から下へ）に表示
-        $query = AdminMessage::query()
-            ->whereNotNull('published_at') // 送信済みのみ
+        $user = auth()->user();
+        $userId = $user->user_id;
+
+        // 送信済み・親メッセージのみ・新しい順
+        $baseQuery = AdminMessage::query()
+            ->whereNotNull('published_at')
+            ->whereNull('parent_message_id')
             ->orderByDesc('published_at')
             ->orderByDesc('created_at');
 
-        $userId = auth()->id();
-        
-        // 返信メッセージ（parent_message_idが設定されている）は除外
-        $query->whereNull('parent_message_id');
-        
-        if ($userId) {
-            // ログインユーザーの場合：個人向けメッセージまたは会員向けメッセージ
-            $query->where(function($q) use ($userId) {
-                $q->where('user_id', $userId) // 個人向け
-                  ->orWhere(function($qq) {
-                      $qq->whereNull('user_id')
-                         ->where('audience', 'members'); // 会員向け（個人向けでない）
-                  });
-            });
-        } else {
-            // 非ログインユーザーは非会員向けメッセージ（個人向けでない）を表示
-            $query->whereNull('user_id')
-                  ->where('audience', 'guests');
-        }
+        // 表示対象: (1) 自分宛て個人 (2) 自分が recipients に含まれる (3) 会員向け一斉で、登録日時以降かつ条件一致
+        $query = $baseQuery->where(function ($q) use ($user, $userId) {
+            $q->where('user_id', $userId)
+                ->orWhereHas('recipients', fn ($r) => $r->where('users.user_id', $userId))
+                ->orWhere(function ($qq) use ($user, $userId) {
+                    $qq->whereNull('user_id')
+                        ->where('audience', 'members')
+                        ->where('published_at', '>=', $user->created_at)
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_is_adult')->orWhere('target_is_adult', $user->isAdult());
+                        })
+                        ->where(function ($t) use ($user) {
+                            if (empty($user->nationality)) {
+                                $t->whereNull('target_nationalities');
+                            } else {
+                                $t->whereNull('target_nationalities')
+                                    ->orWhereJsonContains('target_nationalities', $user->nationality);
+                            }
+                        })
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_registered_after')
+                                ->orWhere('target_registered_after', '<=', $user->created_at);
+                        })
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_registered_before')
+                                ->orWhere('target_registered_before', '>=', $user->created_at);
+                        });
+                });
+        });
 
-        // 10件ずつページネーション
         $messages = $query->paginate(10);
-        
-        // 各メッセージの開封状態と翻訳済みタイトル・本文を事前に計算（N+1問題の回避）
-        if ($userId) {
-            // ログインユーザーの場合、一度に全メッセージの開封状態とコイン受け取り状態を取得（パフォーマンス向上）
-            $messageIds = $messages->pluck('id')->toArray();
-            if (!empty($messageIds)) {
-                $readMessageIds = AdminMessageRead::where('user_id', $userId)
-                    ->whereIn('admin_message_id', $messageIds)
-                    ->pluck('admin_message_id')
-                    ->toArray();
-                
-                $receivedCoinMessageIds = AdminMessageCoinReward::where('user_id', $userId)
-                    ->whereIn('admin_message_id', $messageIds)
-                    ->pluck('admin_message_id')
-                    ->toArray();
-                
-                foreach ($messages as $message) {
-                    $message->is_read = in_array($message->id, $readMessageIds);
-                    $message->has_received_coin = in_array($message->id, $receivedCoinMessageIds);
-                    // アクセサを回避して翻訳済みタイトル・本文を事前に計算
-                    $message->translated_title = $this->getTranslatedTitle($message, $lang);
-                    $message->translated_body = $this->getTranslatedBody($message, $lang);
-                }
-            } else {
-                foreach ($messages as $message) {
-                    $message->is_read = false;
-                    $message->has_received_coin = false;
-                    // アクセサを回避して翻訳済みタイトル・本文を事前に計算
-                    $message->translated_title = $this->getTranslatedTitle($message, $lang);
-                    $message->translated_body = $this->getTranslatedBody($message, $lang);
-                }
+        $messageIds = $messages->pluck('id')->toArray();
+
+        if (!empty($messageIds)) {
+            $readMessageIds = AdminMessageRead::where('user_id', $userId)
+                ->whereIn('admin_message_id', $messageIds)
+                ->pluck('admin_message_id')
+                ->toArray();
+            $receivedCoinMessageIds = AdminMessageCoinReward::where('user_id', $userId)
+                ->whereIn('admin_message_id', $messageIds)
+                ->pluck('admin_message_id')
+                ->toArray();
+            foreach ($messages as $message) {
+                $message->is_read = in_array($message->id, $readMessageIds);
+                $message->has_received_coin = in_array($message->id, $receivedCoinMessageIds);
+                $message->translated_title = $this->getTranslatedTitle($message, $lang);
+                $message->translated_body = $this->getTranslatedBody($message, $lang);
             }
         } else {
-            // 非ログインユーザーの場合は常に未読として扱う
             foreach ($messages as $message) {
                 $message->is_read = false;
                 $message->has_received_coin = false;
-                // アクセサを回避して翻訳済みタイトル・本文を事前に計算
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
             }

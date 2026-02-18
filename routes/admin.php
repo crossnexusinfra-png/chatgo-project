@@ -35,6 +35,7 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         // お知らせ配信
         Route::get('/messages', [AdminController::class, 'messages'])->name('messages');
         Route::post('/messages', [AdminController::class, 'messagesStore'])->name('messages.store');
+        Route::post('/messages/set-welcome', [AdminController::class, 'messagesSetWelcome'])->name('messages.set-welcome');
         Route::post('/messages/{messageId}/cancel', [AdminController::class, 'messagesCancel'])->name('messages.cancel');
 
         Route::post('/suggestions/{suggestion}/approve', [AdminController::class, 'approveSuggestion'])->name('suggestions.approve');

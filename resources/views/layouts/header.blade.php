@@ -73,13 +73,7 @@
                         ✏️
                     </button>
                 @else
-                    <!-- 非ログイン時の表示 -->
-                    <a href="{{ route('notifications.index') }}" class="header-button notification-btn" title="{{ \App\Services\LanguageService::trans('notifications', $lang) }}">
-                        🔔
-                        @if(isset($unreadNotificationCount) && $unreadNotificationCount > 0)
-                            <span class="notification-badge">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
-                        @endif
-                    </a>
+                    <!-- 非ログイン時の表示（お知らせはログイン時のみ表示） -->
                     <a href="{{ route('auth.choice') }}" class="header-button auth-btn" title="{{ \App\Services\LanguageService::trans('login_register', $lang) }}">
                         🔑
                     </a>
