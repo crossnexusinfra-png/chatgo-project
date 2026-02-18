@@ -59,7 +59,7 @@
                 <option value="filtered">{{ \App\Services\LanguageService::trans('admin_messages_target_filtered', $lang) }}</option>
                 <option value="specific">{{ \App\Services\LanguageService::trans('admin_messages_target_specific', $lang) }}</option>
             </select>
-            <div id="target_filtered_fields" class="admin-messages-target-extra" style="display:none;">
+            <div id="target_filtered_fields" class="admin-messages-target-extra">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult', $lang) }}</label>
                 <select name="target_is_adult">
                     <option value="">{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult_all', $lang) }}</option>
@@ -73,7 +73,7 @@
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_registered_before', $lang) }}</label>
                 <input type="datetime-local" name="target_registered_before">
             </div>
-            <div id="target_specific_fields" class="admin-messages-target-extra" style="display:none;">
+            <div id="target_specific_fields" class="admin-messages-target-extra">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers', $lang) }}</label>
                 <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="12345, 67890"></textarea>
             </div>
@@ -188,11 +188,17 @@
             // グローバルスコープに公開
             window.applyTemplate = applyTemplate;
             
-            // target_type に応じて条件指定・特定ユーザー欄の表示切替
+            // target_type に応じて条件指定・特定ユーザー欄の表示切替（CSP対応: styleではなくclassで制御）
             function toggleTargetExtra() {
                 const type = document.getElementById('target_type')?.value;
-                document.getElementById('target_filtered_fields').style.display = type === 'filtered' ? 'block' : 'none';
-                document.getElementById('target_specific_fields').style.display = type === 'specific' ? 'block' : 'none';
+                const filteredEl = document.getElementById('target_filtered_fields');
+                const specificEl = document.getElementById('target_specific_fields');
+                if (filteredEl) {
+                    filteredEl.classList.toggle('is-visible', type === 'filtered');
+                }
+                if (specificEl) {
+                    specificEl.classList.toggle('is-visible', type === 'specific');
+                }
                 const ri = document.getElementById('recipient_identifiers');
                 if (ri) ri.required = (type === 'specific');
             }

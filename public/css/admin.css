@@ -99,6 +99,14 @@
     border-radius: 6px;
 }
 
+/* 送信先の条件指定・特定ユーザー欄（CSP対応: インラインstyleを使わずクラスで表示切替） */
+.admin-messages-target-extra {
+    display: none;
+}
+.admin-messages-target-extra.is-visible {
+    display: block;
+}
+
 /* Buttons */
 .admin-page button {
     padding: 8px 12px;
