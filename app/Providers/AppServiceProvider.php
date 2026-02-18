@@ -55,53 +55,63 @@ class AppServiceProvider extends ServiceProvider
         });
         */
         
-        // ヘッダーに未読お知らせ数を共有（パフォーマンス最適化版）
+        // ヘッダーに未読お知らせ数を共有（表示条件と同一：登録日以降・条件一致のみカウント）
         View::composer('layouts.header', function ($view) {
             try {
                 $unreadCount = 0;
-                
+
                 if (auth()->check()) {
-                    $userId = auth()->id();
-                    
-                    // メッセージIDを一括取得（最大50件に制限してパフォーマンス向上）
+                    $user = auth()->user();
+                    $userId = $user->user_id;
+
+                    // お知らせ一覧と同じ条件で対象メッセージIDを取得（登録前のお知らせは含めない）
                     $messageIds = AdminMessage::query()
-                        ->whereNotNull('published_at') // 送信済みのみ
-                        ->whereNull('parent_message_id') // 返信メッセージは除外
-                        ->where(function($q) use ($userId) {
-                            $q->where('user_id', $userId) // 個人向け
-                              ->orWhere(function($qq) {
-                                  $qq->whereNull('user_id')
-                                     ->where('audience', 'members'); // 会員向け（個人向けでない）
-                              });
+                        ->whereNotNull('published_at')
+                        ->whereNull('parent_message_id')
+                        ->where(function ($q) use ($user, $userId) {
+                            $q->where('user_id', $userId)
+                                ->orWhereHas('recipients', fn ($r) => $r->where('users.user_id', $userId))
+                                ->orWhere(function ($qq) use ($user, $userId) {
+                                    $qq->whereNull('user_id')
+                                        ->where('audience', 'members')
+                                        ->where('published_at', '>=', $user->created_at)
+                                        ->where(function ($t) use ($user) {
+                                            $t->whereNull('target_is_adult')->orWhere('target_is_adult', $user->isAdult());
+                                        })
+                                        ->where(function ($t) use ($user) {
+                                            if (empty($user->nationality)) {
+                                                $t->whereNull('target_nationalities');
+                                            } else {
+                                                $t->whereNull('target_nationalities')
+                                                    ->orWhereJsonContains('target_nationalities', $user->nationality);
+                                            }
+                                        })
+                                        ->where(function ($t) use ($user) {
+                                            $t->whereNull('target_registered_after')
+                                                ->orWhere('target_registered_after', '<=', $user->created_at);
+                                        })
+                                        ->where(function ($t) use ($user) {
+                                            $t->whereNull('target_registered_before')
+                                                ->orWhere('target_registered_before', '>=', $user->created_at);
+                                        });
+                                });
                         })
                         ->pluck('id')
                         ->take(50)
                         ->toArray();
-                    
+
                     if (!empty($messageIds)) {
-                        // 開封済みメッセージIDを一括取得
                         $readMessageIds = AdminMessageRead::where('user_id', $userId)
                             ->whereIn('admin_message_id', $messageIds)
                             ->pluck('admin_message_id')
                             ->toArray();
-                        
-                        // 未読数を計算
                         $unreadCount = count($messageIds) - count($readMessageIds);
                     }
-                } else {
-                    // 非ログインユーザーは非会員向けメッセージ（個人向けでない）を未読としてカウント
-                    // パフォーマンス向上のため、最大50件に制限
-                    $unreadCount = AdminMessage::whereNotNull('published_at')
-                        ->whereNull('parent_message_id') // 返信メッセージは除外
-                        ->whereNull('user_id')
-                        ->where('audience', 'guests')
-                        ->take(50)
-                        ->count();
                 }
-                
+                // 非ログイン時はお知らせ機能なしのため 0
+
                 $view->with('unreadNotificationCount', $unreadCount);
             } catch (\Exception $e) {
-                // エラーが発生した場合は0を返す（パフォーマンス問題を回避）
                 $view->with('unreadNotificationCount', 0);
             }
         });
