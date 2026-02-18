@@ -302,21 +302,16 @@ class AdminController extends Controller
             if ($raw === '') {
                 return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_required', $lang)]);
             }
-            $parts = array_unique(array_filter(explode(',', $raw)));
-            $invalidParts = [];
+            $parts = array_unique(array_filter(array_map('trim', explode(',', $raw))));
             foreach ($parts as $part) {
-                $part = trim($part);
-                if (!is_numeric($part)) {
-                    $invalidParts[] = $part;
+                if ($part === '') {
                     continue;
                 }
-                $u = User::find((int) $part);
+                // 表示形式「ユーザー名@ユーザーID」の「ユーザーID」部分（user_identifier）で検索
+                $u = User::where('user_identifier', $part)->first();
                 if ($u) {
                     $recipientUserIds[] = $u->user_id;
                 }
-            }
-            if (!empty($invalidParts)) {
-                return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_invalid_format', $lang)]);
             }
             $recipientUserIds = array_values(array_unique($recipientUserIds));
             if (empty($recipientUserIds)) {
