@@ -303,19 +303,20 @@ class AdminController extends Controller
                 return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_required', $lang)]);
             }
             $parts = array_unique(array_filter(explode(',', $raw)));
+            $invalidParts = [];
             foreach ($parts as $part) {
                 $part = trim($part);
-                if (is_numeric($part)) {
-                    $u = User::find((int) $part);
-                    if ($u) {
-                        $recipientUserIds[] = $u->user_id;
-                    }
-                } else {
-                    $u = User::where('username', $part)->orWhere('user_identifier', $part)->first();
-                    if ($u) {
-                        $recipientUserIds[] = $u->user_id;
-                    }
+                if (!is_numeric($part)) {
+                    $invalidParts[] = $part;
+                    continue;
                 }
+                $u = User::find((int) $part);
+                if ($u) {
+                    $recipientUserIds[] = $u->user_id;
+                }
+            }
+            if (!empty($invalidParts)) {
+                return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_invalid_format', $lang)]);
             }
             $recipientUserIds = array_values(array_unique($recipientUserIds));
             if (empty($recipientUserIds)) {

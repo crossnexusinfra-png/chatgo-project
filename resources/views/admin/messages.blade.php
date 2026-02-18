@@ -75,7 +75,7 @@
             </div>
             <div id="target_specific_fields" class="admin-messages-target-extra" style="display:none;">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers', $lang) }}</label>
-                <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="user_identifier または 12345"></textarea>
+                <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="12345, 67890"></textarea>
             </div>
             <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
             <input type="text" name="title" id="title" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
