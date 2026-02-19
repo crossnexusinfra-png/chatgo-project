@@ -806,6 +806,10 @@
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.submitting || '送信中';
+                    submitBtn.style.background = '#b0b0b0';
+                    submitBtn.style.backgroundColor = '#b0b0b0';
+                    submitBtn.style.color = '#666';
+                    submitBtn.style.cursor = 'not-allowed';
                 }
             });
         }
