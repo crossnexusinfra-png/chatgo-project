@@ -428,6 +428,54 @@
             }
         });
 
+        // ルーム作成フォーム: 送信開始時にボタン無効化＋「作成中」表示（二重送信防止）
+        const createThreadForm = document.getElementById('createThreadForm');
+        if (createThreadForm) {
+            createThreadForm.addEventListener('submit', function(e) {
+                const submitBtn = createThreadForm.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.creating_room || '作成中';
+                }
+            });
+        }
+
+        // 通報フォーム: 送信開始時にボタン無効化＋「送信中」表示（二重送信防止）
+        const reportForm = document.getElementById('reportForm');
+        if (reportForm) {
+            reportForm.addEventListener('submit', function(e) {
+                const submitBtn = reportForm.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.submitting || '送信中';
+                }
+            });
+        }
+
+        // 改善要望フォーム: 送信開始時にボタン無効化＋「送信中」表示（二重送信防止）
+        const suggestionForm = document.getElementById('suggestionForm');
+        if (suggestionForm) {
+            suggestionForm.addEventListener('submit', function(e) {
+                const submitBtn = suggestionForm.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.submitting || '送信中';
+                }
+            });
+        }
+
         // 画像ファイル選択時のファイル名表示
         const imageInput = document.getElementById('image');
         const imageFileName = document.getElementById('imageFileName');

@@ -127,6 +127,7 @@
         hasMorePages: {{ $messages->hasMorePages() ? 'true' : 'false' }},
         translations: {
             processing: '{{ \App\Services\LanguageService::trans("processing", $lang) }}',
+            submitting: '{{ \App\Services\LanguageService::trans("submitting", $lang) }}',
             replyRequired: '{{ \App\Services\LanguageService::trans('reply_required', $lang) }}',
             replyFailed: '{{ \App\Services\LanguageService::trans('reply_failed', $lang) }}',
             replySuccess: '{{ \App\Services\LanguageService::trans('reply_success', $lang) }}',

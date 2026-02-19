@@ -721,6 +721,11 @@
 
         if (responseForm) {
             responseForm.addEventListener('submit', function(e) {
+                const submitBtn = responseForm.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
                 const body = document.getElementById('body').value.trim();
                 const mediaFile = document.getElementById('media_file').files[0];
 
@@ -797,6 +802,10 @@
                         showMediaError(errorMsg);
                         return false;
                     }
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.submitting || '送信中';
                 }
             });
         }

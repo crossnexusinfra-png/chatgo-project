@@ -215,6 +215,7 @@
     
     <script nonce="{{ $csp_nonce ?? '' }}">
         window.authRegisterConfig = {
+            registering: '{{ \App\Services\LanguageService::trans("registering", $lang) }}',
             examplePrefix: '{{ \App\Services\LanguageService::trans("example_prefix", $lang) }}',
             defaultPhoneHelp: '{{ \App\Services\LanguageService::trans("register_phone_local_help", $lang) }}',
             countryData: {

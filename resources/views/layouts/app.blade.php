@@ -46,7 +46,7 @@
             <div class="modal-body">
                 <!-- 新規ルームフォーム -->
                 <section class="post-form">
-                    <form action="{{ route('threads.store') }}" method="POST" enctype="multipart/form-data">
+                    <form id="createThreadForm" action="{{ route('threads.store') }}" method="POST" enctype="multipart/form-data">
                         <!-- CSRF保護 -->
                         @csrf
                         <div class="form-group">

@@ -130,12 +130,22 @@
         event.preventDefault();
         
         const form = event.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && submitBtn.disabled) {
+            return;
+        }
         const formData = new FormData(form);
         const replyBody = formData.get('reply_body');
         
         if (!replyBody || !replyBody.trim()) {
             alert(translations.replyRequired);
             return;
+        }
+        
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = translations.submitting || '送信中';
         }
         
         try {
@@ -156,6 +166,10 @@
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('HTTP error:', response.status, errorText);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
                 alert(translations.replyFailed);
                 return;
             }
@@ -173,17 +187,32 @@
                         if (textarea) {
                             textarea.value = '';
                         }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
+                        }
                         alert(translations.replySuccess);
                     } else {
                         replySection.innerHTML = '<div class="reply-success-message">' + translations.replySuccessMessage + '</div>';
                         alert(translations.replySuccess);
                     }
+                } else if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             } else {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
                 alert(result.error || translations.replyFailed);
             }
         } catch (error) {
             console.error('Failed to send reply:', error);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
             alert(translations.replyFailed);
         }
     };

@@ -6,6 +6,7 @@
 
     const config = window.authRegisterConfig || {};
     const countryData = config.countryData || {};
+    const registeringText = config.registering || '登録中';
     const helpTexts = config.helpTexts || {};
     const countryCodeMap = config.countryCodeMap || {};
     const examplePrefix = config.examplePrefix || '例:';
@@ -220,6 +221,22 @@
         }
         if (passwordConfirmationInput) {
             passwordConfirmationInput.addEventListener('input', validatePassword);
+        }
+
+        // 新規登録フォーム: 送信開始時にボタン無効化＋「登録中」表示（二重送信防止）
+        const registerForm = document.getElementById('registerForm');
+        if (registerForm) {
+            registerForm.addEventListener('submit', function(e) {
+                const submitBtn = registerForm.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = registeringText;
+                }
+            });
         }
     });
 })();

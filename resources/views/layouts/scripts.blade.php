@@ -9,7 +9,12 @@
         'reportReasonThreadImagePersonalInfo' => \App\Services\LanguageService::trans('report_reason_thread_image_personal_info', $lang),
         'reportReasonThreadImageInappropriate' => \App\Services\LanguageService::trans('report_reason_thread_image_inappropriate', $lang),
         'reportReasonAdultContent' => \App\Services\LanguageService::trans('report_reason_adult_content', $lang),
-        'noFileSelected' => \App\Services\LanguageService::trans('no_file_selected', $lang)
+        'noFileSelected' => \App\Services\LanguageService::trans('no_file_selected', $lang),
+        'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
+        'creating_room' => \App\Services\LanguageService::trans('creating_room', $lang),
+        'sending_request' => \App\Services\LanguageService::trans('sending_request', $lang),
+        'deleting' => \App\Services\LanguageService::trans('deleting', $lang),
+        'processing' => \App\Services\LanguageService::trans('processing', $lang)
     ]
 ]) }}">
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>

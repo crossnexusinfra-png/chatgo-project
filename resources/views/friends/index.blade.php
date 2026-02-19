@@ -113,7 +113,7 @@
                                     id="send-coins-btn-{{ $friendId }}">
                                     {{ \App\Services\LanguageService::trans('send_coins', $lang) }}
                                 </button>
-                                <button onclick="deleteFriend({{ $friendId }})" class="btn btn-danger">
+                                <button onclick="deleteFriend(event, {{ $friendId }})" class="btn btn-danger">
                                     {{ \App\Services\LanguageService::trans('delete', $lang) }}
                                 </button>
                             </div>
@@ -156,27 +156,27 @@
                                     <button class="btn btn-secondary" disabled>
                                         {{ \App\Services\LanguageService::trans('request_pending', $lang) }}
                                     </button>
-                                    <button onclick="rejectFriendRequest({{ $available['user']->user_id }})" class="btn btn-danger">
+                                    <button onclick="rejectFriendRequest(event, {{ $available['user']->user_id }})" class="btn btn-danger">
                                         {{ \App\Services\LanguageService::trans('reject', $lang) }}
                                     </button>
                                 @elseif($available['received_request'])
-                                    <form action="{{ route('friends.accept-request', $available['received_request']) }}" method="POST" class="form-inline">
+                                    <form action="{{ route('friends.accept-request', $available['received_request']) }}" method="POST" class="form-inline friend-accept-request-form">
                                         @csrf
                                         <button type="submit" class="btn btn-success">{{ \App\Services\LanguageService::trans('accept', $lang) }}</button>
                                     </form>
                                     <form action="{{ route('friends.reject-request', $available['received_request']) }}" method="POST" class="form-inline" id="reject-form-{{ $available['received_request']->id }}">
                                         @csrf
-                                        <button type="button" onclick="confirmRejectRequest({{ $available['received_request']->id }})" class="btn btn-danger">{{ \App\Services\LanguageService::trans('reject', $lang) }}</button>
+                                        <button type="button" onclick="confirmRejectRequest(event, {{ $available['received_request']->id }})" class="btn btn-danger">{{ \App\Services\LanguageService::trans('reject', $lang) }}</button>
                                     </form>
                                 @else
-                                    <form action="{{ route('friends.send-request') }}" method="POST" class="form-inline">
+                                    <form action="{{ route('friends.send-request') }}" method="POST" class="form-inline friend-send-request-form">
                                         @csrf
                                         <input type="hidden" name="user_id" value="{{ $available['user']->user_id }}">
                                         <button type="submit" class="btn btn-primary" {{ $isMaxFriendsReached ? 'disabled' : '' }}>
                                             {{ \App\Services\LanguageService::trans('send_request', $lang) }}
                                         </button>
                                     </form>
-                                    <button onclick="rejectFriendRequest({{ $available['user']->user_id }})" class="btn btn-danger">
+                                    <button onclick="rejectFriendRequest(event, {{ $available['user']->user_id }})" class="btn btn-danger">
                                         {{ \App\Services\LanguageService::trans('reject', $lang) }}
                                     </button>
                                 @endif
@@ -203,6 +203,10 @@
                 rejectAvailableRoute: '{{ route("friends.reject-available") }}'
             },
             translations: {
+                submitting: '{{ \App\Services\LanguageService::trans("submitting", $lang) }}',
+                sending_request: '{{ \App\Services\LanguageService::trans("sending_request", $lang) }}',
+                deleting: '{{ \App\Services\LanguageService::trans("deleting", $lang) }}',
+                processing: '{{ \App\Services\LanguageService::trans("processing", $lang) }}',
                 inviteCodeCopied: '{{ \App\Services\LanguageService::trans("invite_code_copied", $lang) }}',
                 errorOccurred: '{{ \App\Services\LanguageService::trans("error_occurred", $lang) }}',
                 hours: '{{ \App\Services\LanguageService::trans("hours", $lang) }}',

@@ -21,6 +21,16 @@
     };
 
     window.sendCoins = function(friendId) {
+        const sendButton = document.getElementById('send-coins-btn-' + friendId);
+        if (sendButton && sendButton.disabled) {
+            return;
+        }
+        const originalText = sendButton ? sendButton.textContent : '';
+        if (sendButton) {
+            sendButton.disabled = true;
+            sendButton.classList.add('btn-disabled');
+            sendButton.textContent = translations.submitting || '送信中';
+        }
         fetch(routes.sendCoinsRoute || '/friends/send-coins', {
             method: 'POST',
             headers: {
@@ -36,6 +46,11 @@
             if (data.success) {
                 location.reload();
             } else {
+                if (sendButton) {
+                    sendButton.disabled = false;
+                    sendButton.classList.remove('btn-disabled');
+                    sendButton.textContent = originalText;
+                }
                 if (data.message) {
                     alert(data.message);
                 }
@@ -43,6 +58,11 @@
         })
         .catch(error => {
             console.error('Error:', error);
+            if (sendButton) {
+                sendButton.disabled = false;
+                sendButton.classList.remove('btn-disabled');
+                sendButton.textContent = originalText;
+            }
             if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
@@ -107,13 +127,52 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateWaitTimes();
         setInterval(updateWaitTimes, 1000);
+
+        // フレンド申請フォーム: 送信開始時にボタン無効化＋「申請中」表示（二重送信防止）
+        document.querySelectorAll('.friend-send-request-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.sending_request || '申請中';
+                }
+            });
+        });
+
+        // フレンド承認フォーム: 送信開始時にボタン無効化＋「処理中」表示（二重送信防止）
+        document.querySelectorAll('.friend-accept-request-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = translations.processing || '処理中';
+                }
+            });
+        });
     });
 
-    window.deleteFriend = function(friendId) {
+    window.deleteFriend = function(event, friendId) {
+        if (arguments.length === 1) {
+            friendId = event;
+            event = null;
+        }
+        const button = (event && event.target) ? event.target : null;
+        const originalText = button ? button.textContent : '';
         if (!confirm(translations.confirmDeleteFriend || 'Delete this friend?')) {
             return;
         }
-        
+        if (button) {
+            button.disabled = true;
+            button.textContent = translations.deleting || '削除中';
+        }
         fetch(routes.deleteRoute || '/friends/delete', {
             method: 'POST',
             headers: {
@@ -128,6 +187,10 @@
             if (response.ok) {
                 location.reload();
             } else {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
                 if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
@@ -135,17 +198,30 @@
         })
         .catch(error => {
             console.error('Error:', error);
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
             if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
         });
     };
 
-    window.rejectFriendRequest = function(userId) {
+    window.rejectFriendRequest = function(event, userId) {
+        if (arguments.length === 1) {
+            userId = event;
+            event = null;
+        }
+        const button = (event && event.target) ? event.target : null;
+        const originalText = button ? button.textContent : '';
         if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
             return;
         }
-        
+        if (button) {
+            button.disabled = true;
+            button.textContent = translations.processing || '処理中';
+        }
         fetch(routes.rejectAvailableRoute || '/friends/reject-available', {
             method: 'POST',
             headers: {
@@ -160,6 +236,10 @@
             if (response.ok) {
                 location.reload();
             } else {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
                 if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
@@ -167,17 +247,29 @@
         })
         .catch(error => {
             console.error('Error:', error);
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
             if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
         });
     };
 
-    window.confirmRejectRequest = function(requestId) {
+    window.confirmRejectRequest = function(event, requestId) {
+        if (arguments.length === 1) {
+            requestId = event;
+            event = null;
+        }
         if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
             return;
         }
-        
+        const button = (event && event.target) ? event.target : null;
+        if (button) {
+            button.disabled = true;
+            button.textContent = translations.processing || '処理中';
+        }
         const form = document.getElementById('reject-form-' + requestId);
         if (form) {
             form.submit();

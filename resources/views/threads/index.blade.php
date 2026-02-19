@@ -706,7 +706,7 @@
                 <section class="suggestion-section">
                     <h3 class="suggestion-title">{{ \App\Services\LanguageService::trans('suggestion_title', $lang) }}</h3>
                     <p class="suggestion-description">{{ \App\Services\LanguageService::trans('suggestion_description', $lang) }}</p>
-                    <form method="POST" action="{{ route('suggestions.store') }}">
+                    <form id="suggestionForm" method="POST" action="{{ route('suggestions.store') }}">
                         @csrf
                         <textarea name="message" rows="4" maxlength="1000" placeholder="{{ \App\Services\LanguageService::trans('suggestion_placeholder', $lang) }}" class="suggestion-textarea" required>{{ old('message') }}</textarea>
                         <div class="suggestion-submit-container">

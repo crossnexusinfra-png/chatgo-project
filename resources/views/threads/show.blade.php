@@ -453,6 +453,7 @@
             'videoMaxSize' => \App\Services\LanguageService::trans('video_max_size', $lang),
             'audioMaxSize' => \App\Services\LanguageService::trans('audio_max_size', $lang),
             'messageOrFileRequired' => \App\Services\LanguageService::trans('message_or_file_required', $lang),
+            'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
             'adVideoLoading' => \App\Services\LanguageService::trans('ad_video_loading', $lang),
             'adVideoPlaying' => \App\Services\LanguageService::trans('ad_video_playing', $lang),
             'videoLoadFailed' => \App\Services\LanguageService::trans('video_load_failed', $lang),
