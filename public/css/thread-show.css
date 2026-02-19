@@ -954,6 +954,20 @@ body {
     transform: translateY(0);
 }
 
+/* 無効時: 薄い灰色でグラデーションを上書き（二重送信防止） */
+.submit-btn:disabled,
+.submit-btn[disabled] {
+    background: #b0b0b0 !important;
+    color: #666 !important;
+    transform: none !important;
+    cursor: not-allowed !important;
+}
+.submit-btn:disabled:hover,
+.submit-btn[disabled]:hover {
+    background: #b0b0b0 !important;
+    transform: none !important;
+}
+
 /* メディアファイル選択ボタン */
 .media-file-btn {
     background: #667eea;

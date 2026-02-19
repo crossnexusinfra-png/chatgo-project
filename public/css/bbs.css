@@ -1633,12 +1633,18 @@ body {
 button:disabled,
 button[disabled],
 .btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-success:disabled,
 .submit-btn:disabled,
 .auth-submit-btn:disabled,
 .suggestion-submit-button:disabled,
+.favorite-btn:disabled,
 input[type="submit"]:disabled,
 input[type="button"]:disabled {
     cursor: not-allowed !important;
+    background: #b0b0b0 !important;
     background-color: #b0b0b0 !important;
     color: #666 !important;
     border-color: #a0a0a0 !important;
@@ -1649,10 +1655,17 @@ input[type="button"]:disabled {
 button:disabled:hover,
 button[disabled]:hover,
 .btn:disabled:hover,
+.btn-primary:disabled:hover,
+.btn-secondary:disabled:hover,
+.btn-danger:disabled:hover,
+.btn-success:disabled:hover,
+.submit-btn:disabled:hover,
 input[type="submit"]:disabled:hover,
 input[type="button"]:disabled:hover {
+    background: #b0b0b0 !important;
     background-color: #b0b0b0 !important;
     color: #666 !important;
+    border-color: #a0a0a0 !important;
     transform: none !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
