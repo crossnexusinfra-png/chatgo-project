@@ -1628,6 +1628,14 @@ body {
     text-align: center;
 }
 
+/* 無効化されたボタン: クリック不可・カーソルを禁止に（二重送信防止用） */
+button:disabled,
+input[type="submit"]:disabled,
+input[type="button"]:disabled {
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
 .btn-primary {
     background-color: #0275d8;
     color: white;
