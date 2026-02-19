@@ -739,6 +739,7 @@ return [
     'video_file' => '動画',
     'audio_file' => '音声',
     'file_size_exceeds_php_limit' => 'ファイルサイズがPHPの設定上限（:phpMaxMB）を超えています。選択されたファイル：:fileSizeMB。サーバーの設定を確認してください。',
+    'file_validation_tool_unavailable' => 'ファイル検証ツールが利用できません。動画・音声の形式確認には、サーバーに FFmpeg（ffprobe）のインストールが必要です。サーバー管理者にご相談ください。',
     'image_max_size' => '画像 (最大1.5MB)',
     'video_max_size' => '動画 (最大10MB)',
     'audio_max_size' => '音声 (最大5MB)',

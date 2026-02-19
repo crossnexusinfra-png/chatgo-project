@@ -1628,7 +1628,7 @@ body {
     text-align: center;
 }
 
-/* 無効化されたボタン: 色を薄く・ホバー無効・クリック不可（二重送信防止用） */
+/* 無効化されたボタン: 薄い灰色で無効を明示・ホバー無効・クリック不可（二重送信防止用） */
 /* pointer-events は付けない: 無効ボタン上でカーソルを not-allowed にするため（disabled でクリックは防止される） */
 button:disabled,
 button[disabled],
@@ -1639,7 +1639,10 @@ button[disabled],
 input[type="submit"]:disabled,
 input[type="button"]:disabled {
     cursor: not-allowed !important;
-    opacity: 0.5;
+    background-color: #b0b0b0 !important;
+    color: #666 !important;
+    border-color: #a0a0a0 !important;
+    opacity: 1;
     transform: none !important;
     box-shadow: none !important;
 }
@@ -1648,6 +1651,8 @@ button[disabled]:hover,
 .btn:disabled:hover,
 input[type="submit"]:disabled:hover,
 input[type="button"]:disabled:hover {
+    background-color: #b0b0b0 !important;
+    color: #666 !important;
     transform: none !important;
     box-shadow: none !important;
     cursor: not-allowed !important;

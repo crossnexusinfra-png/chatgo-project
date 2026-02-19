@@ -738,6 +738,7 @@ return [
     'video_file' => 'Video',
     'audio_file' => 'Audio',
     'file_size_exceeds_php_limit' => 'File size exceeds PHP configuration limit (:phpMaxMB). Selected file: :fileSizeMB. Please check server settings.',
+    'file_validation_tool_unavailable' => 'File validation tool is not available. FFmpeg (ffprobe) must be installed on the server to verify video/audio format. Please contact the server administrator.',
     'image_max_size' => 'Image (max 1.5MB)',
     'video_max_size' => 'Video (max 10MB)',
     'audio_max_size' => 'Audio (max 5MB)',

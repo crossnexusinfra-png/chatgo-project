@@ -301,9 +301,7 @@ class MediaFileValidationService
                         ];
                     }
                     
-                    $errorMsg = $this->isJapanese()
-                        ? 'ファイル検証ツールが利用できません。'
-                        : 'File validation tool is not available.';
+                    $errorMsg = \App\Services\LanguageService::trans('file_validation_tool_unavailable', $this->lang);
                     return [
                         'valid' => false,
                         'error' => $errorMsg,
