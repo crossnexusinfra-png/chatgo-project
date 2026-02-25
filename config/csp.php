@@ -22,6 +22,7 @@ return [
         ],
         'script-src' => [
             "'self'",
+            "'unsafe-inline'", // onclick 等のインラインイベントハンドラ用（画像プレビュー等）
             // nonceは動的に追加されます
         ],
         'style-src' => [
@@ -44,6 +45,7 @@ return [
         'media-src' => [
             "'self'",
             'blob:',
+            'https://commondatastorage.googleapis.com', // 広告動画テスト用
         ],
         'object-src' => [
             "'none'",
