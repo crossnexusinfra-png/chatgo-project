@@ -1326,6 +1326,23 @@
             }
         });
 
+        // 画像プレビュークリック（イベント委譲・CSP対応でインラインonclickを使わない）
+        document.addEventListener('click', function(e) {
+            const preview = e.target.closest('.media-preview-image');
+            if (!preview) return;
+            e.preventDefault();
+            const url = preview.getAttribute('data-image-url');
+            if (url) window.openImageModal(url);
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const preview = e.target.closest('.media-preview-image');
+            if (!preview) return;
+            e.preventDefault();
+            const url = preview.getAttribute('data-image-url');
+            if (url) window.openImageModal(url);
+        });
+
         // メディアファイルハンドラーの初期化
         initMediaFileHandlers();
 
