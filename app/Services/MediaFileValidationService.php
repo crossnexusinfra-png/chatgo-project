@@ -58,6 +58,15 @@ class MediaFileValidationService
     }
 
     /**
+     * ClamAVウイルススキャンを有効にするかどうか
+     * デフォルトは無効。有効化する場合は .env に CLAMAV_ENABLED=true を設定
+     */
+    private function isClamAVEnabled(): bool
+    {
+        return env('CLAMAV_ENABLED', false) === true;
+    }
+
+    /**
      * 日本語かどうかを判定
      */
     private function isJapanese(): bool
@@ -464,6 +473,11 @@ class MediaFileValidationService
      */
     private function scanWithClamAV(UploadedFile $file): array
     {
+        if (!$this->isClamAVEnabled()) {
+            Log::info('MediaFileValidationService: ClamAV scan skipped (CLAMAV_ENABLED is not true)');
+            return ['valid' => true, 'error' => null];
+        }
+
         try {
             $filePath = $file->getRealPath();
             $useClamscan = false;
