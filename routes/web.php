@@ -27,6 +27,26 @@ require __DIR__.'/admin.php';
 // トップページにアクセスされたら、ThreadControllerのindexメソッドを呼び出す
 Route::get('/', [ThreadController::class, 'index'])->name('threads.index');
 
+// 413 切り分け用: アップロード上限の確認（APP_DEBUG 時のみ。本番では無効）
+if (config('app.debug')) {
+    Route::get('/upload-limits', function () {
+        $uploadMax = ini_get('upload_max_filesize');
+        $postMax = ini_get('post_max_size');
+        return response()->json([
+            'php' => [
+                'upload_max_filesize' => $uploadMax,
+                'post_max_size' => $postMax,
+                'note' => '音声は5MBまで許可。post_max_size と upload_max_filesize は 5M 以上推奨。',
+            ],
+            'app_allowed' => [
+                'image_mb' => 1.5,
+                'video_mb' => 10,
+                'audio_mb' => 5,
+            ],
+        ], 200, ['Content-Type' => 'application/json; charset=UTF-8'], JSON_UNESCAPED_UNICODE);
+    })->name('upload-limits');
+}
+
 // サイト改善要望の投稿
 Route::post('/suggestions', [SuggestionController::class, 'store'])->name('suggestions.store');
 // GETリクエストの場合はトップページにリダイレクト
