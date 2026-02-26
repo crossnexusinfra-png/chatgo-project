@@ -813,33 +813,37 @@
                         return false;
                     }
                 }
+                e.preventDefault();
                 form.classList.add('response-form-submitting');
                 var sb = form.querySelector('button[type="submit"]');
-                var textarea = form.querySelector('textarea');
+                var textarea = form.querySelector('textarea[name="body"]');
                 var plusBtn = form.querySelector('button.media-file-btn');
                 var cancelBtn = form.querySelector('.reply-target-cancel');
                 if (textarea) {
                     textarea.readOnly = true;
                     textarea.setAttribute('readonly', 'readonly');
-                    textarea.style.pointerEvents = 'none';
-                    textarea.style.cursor = 'not-allowed';
+                    textarea.setAttribute('aria-disabled', 'true');
+                    textarea.style.cssText = 'pointer-events:none;cursor:not-allowed;background-color:#f0f0f0;color:#666;';
                 }
                 if (plusBtn) {
                     plusBtn.disabled = true;
                     plusBtn.setAttribute('disabled', 'disabled');
-                    plusBtn.style.pointerEvents = 'none';
-                    plusBtn.style.cursor = 'not-allowed';
+                    plusBtn.setAttribute('aria-disabled', 'true');
+                    plusBtn.style.cssText = 'pointer-events:none;cursor:not-allowed;background:#b0b0b0!important;color:#666!important;';
                 }
-                if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
+                if (cancelBtn) {
+                    cancelBtn.disabled = true;
+                    cancelBtn.setAttribute('disabled', 'disabled');
+                }
                 if (sb) {
                     sb.disabled = true;
                     sb.setAttribute('disabled', 'disabled');
                     sb.textContent = translations.submitting || '送信中';
-                    sb.style.background = '#b0b0b0';
-                    sb.style.backgroundColor = '#b0b0b0';
-                    sb.style.color = '#666';
-                    sb.style.cursor = 'not-allowed';
+                    sb.style.cssText = 'background:#b0b0b0!important;background-color:#b0b0b0!important;color:#666!important;cursor:not-allowed!important;';
                 }
+                setTimeout(function() {
+                    form.submit();
+                }, 50);
             });
         }
     }
