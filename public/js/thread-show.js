@@ -727,83 +727,20 @@
 
         if (responseForm) {
             responseForm.addEventListener('submit', function(e) {
-                var form = responseForm;
+                var form = e.target;
+                if (form.tagName !== 'FORM') return;
                 var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                function disableFormForSubmit() {
-                    form.classList.add('response-form-submitting');
-                    var sb = form.querySelector('button[type="submit"]');
-                    var textarea = form.querySelector('textarea');
-                    var plusBtn = form.querySelector('button.media-file-btn');
-                    var cancelBtn = form.querySelector('.reply-target-cancel');
-                    if (textarea) {
-                        textarea.readOnly = true;
-                        textarea.setAttribute('readonly', 'readonly');
-                        textarea.setAttribute('aria-disabled', 'true');
-                        textarea.style.pointerEvents = 'none';
-                        textarea.style.cursor = 'not-allowed';
-                    }
-                    if (plusBtn) {
-                        plusBtn.disabled = true;
-                        plusBtn.setAttribute('disabled', 'disabled');
-                        plusBtn.setAttribute('aria-disabled', 'true');
-                        plusBtn.style.pointerEvents = 'none';
-                        plusBtn.style.cursor = 'not-allowed';
-                    }
-                    if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
-                    if (sb) {
-                        sb.disabled = true;
-                        sb.setAttribute('disabled', 'disabled');
-                        sb.textContent = translations.submitting || '送信中';
-                        sb.style.background = '#b0b0b0';
-                        sb.style.backgroundColor = '#b0b0b0';
-                        sb.style.color = '#666';
-                        sb.style.cursor = 'not-allowed';
-                    }
-                }
-                function reenableForm() {
-                    form.classList.remove('response-form-submitting');
-                    var sb = form.querySelector('button[type="submit"]');
-                    var textarea = form.querySelector('textarea');
-                    var plusBtn = form.querySelector('button.media-file-btn');
-                    var cancelBtn = form.querySelector('.reply-target-cancel');
-                    if (textarea) {
-                        textarea.readOnly = false;
-                        textarea.removeAttribute('readonly');
-                        textarea.removeAttribute('aria-disabled');
-                        textarea.style.pointerEvents = '';
-                        textarea.style.cursor = '';
-                    }
-                    if (plusBtn) {
-                        plusBtn.disabled = false;
-                        plusBtn.removeAttribute('disabled');
-                        plusBtn.removeAttribute('aria-disabled');
-                        plusBtn.style.pointerEvents = '';
-                        plusBtn.style.cursor = '';
-                    }
-                    if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.removeAttribute('disabled'); }
-                    if (sb) {
-                        sb.disabled = false;
-                        sb.removeAttribute('disabled');
-                        sb.textContent = translations.submit || '送信';
-                        sb.style.background = '';
-                        sb.style.backgroundColor = '';
-                        sb.style.color = '';
-                        sb.style.cursor = '';
-                    }
-                }
-                disableFormForSubmit();
                 var textareaEl = form.querySelector('textarea');
                 var body = (textareaEl && textareaEl.value) ? textareaEl.value.trim() : '';
-                var mediaFileInput = form.querySelector('#media_file');
+                var mediaFileInput = form.querySelector('input[type="file"][name="media_file"]');
                 var mediaFile = mediaFileInput && mediaFileInput.files[0];
 
                 if (!body && !mediaFile) {
                     e.preventDefault();
-                    reenableForm();
                     showMediaError(translations.messageOrFileRequired || translations.messageOrFileRequired);
                     return false;
                 }
@@ -827,7 +764,6 @@
                     
                     if (!isValidMimeType && !isValidExtension) {
                         e.preventDefault();
-                        reenableForm();
                         showMediaError(translations.fileFormatNotAllowed);
                         return false;
                     }
@@ -838,7 +774,6 @@
                     
                     if (mediaFile.size > phpUploadMaxSize) {
                         e.preventDefault();
-                        reenableForm();
                         const fileSizeMB = (mediaFile.size / (1024 * 1024)).toFixed(2);
                         const phpMaxMB = (phpUploadMaxSize / (1024 * 1024)).toFixed(0);
                         const errorMsg = translations.fileSizeExceedsPhpLimit
@@ -869,7 +804,6 @@
                     
                     if (mediaFile.size > maxSize) {
                         e.preventDefault();
-                        reenableForm();
                         const fileSizeMB = (mediaFile.size / (1024 * 1024)).toFixed(2);
                         const errorMsg = translations.fileSizeTooLarge
                             .replace(':fileType', fileTypeName)
@@ -878,6 +812,33 @@
                         showMediaError(errorMsg);
                         return false;
                     }
+                }
+                form.classList.add('response-form-submitting');
+                var sb = form.querySelector('button[type="submit"]');
+                var textarea = form.querySelector('textarea');
+                var plusBtn = form.querySelector('button.media-file-btn');
+                var cancelBtn = form.querySelector('.reply-target-cancel');
+                if (textarea) {
+                    textarea.readOnly = true;
+                    textarea.setAttribute('readonly', 'readonly');
+                    textarea.style.pointerEvents = 'none';
+                    textarea.style.cursor = 'not-allowed';
+                }
+                if (plusBtn) {
+                    plusBtn.disabled = true;
+                    plusBtn.setAttribute('disabled', 'disabled');
+                    plusBtn.style.pointerEvents = 'none';
+                    plusBtn.style.cursor = 'not-allowed';
+                }
+                if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
+                if (sb) {
+                    sb.disabled = true;
+                    sb.setAttribute('disabled', 'disabled');
+                    sb.textContent = translations.submitting || '送信中';
+                    sb.style.background = '#b0b0b0';
+                    sb.style.backgroundColor = '#b0b0b0';
+                    sb.style.color = '#666';
+                    sb.style.cursor = 'not-allowed';
                 }
             });
         }
