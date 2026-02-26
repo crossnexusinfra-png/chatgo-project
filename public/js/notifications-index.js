@@ -142,6 +142,12 @@
             return;
         }
         
+        const replyTextarea = form.querySelector('textarea[name="reply_body"]');
+        form.classList.add('form-submitting');
+        if (replyTextarea) {
+            replyTextarea.readOnly = true;
+            replyTextarea.setAttribute('aria-disabled', 'true');
+        }
         const originalText = submitBtn ? submitBtn.textContent : '';
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -166,6 +172,8 @@
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('HTTP error:', response.status, errorText);
+                form.classList.remove('form-submitting');
+                if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
@@ -183,9 +191,12 @@
                 
                 if (replySection) {
                     if (isUnlimitedReply) {
+                        form.classList.remove('form-submitting');
                         const textarea = form.querySelector('textarea[name="reply_body"]');
                         if (textarea) {
                             textarea.value = '';
+                            textarea.readOnly = false;
+                            textarea.removeAttribute('aria-disabled');
                         }
                         if (submitBtn) {
                             submitBtn.disabled = false;
@@ -201,6 +212,8 @@
                     submitBtn.textContent = originalText;
                 }
             } else {
+                form.classList.remove('form-submitting');
+                if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
@@ -209,6 +222,8 @@
             }
         } catch (error) {
             console.error('Failed to send reply:', error);
+            form.classList.remove('form-submitting');
+            if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;

@@ -128,7 +128,7 @@
         updateWaitTimes();
         setInterval(updateWaitTimes, 1000);
 
-        // フレンド申請フォーム: 送信開始時にボタン無効化＋「申請中」表示（二重送信防止）
+        // フレンド申請フォーム: 送信開始時にボタン無効化＋送信内容に関係する要素も無効化（二重送信防止）
         document.querySelectorAll('.friend-send-request-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -136,6 +136,11 @@
                     e.preventDefault();
                     return false;
                 }
+                form.querySelectorAll('button').forEach(function(btn) { btn.disabled = true; });
+                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                    el.readOnly = true;
+                    el.setAttribute('aria-disabled', 'true');
+                });
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.sending_request || '申請中';
@@ -143,7 +148,7 @@
             });
         });
 
-        // フレンド承認フォーム: 送信開始時にボタン無効化＋「処理中」表示（二重送信防止）
+        // フレンド承認フォーム: 送信開始時にボタン無効化＋送信内容に関係する要素も無効化（二重送信防止）
         document.querySelectorAll('.friend-accept-request-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -151,6 +156,11 @@
                     e.preventDefault();
                     return false;
                 }
+                form.querySelectorAll('button').forEach(function(btn) { btn.disabled = true; });
+                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                    el.readOnly = true;
+                    el.setAttribute('aria-disabled', 'true');
+                });
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.processing || '処理中';

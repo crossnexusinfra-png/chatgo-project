@@ -223,7 +223,7 @@
             passwordConfirmationInput.addEventListener('input', validatePassword);
         }
 
-        // 新規登録フォーム: 送信開始時にボタン無効化＋「登録中」表示（二重送信防止）
+        // 新規登録フォーム: 送信開始時にボタン無効化＋送信内容に関係する入力も無効化（二重送信防止）
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
             registerForm.addEventListener('submit', function(e) {
@@ -232,6 +232,14 @@
                     e.preventDefault();
                     return false;
                 }
+                registerForm.classList.add('form-submitting');
+                registerForm.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                    el.readOnly = true;
+                    el.setAttribute('aria-disabled', 'true');
+                });
+                registerForm.querySelectorAll('select').forEach(function(el) {
+                    el.setAttribute('aria-disabled', 'true');
+                });
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = registeringText;

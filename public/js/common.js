@@ -428,7 +428,7 @@
             }
         });
 
-        // ルーム作成フォーム: 送信開始時にボタン無効化＋「作成中」表示（二重送信防止）
+        // ルーム作成フォーム: 送信開始時にボタン無効化＋送信内容に関係する入力も無効化（二重送信防止）
         const createThreadForm = document.getElementById('createThreadForm');
         if (createThreadForm) {
             createThreadForm.addEventListener('submit', function(e) {
@@ -437,6 +437,13 @@
                     e.preventDefault();
                     return false;
                 }
+                createThreadForm.classList.add('form-submitting');
+                const userName = createThreadForm.querySelector('#user_name');
+                const title = createThreadForm.querySelector('#title');
+                const body = createThreadForm.querySelector('#body');
+                if (userName) { userName.readOnly = true; userName.setAttribute('aria-disabled', 'true'); }
+                if (title) { title.readOnly = true; title.setAttribute('aria-disabled', 'true'); }
+                if (body) { body.readOnly = true; body.setAttribute('aria-disabled', 'true'); }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.creating_room || '作成中';
@@ -444,7 +451,7 @@
             });
         }
 
-        // 通報フォーム: 送信開始時にボタン無効化＋「送信中」表示（二重送信防止）
+        // 通報フォーム: 送信開始時にボタン無効化＋送信内容に関係する入力も無効化（二重送信防止）
         const reportForm = document.getElementById('reportForm');
         if (reportForm) {
             reportForm.addEventListener('submit', function(e) {
@@ -453,6 +460,11 @@
                     e.preventDefault();
                     return false;
                 }
+                reportForm.classList.add('form-submitting');
+                const reportDescription = reportForm.querySelector('#report_description');
+                const cancelReport = document.getElementById('cancelReport');
+                if (reportDescription) { reportDescription.readOnly = true; reportDescription.setAttribute('aria-disabled', 'true'); }
+                if (cancelReport) { cancelReport.disabled = true; }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.submitting || '送信中';
@@ -460,7 +472,7 @@
             });
         }
 
-        // 改善要望フォーム: 送信開始時にボタン無効化＋「送信中」表示（二重送信防止）
+        // 改善要望フォーム: 送信開始時にボタン無効化＋送信内容に関係する入力も無効化（二重送信防止）
         const suggestionForm = document.getElementById('suggestionForm');
         if (suggestionForm) {
             suggestionForm.addEventListener('submit', function(e) {
@@ -469,6 +481,8 @@
                     e.preventDefault();
                     return false;
                 }
+                const textarea = suggestionForm.querySelector('textarea.suggestion-textarea, textarea[name="message"]');
+                if (textarea) { textarea.readOnly = true; textarea.setAttribute('aria-disabled', 'true'); }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.submitting || '送信中';

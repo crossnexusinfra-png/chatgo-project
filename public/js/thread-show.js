@@ -803,6 +803,21 @@
                         return false;
                     }
                 }
+                // 送信中は送信内容に関係する入力要素を無効化（二重送信・操作防止）
+                const bodyEl = document.getElementById('body');
+                const mediaFileBtn = document.getElementById('media-file-btn');
+                const replyTargetCancel = responseForm.querySelector('.reply-target-cancel');
+                if (bodyEl) {
+                    bodyEl.readOnly = true;
+                    bodyEl.setAttribute('aria-disabled', 'true');
+                }
+                if (mediaFileBtn) {
+                    mediaFileBtn.disabled = true;
+                }
+                // ファイル input は disabled にしない（無効にすると送信されないため）。+ ボタンで選択不可にしている
+                if (replyTargetCancel) {
+                    replyTargetCancel.disabled = true;
+                }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = translations.submitting || '送信中';

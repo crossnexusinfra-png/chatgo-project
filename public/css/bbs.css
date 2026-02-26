@@ -1671,6 +1671,31 @@ input[type="button"]:disabled:hover {
     cursor: not-allowed !important;
 }
 
+/* 送信中フォーム: 入力欄の読み取り専用・選択不可の見た目（二重送信防止） */
+form.form-submitting textarea[readonly],
+form.form-submitting input[readonly] {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+    color: #666;
+}
+#createThreadForm.form-submitting .file-input-label,
+#createThreadForm.form-submitting #tag,
+#createThreadForm.form-submitting #is_r18 {
+    pointer-events: none;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+#reportForm.form-submitting #report_reason {
+    pointer-events: none;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+#registerForm.form-submitting select {
+    pointer-events: none;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
 .btn-primary {
     background-color: #0275d8;
     color: white;
