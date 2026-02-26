@@ -729,12 +729,22 @@
                     e.preventDefault();
                     return false;
                 }
-                var bodyEl = document.getElementById('body');
-                var mediaFileBtn = document.getElementById('media-file-btn');
+                var bodyEl = responseForm.querySelector('textarea[name="body"]');
+                var mediaFileBtn = responseForm.querySelector('#media-file-btn');
+                var mediaFileInput = responseForm.querySelector('#media_file');
                 var replyTargetCancel = responseForm.querySelector('.reply-target-cancel');
                 function disableFormForSubmit() {
-                    if (bodyEl) { bodyEl.readOnly = true; bodyEl.setAttribute('aria-disabled', 'true'); }
-                    if (mediaFileBtn) { mediaFileBtn.disabled = true; }
+                    responseForm.classList.add('response-form-submitting');
+                    if (bodyEl) {
+                        bodyEl.readOnly = true;
+                        bodyEl.setAttribute('aria-disabled', 'true');
+                        bodyEl.style.pointerEvents = 'none';
+                        bodyEl.style.cursor = 'not-allowed';
+                    }
+                    if (mediaFileBtn) {
+                        mediaFileBtn.disabled = true;
+                        mediaFileBtn.setAttribute('aria-disabled', 'true');
+                    }
                     if (replyTargetCancel) { replyTargetCancel.disabled = true; }
                     if (submitBtn) {
                         submitBtn.disabled = true;
@@ -746,8 +756,17 @@
                     }
                 }
                 function reenableForm() {
-                    if (bodyEl) { bodyEl.readOnly = false; bodyEl.removeAttribute('aria-disabled'); }
-                    if (mediaFileBtn) { mediaFileBtn.disabled = false; }
+                    responseForm.classList.remove('response-form-submitting');
+                    if (bodyEl) {
+                        bodyEl.readOnly = false;
+                        bodyEl.removeAttribute('aria-disabled');
+                        bodyEl.style.pointerEvents = '';
+                        bodyEl.style.cursor = '';
+                    }
+                    if (mediaFileBtn) {
+                        mediaFileBtn.disabled = false;
+                        mediaFileBtn.removeAttribute('aria-disabled');
+                    }
                     if (replyTargetCancel) { replyTargetCancel.disabled = false; }
                     if (submitBtn) {
                         submitBtn.disabled = false;
@@ -760,7 +779,7 @@
                 }
                 disableFormForSubmit();
                 var body = (bodyEl && bodyEl.value) ? bodyEl.value.trim() : '';
-                var mediaFile = document.getElementById('media_file') && document.getElementById('media_file').files[0];
+                var mediaFile = mediaFileInput && mediaFileInput.files[0];
 
                 if (!body && !mediaFile) {
                     e.preventDefault();

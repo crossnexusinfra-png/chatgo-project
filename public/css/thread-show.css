@@ -1010,10 +1010,23 @@ body {
 }
 
 /* 送信中: 本文入力欄を読み取り専用表示 */
-#response-form textarea#body[readonly] {
+#response-form textarea#body[readonly],
+#response-form textarea[name="body"][readonly] {
     background-color: #f0f0f0;
     cursor: not-allowed;
     color: #666;
+}
+
+/* 送信中フォーム: テキストエリア・+ボタンを確実に操作不可にする */
+#response-form.response-form-submitting textarea[name="body"] {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    background-color: #f0f0f0 !important;
+    color: #666 !important;
+}
+#response-form.response-form-submitting .media-file-btn {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
 }
 
 /* バリデーションエラー表示 */
