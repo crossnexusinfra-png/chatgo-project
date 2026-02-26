@@ -229,15 +229,13 @@
             function reenableRegisterForm() {
                 var form = registerForm;
                 form.classList.remove('form-submitting');
-                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                form.querySelectorAll('.js-register-fields input:not([type="hidden"]), .js-register-fields textarea').forEach(function(el) {
                     el.readOnly = false;
                     el.removeAttribute('readonly');
                     el.removeAttribute('aria-disabled');
-                    el.style.pointerEvents = '';
                 });
-                form.querySelectorAll('select').forEach(function(el) {
+                form.querySelectorAll('.js-register-fields select').forEach(function(el) {
                     el.removeAttribute('aria-disabled');
-                    el.style.pointerEvents = '';
                 });
                 var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
@@ -250,23 +248,27 @@
                 reenableRegisterForm();
             }, true);
             registerForm.addEventListener('submit', function(e) {
-                var form = registerForm;
+                var form = e.target;
+                if (form.id !== 'registerForm') return;
                 var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
+                e.preventDefault();
+                if (!form.checkValidity()) return;
                 form.classList.add('form-submitting');
-                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
-                    el.readOnly = true;
-                    el.setAttribute('readonly', 'readonly');
-                    el.setAttribute('aria-disabled', 'true');
-                    el.style.pointerEvents = 'none';
-                });
-                form.querySelectorAll('select').forEach(function(el) {
-                    el.setAttribute('aria-disabled', 'true');
-                    el.style.pointerEvents = 'none';
-                });
+                var fieldsWrap = form.querySelector('.js-register-fields');
+                if (fieldsWrap) {
+                    form.querySelectorAll('.js-register-fields input:not([type="hidden"]), .js-register-fields textarea').forEach(function(el) {
+                        el.readOnly = true;
+                        el.setAttribute('readonly', 'readonly');
+                        el.setAttribute('aria-disabled', 'true');
+                    });
+                    form.querySelectorAll('.js-register-fields select').forEach(function(el) {
+                        el.setAttribute('aria-disabled', 'true');
+                    });
+                }
                 if (submitBtn) {
                     if (!submitBtn.dataset.originalSubmitText) {
                         submitBtn.dataset.originalSubmitText = submitBtn.textContent;
@@ -275,6 +277,7 @@
                     submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = registeringText;
                 }
+                setTimeout(function() { form.submit(); }, 50);
             });
         }
     });

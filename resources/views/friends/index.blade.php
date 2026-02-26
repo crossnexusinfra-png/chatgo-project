@@ -162,7 +162,9 @@
                                 @elseif($available['received_request'])
                                     <form action="{{ route('friends.accept-request', $available['received_request']) }}" method="POST" class="form-inline friend-accept-request-form">
                                         @csrf
+                                        <div class="js-friend-form-fields">
                                         <button type="submit" class="btn btn-success">{{ \App\Services\LanguageService::trans('accept', $lang) }}</button>
+                                        </div>
                                     </form>
                                     <form action="{{ route('friends.reject-request', $available['received_request']) }}" method="POST" class="form-inline" id="reject-form-{{ $available['received_request']->id }}">
                                         @csrf
@@ -172,9 +174,11 @@
                                     <form action="{{ route('friends.send-request') }}" method="POST" class="form-inline friend-send-request-form">
                                         @csrf
                                         <input type="hidden" name="user_id" value="{{ $available['user']->user_id }}">
+                                        <div class="js-friend-form-fields">
                                         <button type="submit" class="btn btn-primary" {{ $isMaxFriendsReached ? 'disabled' : '' }}>
                                             {{ \App\Services\LanguageService::trans('send_request', $lang) }}
                                         </button>
+                                        </div>
                                     </form>
                                     <button onclick="rejectFriendRequest(event, {{ $available['user']->user_id }})" class="btn btn-danger">
                                         {{ \App\Services\LanguageService::trans('reject', $lang) }}

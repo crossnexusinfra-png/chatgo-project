@@ -337,7 +337,7 @@
                 <form id="response-form" action="{{ route('responses.store', $thread) }}" method="POST" class="input-form" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" id="parent_response_id" name="parent_response_id" value="">
-                    <div class="form-group response-form-group">
+                    <div class="form-group response-form-group js-response-form-fields">
                         <div class="response-form-input-wrapper">
                             <label for="body" class="response-form-label-hidden">{{ \App\Services\LanguageService::trans('message_label', $lang) }}</label>
                             @if ($errors->has('body'))
@@ -368,11 +368,11 @@
                                     {{ \App\Services\LanguageService::trans('media_file_upload_failed', $lang) }}
                                 </div>
                             @enderror
-                            <textarea id="body" name="body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}">{{ old('body') }}</textarea>
+                            <textarea id="body" name="body" class="js-response-body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}">{{ old('body') }}</textarea>
                         </div>
                         <div class="media-file-container">
                             <input type="file" id="media_file" name="media_file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/webm" class="media-file-input-hidden">
-                            <button type="button" id="media-file-btn" class="media-file-btn" title="{{ \App\Services\LanguageService::trans('attach_file', $lang) }}">+</button>
+                            <button type="button" id="media-file-btn" class="media-file-btn js-media-file-btn" title="{{ \App\Services\LanguageService::trans('attach_file', $lang) }}">+</button>
                             <span id="media-file-name" class="media-file-name-display"></span>
                         </div>
                         <button type="submit" class="submit-btn">{{ \App\Services\LanguageService::trans('submit', $lang) }}</button>

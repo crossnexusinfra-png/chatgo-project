@@ -35,7 +35,7 @@
             
             <form method="POST" action="{{ route('register') }}" class="auth-form" id="registerForm">
                 @csrf
-                
+                <div class="js-register-fields">
                 <div class="form-group">
                     <label for="username">{{ \App\Services\LanguageService::trans('register_username_label', $lang) }} <span class="required">*</span></label>
                     <input type="text" id="username" name="username" value="{{ old('username') }}" 
@@ -202,7 +202,7 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                
+                </div>
                 <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('register_submit', $lang) }}</button>
             </form>
             

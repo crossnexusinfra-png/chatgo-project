@@ -142,7 +142,7 @@
             return;
         }
         
-        const replyTextarea = form.querySelector('textarea[name="reply_body"]');
+        const replyTextarea = form.querySelector('.js-notification-reply-body') || form.querySelector('textarea[name="reply_body"]');
         form.classList.add('form-submitting');
         if (replyTextarea) {
             replyTextarea.readOnly = true;

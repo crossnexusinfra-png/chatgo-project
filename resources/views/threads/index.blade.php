@@ -708,7 +708,9 @@
                     <p class="suggestion-description">{{ \App\Services\LanguageService::trans('suggestion_description', $lang) }}</p>
                     <form id="suggestionForm" method="POST" action="{{ route('suggestions.store') }}">
                         @csrf
-                        <textarea name="message" rows="4" maxlength="1000" placeholder="{{ \App\Services\LanguageService::trans('suggestion_placeholder', $lang) }}" class="suggestion-textarea" required>{{ old('message') }}</textarea>
+                        <div class="js-suggestion-fields">
+                        <textarea name="message" rows="4" maxlength="1000" placeholder="{{ \App\Services\LanguageService::trans('suggestion_placeholder', $lang) }}" class="suggestion-textarea js-suggestion-message" required>{{ old('message') }}</textarea>
+                        </div>
                         <div class="suggestion-submit-container">
                             <button type="submit" class="btn suggestion-submit-button">{{ \App\Services\LanguageService::trans('suggestion_submit', $lang) }}</button>
                         </div>

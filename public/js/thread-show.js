@@ -728,13 +728,14 @@
         if (responseForm) {
             responseForm.addEventListener('submit', function(e) {
                 var form = e.target;
-                if (form.tagName !== 'FORM') return;
+                if (form.tagName !== 'FORM' || form.id !== 'response-form') return;
                 var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                var textareaEl = form.querySelector('textarea');
+                var textareaEl = form.querySelector('.js-response-body');
+                if (!textareaEl) textareaEl = form.querySelector('textarea[name="body"]');
                 var body = (textareaEl && textareaEl.value) ? textareaEl.value.trim() : '';
                 var mediaFileInput = form.querySelector('input[type="file"][name="media_file"]');
                 var mediaFile = mediaFileInput && mediaFileInput.files[0];
@@ -816,20 +817,18 @@
                 e.preventDefault();
                 form.classList.add('response-form-submitting');
                 var sb = form.querySelector('button[type="submit"]');
-                var textarea = form.querySelector('textarea[name="body"]');
-                var plusBtn = form.querySelector('button.media-file-btn');
+                var textarea = form.querySelector('.js-response-body') || form.querySelector('textarea[name="body"]');
+                var plusBtn = form.querySelector('.js-media-file-btn') || form.querySelector('button.media-file-btn');
                 var cancelBtn = form.querySelector('.reply-target-cancel');
                 if (textarea) {
                     textarea.readOnly = true;
                     textarea.setAttribute('readonly', 'readonly');
                     textarea.setAttribute('aria-disabled', 'true');
-                    textarea.style.cssText = 'pointer-events:none;cursor:not-allowed;background-color:#f0f0f0;color:#666;';
                 }
                 if (plusBtn) {
                     plusBtn.disabled = true;
                     plusBtn.setAttribute('disabled', 'disabled');
                     plusBtn.setAttribute('aria-disabled', 'true');
-                    plusBtn.style.cssText = 'pointer-events:none;cursor:not-allowed;background:#b0b0b0!important;color:#666!important;';
                 }
                 if (cancelBtn) {
                     cancelBtn.disabled = true;
@@ -839,7 +838,6 @@
                     sb.disabled = true;
                     sb.setAttribute('disabled', 'disabled');
                     sb.textContent = translations.submitting || '送信中';
-                    sb.style.cssText = 'background:#b0b0b0!important;background-color:#b0b0b0!important;color:#666!important;cursor:not-allowed!important;';
                 }
                 setTimeout(function() {
                     form.submit();

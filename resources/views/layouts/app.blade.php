@@ -49,19 +49,20 @@
                     <form id="createThreadForm" action="{{ route('threads.store') }}" method="POST" enctype="multipart/form-data">
                         <!-- CSRF保護 -->
                         @csrf
+                        <div class="js-create-thread-fields">
                         <div class="form-group">
                             <label for="user_name">{{ \App\Services\LanguageService::trans('thread_author', $lang) }}:</label>
-                            <input type="text" id="user_name" name="user_name" value="{{ Auth::check() ? Auth::user()->username : old('user_name') }}" maxlength="20" required>
+                            <input type="text" id="user_name" name="user_name" class="js-create-thread-user_name" value="{{ Auth::check() ? Auth::user()->username : old('user_name') }}" maxlength="20" required>
                             <small>20{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
                         </div>
                         <div class="form-group">
                             <label for="title">{{ \App\Services\LanguageService::trans('thread_title', $lang) }}:</label>
-                            <input type="text" id="title" name="title" value="{{ old('title') }}" maxlength="50" required>
+                            <input type="text" id="title" name="title" class="js-create-thread-title" value="{{ old('title') }}" maxlength="50" required>
                             <small>50{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
                         </div>
                         <div class="form-group">
                             <label for="body">{{ \App\Services\LanguageService::trans('thread_body', $lang) }}:</label>
-                            <textarea id="body" name="body" rows="5" maxlength="1000" required>{{ old('body') }}</textarea>
+                            <textarea id="body" name="body" class="js-create-thread-body" rows="5" maxlength="1000" required>{{ old('body') }}</textarea>
                             <small>1000{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
                         </div>
                         @php
@@ -213,6 +214,7 @@
                             </div>
                             <small>{{ \App\Services\LanguageService::trans('image_help', $lang) }}</small>
                         </div>
+                        </div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">{{ \App\Services\LanguageService::trans('create_thread', $lang) }}</button>
                             <button type="button" class="btn btn-secondary" id="cancelCreateThread">{{ \App\Services\LanguageService::trans('cancel', $lang) }}</button>
@@ -237,10 +239,10 @@
                     <input type="hidden" id="report_thread_id" name="thread_id" value="">
                     <input type="hidden" id="report_response_id" name="response_id" value="">
                     <input type="hidden" id="report_reported_user_id" name="reported_user_id" value="">
-                    
+                    <div class="js-report-fields">
                     <div class="form-group">
                         <label for="report_reason">{{ \App\Services\LanguageService::trans('report_reason_label', $lang) }}:</label>
-                        <select id="report_reason" name="reason" required>
+                        <select id="report_reason" name="reason" class="js-report-reason" required>
                             <option value="">{{ \App\Services\LanguageService::trans('select_please', $lang) }}</option>
                             <option value="スパム・迷惑行為">{{ \App\Services\LanguageService::trans('report_reason_spam', $lang) }}</option>
                             <option value="攻撃的・不適切な内容">{{ \App\Services\LanguageService::trans('report_reason_offensive', $lang) }}</option>
@@ -253,10 +255,10 @@
                     
                     <div class="form-group">
                         <label for="report_description">{{ \App\Services\LanguageService::trans('report_description_label', $lang) }}:</label>
-                        <textarea id="report_description" name="description" rows="4" maxlength="300" placeholder="{{ \App\Services\LanguageService::trans('report_description_placeholder', $lang) }}"></textarea>
+                        <textarea id="report_description" name="description" class="js-report-description" rows="4" maxlength="300" placeholder="{{ \App\Services\LanguageService::trans('report_description_placeholder', $lang) }}"></textarea>
                         <small>{{ \App\Services\LanguageService::trans('report_description_max', $lang) }}</small>
                     </div>
-                    
+                    </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">{{ \App\Services\LanguageService::trans('report_submit_button', $lang) }}</button>
                         <button type="button" class="btn btn-secondary" id="cancelReport">{{ \App\Services\LanguageService::trans('report_cancel_button', $lang) }}</button>

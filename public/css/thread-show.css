@@ -1017,16 +1017,25 @@ body {
     color: #666;
 }
 
-/* 送信中フォーム: テキストエリア・+ボタンを確実に操作不可にする */
+/* 送信中フォーム: テキストエリア・+ボタン・ラッパーを確実に操作不可・見た目無効化 */
+#response-form.response-form-submitting .js-response-form-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+#response-form.response-form-submitting .js-response-body,
 #response-form.response-form-submitting textarea[name="body"] {
     pointer-events: none !important;
     cursor: not-allowed !important;
     background-color: #f0f0f0 !important;
     color: #666 !important;
 }
+#response-form.response-form-submitting .js-media-file-btn,
 #response-form.response-form-submitting .media-file-btn {
     pointer-events: none !important;
     cursor: not-allowed !important;
+    background: #b0b0b0 !important;
+    color: #666 !important;
 }
 
 /* バリデーションエラー表示 */

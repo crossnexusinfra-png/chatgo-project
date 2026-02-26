@@ -1695,6 +1695,72 @@ form.form-submitting input[readonly] {
     opacity: 0.8;
     cursor: not-allowed;
 }
+#registerForm.form-submitting .js-register-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+#registerForm.form-submitting .js-register-fields input,
+#registerForm.form-submitting .js-register-fields textarea {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+/* ルーム作成・通報・改善要望: 送信中は入力欄を操作不可・無効表示 */
+#createThreadForm.form-submitting .js-create-thread-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+#createThreadForm.form-submitting .js-create-thread-fields input,
+#createThreadForm.form-submitting .js-create-thread-fields textarea,
+#createThreadForm.form-submitting .js-create-thread-fields select,
+#createThreadForm.form-submitting .js-create-thread-fields .file-input-label {
+    cursor: not-allowed !important;
+    background-color: #f0f0f0;
+    color: #666;
+}
+#reportForm.form-submitting .js-report-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+#reportForm.form-submitting .js-report-fields textarea,
+#reportForm.form-submitting .js-report-fields select {
+    cursor: not-allowed !important;
+    background-color: #f0f0f0;
+    color: #666;
+}
+#suggestionForm.form-submitting .js-suggestion-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+#suggestionForm.form-submitting .js-suggestion-fields textarea {
+    cursor: not-allowed !important;
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+/* フレンド申請・承認フォーム: 送信中 */
+.friend-send-request-form.form-submitting .js-friend-form-fields,
+.friend-accept-request-form.form-submitting .js-friend-form-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+
+/* 通知返信フォーム: 送信中 */
+.reply-form.form-submitting .js-notification-reply-fields {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+.reply-form.form-submitting .js-notification-reply-fields textarea {
+    cursor: not-allowed !important;
+    background-color: #f0f0f0;
+    color: #666;
+}
 
 .btn-primary {
     background-color: #0275d8;
