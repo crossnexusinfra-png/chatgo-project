@@ -444,9 +444,13 @@
                 var userName = form.querySelector('.js-create-thread-user_name');
                 var title = form.querySelector('.js-create-thread-title');
                 var body = form.querySelector('.js-create-thread-body');
+                var cancelBtn = form.querySelector('#cancelCreateThread');
+                var closeModalBtn = document.getElementById('closeCreateThreadModal');
                 if (userName) { userName.readOnly = true; userName.setAttribute('readonly', 'readonly'); }
                 if (title) { title.readOnly = true; title.setAttribute('readonly', 'readonly'); }
                 if (body) { body.readOnly = true; body.setAttribute('readonly', 'readonly'); }
+                if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
+                if (closeModalBtn) { closeModalBtn.disabled = true; closeModalBtn.setAttribute('disabled', 'disabled'); }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.setAttribute('disabled', 'disabled');
@@ -471,8 +475,10 @@
                 form.classList.add('form-submitting');
                 var reportDescription = form.querySelector('.js-report-description') || form.querySelector('textarea[name="description"]');
                 var cancelReport = form.querySelector('#cancelReport');
+                var closeReportModalBtn = document.getElementById('closeReportModal');
                 if (reportDescription) { reportDescription.readOnly = true; reportDescription.setAttribute('readonly', 'readonly'); }
                 if (cancelReport) { cancelReport.disabled = true; cancelReport.setAttribute('disabled', 'disabled'); }
+                if (closeReportModalBtn) { closeReportModalBtn.disabled = true; closeReportModalBtn.setAttribute('disabled', 'disabled'); }
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.setAttribute('disabled', 'disabled');
