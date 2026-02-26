@@ -226,6 +226,24 @@
         // 新規登録フォーム: 送信開始時にボタン無効化＋送信内容に関係する入力も無効化（二重送信防止）
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
+            function reenableRegisterForm() {
+                registerForm.classList.remove('form-submitting');
+                registerForm.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                    el.readOnly = false;
+                    el.removeAttribute('aria-disabled');
+                });
+                registerForm.querySelectorAll('select').forEach(function(el) {
+                    el.removeAttribute('aria-disabled');
+                });
+                var submitBtn = registerForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitBtn.dataset.originalSubmitText || '登録';
+                }
+            }
+            registerForm.addEventListener('invalid', function(e) {
+                reenableRegisterForm();
+            }, true);
             registerForm.addEventListener('submit', function(e) {
                 const submitBtn = registerForm.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
@@ -241,6 +259,9 @@
                     el.setAttribute('aria-disabled', 'true');
                 });
                 if (submitBtn) {
+                    if (!submitBtn.dataset.originalSubmitText) {
+                        submitBtn.dataset.originalSubmitText = submitBtn.textContent;
+                    }
                     submitBtn.disabled = true;
                     submitBtn.textContent = registeringText;
                 }

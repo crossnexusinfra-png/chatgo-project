@@ -617,6 +617,9 @@
         mediaFileBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            if (mediaFileBtn.disabled) {
+                return;
+            }
             if (mediaFileInput) {
                 mediaFileInput.click();
             }
@@ -726,11 +729,42 @@
                     e.preventDefault();
                     return false;
                 }
-                const body = document.getElementById('body').value.trim();
-                const mediaFile = document.getElementById('media_file').files[0];
+                var bodyEl = document.getElementById('body');
+                var mediaFileBtn = document.getElementById('media-file-btn');
+                var replyTargetCancel = responseForm.querySelector('.reply-target-cancel');
+                function disableFormForSubmit() {
+                    if (bodyEl) { bodyEl.readOnly = true; bodyEl.setAttribute('aria-disabled', 'true'); }
+                    if (mediaFileBtn) { mediaFileBtn.disabled = true; }
+                    if (replyTargetCancel) { replyTargetCancel.disabled = true; }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = translations.submitting || '送信中';
+                        submitBtn.style.background = '#b0b0b0';
+                        submitBtn.style.backgroundColor = '#b0b0b0';
+                        submitBtn.style.color = '#666';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
+                }
+                function reenableForm() {
+                    if (bodyEl) { bodyEl.readOnly = false; bodyEl.removeAttribute('aria-disabled'); }
+                    if (mediaFileBtn) { mediaFileBtn.disabled = false; }
+                    if (replyTargetCancel) { replyTargetCancel.disabled = false; }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = translations.submit || '送信';
+                        submitBtn.style.background = '';
+                        submitBtn.style.backgroundColor = '';
+                        submitBtn.style.color = '';
+                        submitBtn.style.cursor = '';
+                    }
+                }
+                disableFormForSubmit();
+                var body = (bodyEl && bodyEl.value) ? bodyEl.value.trim() : '';
+                var mediaFile = document.getElementById('media_file') && document.getElementById('media_file').files[0];
 
                 if (!body && !mediaFile) {
                     e.preventDefault();
+                    reenableForm();
                     showMediaError(translations.messageOrFileRequired || translations.messageOrFileRequired);
                     return false;
                 }
@@ -754,6 +788,7 @@
                     
                     if (!isValidMimeType && !isValidExtension) {
                         e.preventDefault();
+                        reenableForm();
                         showMediaError(translations.fileFormatNotAllowed);
                         return false;
                     }
@@ -764,6 +799,7 @@
                     
                     if (mediaFile.size > phpUploadMaxSize) {
                         e.preventDefault();
+                        reenableForm();
                         const fileSizeMB = (mediaFile.size / (1024 * 1024)).toFixed(2);
                         const phpMaxMB = (phpUploadMaxSize / (1024 * 1024)).toFixed(0);
                         const errorMsg = translations.fileSizeExceedsPhpLimit
@@ -794,6 +830,7 @@
                     
                     if (mediaFile.size > maxSize) {
                         e.preventDefault();
+                        reenableForm();
                         const fileSizeMB = (mediaFile.size / (1024 * 1024)).toFixed(2);
                         const errorMsg = translations.fileSizeTooLarge
                             .replace(':fileType', fileTypeName)
@@ -802,29 +839,6 @@
                         showMediaError(errorMsg);
                         return false;
                     }
-                }
-                // 送信中は送信内容に関係する入力要素を無効化（二重送信・操作防止）
-                const bodyEl = document.getElementById('body');
-                const mediaFileBtn = document.getElementById('media-file-btn');
-                const replyTargetCancel = responseForm.querySelector('.reply-target-cancel');
-                if (bodyEl) {
-                    bodyEl.readOnly = true;
-                    bodyEl.setAttribute('aria-disabled', 'true');
-                }
-                if (mediaFileBtn) {
-                    mediaFileBtn.disabled = true;
-                }
-                // ファイル input は disabled にしない（無効にすると送信されないため）。+ ボタンで選択不可にしている
-                if (replyTargetCancel) {
-                    replyTargetCancel.disabled = true;
-                }
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = translations.submitting || '送信中';
-                    submitBtn.style.background = '#b0b0b0';
-                    submitBtn.style.backgroundColor = '#b0b0b0';
-                    submitBtn.style.color = '#666';
-                    submitBtn.style.cursor = 'not-allowed';
                 }
             });
         }
