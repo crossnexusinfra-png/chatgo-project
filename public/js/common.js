@@ -432,20 +432,22 @@
         const createThreadForm = document.getElementById('createThreadForm');
         if (createThreadForm) {
             createThreadForm.addEventListener('submit', function(e) {
-                const submitBtn = createThreadForm.querySelector('button[type="submit"]');
+                const form = createThreadForm;
+                const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                createThreadForm.classList.add('form-submitting');
-                const userName = createThreadForm.querySelector('#user_name');
-                const title = createThreadForm.querySelector('#title');
-                const body = createThreadForm.querySelector('#body');
-                if (userName) { userName.readOnly = true; userName.setAttribute('aria-disabled', 'true'); }
-                if (title) { title.readOnly = true; title.setAttribute('aria-disabled', 'true'); }
-                if (body) { body.readOnly = true; body.setAttribute('aria-disabled', 'true'); }
+                form.classList.add('form-submitting');
+                var userName = form.querySelector('input[name="user_name"]');
+                var title = form.querySelector('input[name="title"]');
+                var body = form.querySelector('textarea');
+                if (userName) { userName.readOnly = true; userName.setAttribute('readonly', 'readonly'); userName.style.pointerEvents = 'none'; }
+                if (title) { title.readOnly = true; title.setAttribute('readonly', 'readonly'); title.style.pointerEvents = 'none'; }
+                if (body) { body.readOnly = true; body.setAttribute('readonly', 'readonly'); body.style.pointerEvents = 'none'; }
                 if (submitBtn) {
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = translations.creating_room || '作成中';
                 }
             });
@@ -455,18 +457,20 @@
         const reportForm = document.getElementById('reportForm');
         if (reportForm) {
             reportForm.addEventListener('submit', function(e) {
-                const submitBtn = reportForm.querySelector('button[type="submit"]');
+                const form = reportForm;
+                const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                reportForm.classList.add('form-submitting');
-                const reportDescription = reportForm.querySelector('#report_description');
-                const cancelReport = document.getElementById('cancelReport');
-                if (reportDescription) { reportDescription.readOnly = true; reportDescription.setAttribute('aria-disabled', 'true'); }
-                if (cancelReport) { cancelReport.disabled = true; }
+                form.classList.add('form-submitting');
+                var reportDescription = form.querySelector('textarea[name="description"]');
+                var cancelReport = form.querySelector('#cancelReport');
+                if (reportDescription) { reportDescription.readOnly = true; reportDescription.setAttribute('readonly', 'readonly'); reportDescription.style.pointerEvents = 'none'; }
+                if (cancelReport) { cancelReport.disabled = true; cancelReport.setAttribute('disabled', 'disabled'); }
                 if (submitBtn) {
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = translations.submitting || '送信中';
                 }
             });
@@ -476,15 +480,17 @@
         const suggestionForm = document.getElementById('suggestionForm');
         if (suggestionForm) {
             suggestionForm.addEventListener('submit', function(e) {
-                const submitBtn = suggestionForm.querySelector('button[type="submit"]');
+                const form = suggestionForm;
+                const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                const textarea = suggestionForm.querySelector('textarea.suggestion-textarea, textarea[name="message"]');
-                if (textarea) { textarea.readOnly = true; textarea.setAttribute('aria-disabled', 'true'); }
+                var textarea = form.querySelector('textarea');
+                if (textarea) { textarea.readOnly = true; textarea.setAttribute('readonly', 'readonly'); textarea.style.pointerEvents = 'none'; }
                 if (submitBtn) {
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = translations.submitting || '送信中';
                 }
             });

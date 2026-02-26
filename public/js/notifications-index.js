@@ -146,11 +146,14 @@
         form.classList.add('form-submitting');
         if (replyTextarea) {
             replyTextarea.readOnly = true;
+            replyTextarea.setAttribute('readonly', 'readonly');
             replyTextarea.setAttribute('aria-disabled', 'true');
+            replyTextarea.style.pointerEvents = 'none';
         }
         const originalText = submitBtn ? submitBtn.textContent : '';
         if (submitBtn) {
             submitBtn.disabled = true;
+            submitBtn.setAttribute('disabled', 'disabled');
             submitBtn.textContent = translations.submitting || '送信中';
         }
         
@@ -173,9 +176,15 @@
                 const errorText = await response.text();
                 console.error('HTTP error:', response.status, errorText);
                 form.classList.remove('form-submitting');
-                if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
+                if (replyTextarea) {
+                    replyTextarea.readOnly = false;
+                    replyTextarea.removeAttribute('readonly');
+                    replyTextarea.removeAttribute('aria-disabled');
+                    replyTextarea.style.pointerEvents = '';
+                }
                 if (submitBtn) {
                     submitBtn.disabled = false;
+                    submitBtn.removeAttribute('disabled');
                     submitBtn.textContent = originalText;
                 }
                 alert(translations.replyFailed);
@@ -196,10 +205,13 @@
                         if (textarea) {
                             textarea.value = '';
                             textarea.readOnly = false;
+                            textarea.removeAttribute('readonly');
                             textarea.removeAttribute('aria-disabled');
+                            textarea.style.pointerEvents = '';
                         }
                         if (submitBtn) {
                             submitBtn.disabled = false;
+                            submitBtn.removeAttribute('disabled');
                             submitBtn.textContent = originalText;
                         }
                         alert(translations.replySuccess);
@@ -207,15 +219,31 @@
                         replySection.innerHTML = '<div class="reply-success-message">' + translations.replySuccessMessage + '</div>';
                         alert(translations.replySuccess);
                     }
-                } else if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
+                } else {
+                    form.classList.remove('form-submitting');
+                    if (replyTextarea) {
+                        replyTextarea.readOnly = false;
+                        replyTextarea.removeAttribute('readonly');
+                        replyTextarea.removeAttribute('aria-disabled');
+                        replyTextarea.style.pointerEvents = '';
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.removeAttribute('disabled');
+                        submitBtn.textContent = originalText;
+                    }
                 }
             } else {
                 form.classList.remove('form-submitting');
-                if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
+                if (replyTextarea) {
+                    replyTextarea.readOnly = false;
+                    replyTextarea.removeAttribute('readonly');
+                    replyTextarea.removeAttribute('aria-disabled');
+                    replyTextarea.style.pointerEvents = '';
+                }
                 if (submitBtn) {
                     submitBtn.disabled = false;
+                    submitBtn.removeAttribute('disabled');
                     submitBtn.textContent = originalText;
                 }
                 alert(result.error || translations.replyFailed);
@@ -223,9 +251,15 @@
         } catch (error) {
             console.error('Failed to send reply:', error);
             form.classList.remove('form-submitting');
-            if (replyTextarea) { replyTextarea.readOnly = false; replyTextarea.removeAttribute('aria-disabled'); }
+            if (replyTextarea) {
+                replyTextarea.readOnly = false;
+                replyTextarea.removeAttribute('readonly');
+                replyTextarea.removeAttribute('aria-disabled');
+                replyTextarea.style.pointerEvents = '';
+            }
             if (submitBtn) {
                 submitBtn.disabled = false;
+                submitBtn.removeAttribute('disabled');
                 submitBtn.textContent = originalText;
             }
             alert(translations.replyFailed);

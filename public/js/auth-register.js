@@ -227,17 +227,22 @@
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
             function reenableRegisterForm() {
-                registerForm.classList.remove('form-submitting');
-                registerForm.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                var form = registerForm;
+                form.classList.remove('form-submitting');
+                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
                     el.readOnly = false;
+                    el.removeAttribute('readonly');
                     el.removeAttribute('aria-disabled');
+                    el.style.pointerEvents = '';
                 });
-                registerForm.querySelectorAll('select').forEach(function(el) {
+                form.querySelectorAll('select').forEach(function(el) {
                     el.removeAttribute('aria-disabled');
+                    el.style.pointerEvents = '';
                 });
-                var submitBtn = registerForm.querySelector('button[type="submit"]');
+                var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
                     submitBtn.disabled = false;
+                    submitBtn.removeAttribute('disabled');
                     submitBtn.textContent = submitBtn.dataset.originalSubmitText || '登録';
                 }
             }
@@ -245,24 +250,29 @@
                 reenableRegisterForm();
             }, true);
             registerForm.addEventListener('submit', function(e) {
-                const submitBtn = registerForm.querySelector('button[type="submit"]');
+                var form = registerForm;
+                var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                registerForm.classList.add('form-submitting');
-                registerForm.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
+                form.classList.add('form-submitting');
+                form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
                     el.readOnly = true;
+                    el.setAttribute('readonly', 'readonly');
                     el.setAttribute('aria-disabled', 'true');
+                    el.style.pointerEvents = 'none';
                 });
-                registerForm.querySelectorAll('select').forEach(function(el) {
+                form.querySelectorAll('select').forEach(function(el) {
                     el.setAttribute('aria-disabled', 'true');
+                    el.style.pointerEvents = 'none';
                 });
                 if (submitBtn) {
                     if (!submitBtn.dataset.originalSubmitText) {
                         submitBtn.dataset.originalSubmitText = submitBtn.textContent;
                     }
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = registeringText;
                 }
             });

@@ -131,18 +131,23 @@
         // フレンド申請フォーム: 送信開始時にボタン無効化＋送信内容に関係する要素も無効化（二重送信防止）
         document.querySelectorAll('.friend-send-request-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
-                const submitBtn = form.querySelector('button[type="submit"]');
+                var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                form.querySelectorAll('button').forEach(function(btn) { btn.disabled = true; });
+                form.querySelectorAll('button').forEach(function(btn) {
+                    btn.disabled = true;
+                    btn.setAttribute('disabled', 'disabled');
+                });
                 form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
                     el.readOnly = true;
-                    el.setAttribute('aria-disabled', 'true');
+                    el.setAttribute('readonly', 'readonly');
+                    el.style.pointerEvents = 'none';
                 });
                 if (submitBtn) {
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = translations.sending_request || '申請中';
                 }
             });
@@ -151,18 +156,23 @@
         // フレンド承認フォーム: 送信開始時にボタン無効化＋送信内容に関係する要素も無効化（二重送信防止）
         document.querySelectorAll('.friend-accept-request-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
-                const submitBtn = form.querySelector('button[type="submit"]');
+                var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                form.querySelectorAll('button').forEach(function(btn) { btn.disabled = true; });
+                form.querySelectorAll('button').forEach(function(btn) {
+                    btn.disabled = true;
+                    btn.setAttribute('disabled', 'disabled');
+                });
                 form.querySelectorAll('input:not([type="hidden"]), textarea').forEach(function(el) {
                     el.readOnly = true;
-                    el.setAttribute('aria-disabled', 'true');
+                    el.setAttribute('readonly', 'readonly');
+                    el.style.pointerEvents = 'none';
                 });
                 if (submitBtn) {
                     submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
                     submitBtn.textContent = translations.processing || '処理中';
                 }
             });

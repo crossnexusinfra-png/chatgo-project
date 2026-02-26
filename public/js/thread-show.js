@@ -617,6 +617,9 @@
         mediaFileBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            if (responseForm && responseForm.classList.contains('response-form-submitting')) {
+                return;
+            }
             if (mediaFileBtn.disabled) {
                 return;
             }
@@ -724,61 +727,78 @@
 
         if (responseForm) {
             responseForm.addEventListener('submit', function(e) {
-                const submitBtn = responseForm.querySelector('button[type="submit"]');
+                var form = responseForm;
+                var submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
                     return false;
                 }
-                var bodyEl = responseForm.querySelector('textarea[name="body"]');
-                var mediaFileBtn = responseForm.querySelector('#media-file-btn');
-                var mediaFileInput = responseForm.querySelector('#media_file');
-                var replyTargetCancel = responseForm.querySelector('.reply-target-cancel');
                 function disableFormForSubmit() {
-                    responseForm.classList.add('response-form-submitting');
-                    if (bodyEl) {
-                        bodyEl.readOnly = true;
-                        bodyEl.setAttribute('aria-disabled', 'true');
-                        bodyEl.style.pointerEvents = 'none';
-                        bodyEl.style.cursor = 'not-allowed';
+                    form.classList.add('response-form-submitting');
+                    var sb = form.querySelector('button[type="submit"]');
+                    var textarea = form.querySelector('textarea');
+                    var plusBtn = form.querySelector('button.media-file-btn');
+                    var cancelBtn = form.querySelector('.reply-target-cancel');
+                    if (textarea) {
+                        textarea.readOnly = true;
+                        textarea.setAttribute('readonly', 'readonly');
+                        textarea.setAttribute('aria-disabled', 'true');
+                        textarea.style.pointerEvents = 'none';
+                        textarea.style.cursor = 'not-allowed';
                     }
-                    if (mediaFileBtn) {
-                        mediaFileBtn.disabled = true;
-                        mediaFileBtn.setAttribute('aria-disabled', 'true');
+                    if (plusBtn) {
+                        plusBtn.disabled = true;
+                        plusBtn.setAttribute('disabled', 'disabled');
+                        plusBtn.setAttribute('aria-disabled', 'true');
+                        plusBtn.style.pointerEvents = 'none';
+                        plusBtn.style.cursor = 'not-allowed';
                     }
-                    if (replyTargetCancel) { replyTargetCancel.disabled = true; }
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.textContent = translations.submitting || '送信中';
-                        submitBtn.style.background = '#b0b0b0';
-                        submitBtn.style.backgroundColor = '#b0b0b0';
-                        submitBtn.style.color = '#666';
-                        submitBtn.style.cursor = 'not-allowed';
+                    if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
+                    if (sb) {
+                        sb.disabled = true;
+                        sb.setAttribute('disabled', 'disabled');
+                        sb.textContent = translations.submitting || '送信中';
+                        sb.style.background = '#b0b0b0';
+                        sb.style.backgroundColor = '#b0b0b0';
+                        sb.style.color = '#666';
+                        sb.style.cursor = 'not-allowed';
                     }
                 }
                 function reenableForm() {
-                    responseForm.classList.remove('response-form-submitting');
-                    if (bodyEl) {
-                        bodyEl.readOnly = false;
-                        bodyEl.removeAttribute('aria-disabled');
-                        bodyEl.style.pointerEvents = '';
-                        bodyEl.style.cursor = '';
+                    form.classList.remove('response-form-submitting');
+                    var sb = form.querySelector('button[type="submit"]');
+                    var textarea = form.querySelector('textarea');
+                    var plusBtn = form.querySelector('button.media-file-btn');
+                    var cancelBtn = form.querySelector('.reply-target-cancel');
+                    if (textarea) {
+                        textarea.readOnly = false;
+                        textarea.removeAttribute('readonly');
+                        textarea.removeAttribute('aria-disabled');
+                        textarea.style.pointerEvents = '';
+                        textarea.style.cursor = '';
                     }
-                    if (mediaFileBtn) {
-                        mediaFileBtn.disabled = false;
-                        mediaFileBtn.removeAttribute('aria-disabled');
+                    if (plusBtn) {
+                        plusBtn.disabled = false;
+                        plusBtn.removeAttribute('disabled');
+                        plusBtn.removeAttribute('aria-disabled');
+                        plusBtn.style.pointerEvents = '';
+                        plusBtn.style.cursor = '';
                     }
-                    if (replyTargetCancel) { replyTargetCancel.disabled = false; }
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = translations.submit || '送信';
-                        submitBtn.style.background = '';
-                        submitBtn.style.backgroundColor = '';
-                        submitBtn.style.color = '';
-                        submitBtn.style.cursor = '';
+                    if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.removeAttribute('disabled'); }
+                    if (sb) {
+                        sb.disabled = false;
+                        sb.removeAttribute('disabled');
+                        sb.textContent = translations.submit || '送信';
+                        sb.style.background = '';
+                        sb.style.backgroundColor = '';
+                        sb.style.color = '';
+                        sb.style.cursor = '';
                     }
                 }
                 disableFormForSubmit();
-                var body = (bodyEl && bodyEl.value) ? bodyEl.value.trim() : '';
+                var textareaEl = form.querySelector('textarea');
+                var body = (textareaEl && textareaEl.value) ? textareaEl.value.trim() : '';
+                var mediaFileInput = form.querySelector('#media_file');
                 var mediaFile = mediaFileInput && mediaFileInput.files[0];
 
                 if (!body && !mediaFile) {
