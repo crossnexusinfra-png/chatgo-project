@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Services\SecureHttpClientService;
 
 class SafeBrowsingService
@@ -54,6 +55,20 @@ class SafeBrowsingService
             }
 
             Log::debug('SafeBrowsingService: Normalized URL', ['original' => $url, 'normalized' => $normalizedUrl]);
+
+            // レート制限: 20req/min per user_id（TrustCloudflareProxies + TrustProxies により request()->ip() でクライアントIP取得）
+            $clientIp = request()->ip();
+            $uid = auth()->id();
+            $rateLimitKey = 'safebrowsing:' . ($uid ? "user:{$uid}" : "ip:{$clientIp}");
+            if (RateLimiter::tooManyAttempts($rateLimitKey, 20)) {
+                Log::warning('SafeBrowsingService: Rate limit exceeded (20/min)', ['key' => $rateLimitKey]);
+                return [
+                    'safe' => false,
+                    'error' => 'rate_limit_exceeded',
+                    'threats' => []
+                ];
+            }
+            RateLimiter::hit($rateLimitKey, 60);
 
             // Google Safe Browsing APIにリクエスト
             $requestData = [

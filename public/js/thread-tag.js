@@ -23,7 +23,7 @@
     }
 
     window.createInfiniteScrollLoader({
-        url: `/tag/${tag}/more`,
+        url: `/api/tag/${tag}/more`,
         params: params,
         hasMore: hasMoreThreads,
         onLoad: function(data, currentOffset) {

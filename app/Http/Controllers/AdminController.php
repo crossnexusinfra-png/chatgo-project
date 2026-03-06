@@ -279,10 +279,10 @@ class AdminController extends Controller
 
         request()->validate([
             'target_type' => 'required|in:all_members,filtered,specific',
-            'body' => 'required|string',
-            'title' => 'nullable|string',
-            'title_key' => 'nullable|string',
-            'body_key' => 'nullable|string',
+            'body' => 'required|string|max:2000',
+            'title' => 'nullable|string|max:255',
+            'title_key' => 'nullable|string|max:255',
+            'body_key' => 'nullable|string|max:255',
             'allows_reply' => 'nullable|boolean',
             'unlimited_reply' => 'nullable|boolean',
             'coin_amount' => 'nullable|integer|min:0',

@@ -11,7 +11,7 @@
 ブラウザで次のURLを開きます（実際のドメインに置き換えてください）。
 
 ```
-https://あなたのドメイン/upload-limits
+https://あなたのドメイン/api/upload-limits
 ```
 
 表示される内容の例:
@@ -48,14 +48,14 @@ https://あなたのドメイン/upload-limits
 
 | 状況 | 想定される原因 |
 |------|----------------|
-| `/upload-limits` が 413 や 502 で開けない | 手元の環境では PHP まで届いていない可能性（例: 別のプロキシやロードバランサで 413）。 |
-| `/upload-limits` は開けるが、`upload_max_filesize` や `post_max_size` が 5M 未満 | **PHP の上限**が原因。`php.ini` や `user.ini` で 5M 以上に変更。 |
+| `/api/upload-limits` が 413 や 502 で開けない | 手元の環境では PHP まで届いていない可能性（例: 別のプロキシやロードバランサで 413）。 |
+| `/api/upload-limits` は開けるが、`upload_max_filesize` や `post_max_size` が 5M 未満 | **PHP の上限**が原因。`php.ini` や `user.ini` で 5M 以上に変更。 |
 | PHP の値は 5M 以上なのにアップロードで 413 | **Nginx（または前段のプロキシ）の上限**の可能性が高い。`client_max_body_size` などを 10M 程度に増やす。 |
 | Nginx を増やしても 413 | Apache の `LimitRequestBody` や、Cloudflare など前段のプロキシの制限を確認。 |
 
 ---
 
-## 4. 本番で `/upload-limits` を出したくない場合
+## 4. 本番で `/api/upload-limits` を出したくない場合
 
-`APP_DEBUG=false` にすると `/upload-limits` は登録されません。  
+`APP_DEBUG=false` にすると `/api/upload-limits` は登録されません。  
 切り分けが終わったら、本番では `APP_DEBUG=false` のままにしておけばこのURLは使えません。

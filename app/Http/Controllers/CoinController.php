@@ -22,6 +22,12 @@ class CoinController extends Controller
     public function watchAd(Request $request)
     {
         $user = Auth::user();
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('coins.watch-ad', $user->user_id);
+        if (!$lock) {
+            $lang = LanguageService::getCurrentLanguage();
+            return response()->json(['success' => false, 'message' => LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
         $result = $this->coinService->rewardAdWatch($user);
         
         $lang = LanguageService::getCurrentLanguage();
@@ -39,6 +45,9 @@ class CoinController extends Controller
                 'message' => $result['message'],
             ], 400);
         }
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -47,6 +56,12 @@ class CoinController extends Controller
     public function claimLoginReward(Request $request)
     {
         $user = Auth::user();
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('coins.claim-login-reward', $user->user_id);
+        if (!$lock) {
+            $lang = LanguageService::getCurrentLanguage();
+            return response()->json(['success' => false, 'message' => LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
         $result = $this->coinService->rewardConsecutiveLogin($user);
         
         $lang = LanguageService::getCurrentLanguage();
@@ -66,6 +81,9 @@ class CoinController extends Controller
                 'success' => false,
                 'message' => $result['message'],
             ], 400);
+        }
+        } finally {
+            $lock->release();
         }
     }
 

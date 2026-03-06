@@ -12,7 +12,7 @@
     const hasMoreThreads = config.hasMoreThreads || false;
 
     window.createInfiniteScrollLoader({
-        url: `/category/${category}/more`,
+        url: `/api/category/${category}/more`,
         params: {
             offset: config.currentOffset || 20,
             sort_by: sortBy,

@@ -429,7 +429,7 @@
         modal.style.display = 'block';
         content.innerHTML = '<p class="loading">' + (translations.loading || 'Loading...') + '</p>';
         
-        fetch(`/user/${userId}/residence-history`, {
+        fetch(`/api/user/${userId}/residence-history`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json'

@@ -342,6 +342,8 @@ return [
     
     // Authentication & Login
     'login_required' => 'Login is required.',
+    'request_user_mismatch' => 'You do not have permission to perform this action.',
+    'duplicate_submission' => 'Duplicate submission. Please wait a moment and try again.',
     'login_failed' => 'Login credentials are incorrect.',
     'login_required_error' => 'Login is required',
     'acknowledgment_success' => 'Acknowledged the notice.',
@@ -578,7 +580,16 @@ return [
     'login_no_account' => 'Don\'t have an account?',
     'login_register_link' => 'Register',
     'login_back' => '← Back',
-    
+    'login_disabled_use_reset' => 'Login is disabled. Please reset your password.',
+    'login_locked' => 'Login is temporarily locked until :time.',
+    'login_captcha_notice' => 'Multiple failed attempts detected. You can reset your password using the link below.',
+    'login_password_reset_link' => 'Reset password',
+    'login_reset_title' => 'Password Reset',
+    'login_reset_enter_phone_email' => 'Enter your registered phone number and email address. After verification, you can change your password.',
+    'login_reset_verify_sms_email' => 'Enter the verification codes sent by SMS and email.',
+    'login_reset_new_password' => 'Set a new password.',
+    'login_reset_success' => 'Password changed. Please log in with your new password.',
+
     // Auth Choice Page
     'auth_choice_title' => 'Login / Register - BBS',
     'auth_choice_welcome' => 'Welcome to BBS',

@@ -12,7 +12,7 @@
     const hasMoreThreads = config.hasMoreThreads || false;
 
     window.createInfiniteScrollLoader({
-        url: '/search/more',
+        url: '/api/search/more',
         params: {
             offset: config.currentOffset || 20,
             q: query,

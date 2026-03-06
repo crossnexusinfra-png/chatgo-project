@@ -68,7 +68,8 @@
         }
 
         try {
-            const response = await fetch(`/threads/${threadId}/responses?offset=${currentOffset}`);
+            const responsesUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesRoute) || `/api/threads/${threadId}/responses`;
+            const response = await fetch(`${responsesUrl}?offset=${currentOffset}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -214,7 +215,8 @@
         });
         
         try {
-            const response = await fetch(`/threads/${threadId}/responses/search?query=${encodeURIComponent(query)}&target=${selectedTarget}`);
+            const searchUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesSearchRoute) || `/api/threads/${threadId}/responses/search`;
+            const response = await fetch(`${searchUrl}?query=${encodeURIComponent(query)}&target=${selectedTarget}`);
             const data = await response.json();
             
             const results = [];
@@ -1094,7 +1096,8 @@
 
         try {
             console.log('[リアルタイム更新] 新しいレスポンスをチェック中... (threadId:', threadId, ', lastResponseId:', lastResponseId, ')');
-            const response = await fetch(`/threads/${threadId}/responses/new?last_response_id=${lastResponseId}`, {
+            const newUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesNewRoute) || `/api/threads/${threadId}/responses/new`;
+            const response = await fetch(`${newUrl}?last_response_id=${lastResponseId}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

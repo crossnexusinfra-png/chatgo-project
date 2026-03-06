@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\TranslationCache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * GPT-4o mini を用いたルーム名・リプライ本文の翻訳サービス
@@ -292,6 +293,16 @@ class TranslationService
             Log::warning('TranslationService: OpenAI API key not configured');
             return null;
         }
+
+        // レート制限: 10req/min per user_id（TrustCloudflareProxies + TrustProxies により request()->ip() でクライアントIP取得）
+        $clientIp = request()->ip();
+        $uid = auth()->id();
+        $rateLimitKey = 'openai:' . ($uid ? "user:{$uid}" : "ip:{$clientIp}");
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 10)) {
+            Log::warning('TranslationService: OpenAI rate limit exceeded (10/min)', ['key' => $rateLimitKey]);
+            return null;
+        }
+        RateLimiter::hit($rateLimitKey, 60);
 
         // テスト用: 翻訳APIを呼び出す直前にセッションにフラグを立て、表示側でアラート可能にする
         if (config('services.openai.translation_debug_alert')) {

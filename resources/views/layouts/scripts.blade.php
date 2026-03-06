@@ -1,7 +1,7 @@
 <meta name="common-config" content="{{ json_encode([
     'isAdult' => auth()->check() && auth()->user() ? auth()->user()->isAdult() : false,
     'routes' => [
-        'existingReportRoute' => route('reports.existing')
+        'existingReportRoute' => route('api.reports.existing')
     ],
     'translations' => [
         'r18ThreadAdultOnly' => \App\Services\LanguageService::trans('r18_thread_adult_only', $lang),

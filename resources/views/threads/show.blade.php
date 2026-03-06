@@ -432,7 +432,10 @@
         'routes' => [
             'storeRoute' => route('responses.store', $thread),
             'replyRoute' => route('responses.reply', ['thread' => $thread->thread_id, 'response' => ':responseId']),
-            'watchAdRoute' => route('coins.watch-ad')
+            'watchAdRoute' => route('coins.watch-ad'),
+            'responsesRoute' => route('api.threads.responses', $thread),
+            'responsesNewRoute' => route('api.threads.responses.new', $thread),
+            'responsesSearchRoute' => route('api.threads.responses.search', $thread)
         ],
         'translations' => [
             'loading' => \App\Services\LanguageService::trans('loading', $lang),

@@ -18,24 +18,134 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             // 管理者ルートは routes/web.php の先頭で読み込み（優先マッチのため）
 
-            // レート制限の設定
+            // クライアントIPは TrustCloudflareProxies + TrustProxies により $request->ip() で取得（CF-Connecting-IP を X-Forwarded-For に反映済み）
+
+            // /api（JSONデータ取得）: 60/分 user_id, 100/分 IP
             RateLimiter::for('api', function (Request $request) {
-                return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+                $ip = $request->ip();
+                $uid = $request->user()?->id;
+                return [
+                    Limit::perMinute(60)->by($uid ? "user:{$uid}" : "ip:{$ip}"),
+                    Limit::perMinute(100)->by("ip:{$ip}"),
+                ];
             });
-            
-            // ログイン試行のレート制限（1分間に5回）
-            RateLimiter::for('login', function (Request $request) {
-                return Limit::perMinute(5)->by($request->ip());
+
+            // 検索系（/search 含む）: 20/分 IP, 20/分 user_id
+            RateLimiter::for('search', function (Request $request) {
+                $ip = $request->ip();
+                $uid = $request->user()?->id;
+                return [
+                    Limit::perMinute(20)->by("ip:{$ip}"),
+                    Limit::perMinute(20)->by($uid ? "user:{$uid}" : "ip:{$ip}"),
+                ];
             });
-            
-            // 認証コード送信のレート制限（1分間に1回）
-            RateLimiter::for('verification', function (Request $request) {
-                return Limit::perMinute(1)->by($request->ip());
+
+            // 初期登録時 認証コード再送信（SMS）: 1/分 IP, 1/分 phone
+            RateLimiter::for('verification_initial_sms', function (Request $request) {
+                $ip = $request->ip();
+                $phone = $request->session()->get('registration_data.phone', '');
+                return [
+                    Limit::perMinute(1)->by("ip:{$ip}"),
+                    Limit::perMinute(1)->by('phone:' . ($phone ?: 'unknown')),
+                ];
             });
-            
-            // 投稿のレート制限（1分間に10回）
+
+            // 初期登録時 認証コード再送信（email）: 1/分 IP, 1/分 email
+            RateLimiter::for('verification_initial_email', function (Request $request) {
+                $ip = $request->ip();
+                $email = $request->session()->get('registration_data.email', '');
+                return [
+                    Limit::perMinute(1)->by("ip:{$ip}"),
+                    Limit::perMinute(1)->by('email:' . ($email ?: 'unknown')),
+                ];
+            });
+
+            // 電話番号・メアド変更時 認証コード再送信: 1/分 user_id
+            RateLimiter::for('verification_profile', function (Request $request) {
+                $uid = $request->user()?->id;
+                return Limit::perMinute(1)->by($uid ? "user:{$uid}" : 'ip:' . $request->ip());
+            });
+
+            // 投稿系（ルーム作成・リプライ・返信）: 10/分 user_id, 30/分 IP
             RateLimiter::for('post', function (Request $request) {
-                return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+                $ip = $request->ip();
+                $uid = $request->user()?->id;
+                return [
+                    Limit::perMinute(10)->by($uid ? "user:{$uid}" : "ip:{$ip}"),
+                    Limit::perMinute(30)->by("ip:{$ip}"),
+                ];
+            });
+
+            // Google Safe Browsing（コントローラ内で手動チェック）: 20/分 user_id
+            RateLimiter::for('safebrowsing', function (Request $request) {
+                $uid = $request->user()?->id;
+                $ip = $request->ip();
+                return Limit::perMinute(20)->by($uid ? "user:{$uid}" : "ip:{$ip}");
+            });
+
+            // Veriphone（登録・プロフィール電話検証）: 5/分 IP, 5/分 user_id
+            RateLimiter::for('veriphone', function (Request $request) {
+                $ip = $request->ip();
+                $uid = $request->user()?->id;
+                return [
+                    Limit::perMinute(5)->by("ip:{$ip}"),
+                    Limit::perMinute(5)->by($uid ? "user:{$uid}" : "ip:{$ip}"),
+                ];
+            });
+
+            // OpenAI 翻訳（サービス内で手動チェック）: 10/分 user_id
+            RateLimiter::for('openai', function (Request $request) {
+                $uid = $request->user()?->id;
+                $ip = $request->ip();
+                return Limit::perMinute(10)->by($uid ? "user:{$uid}" : "ip:{$ip}");
+            });
+
+            // 広告API（今後実装予定）: 5/分 user_id
+            RateLimiter::for('ad_api', function (Request $request) {
+                $uid = $request->user()?->id;
+                return Limit::perMinute(5)->by($uid ? "user:{$uid}" : 'ip:' . $request->ip());
+            });
+
+            // コイン送信: 3/分 user_id, 20/日 user_id
+            RateLimiter::for('coins_send', function (Request $request) {
+                $uid = $request->user()?->id;
+                if (!$uid) {
+                    return Limit::perMinute(1)->by('ip:' . $request->ip());
+                }
+                return [
+                    Limit::perMinute(3)->by("user:{$uid}"),
+                    Limit::perDay(20)->by("user:{$uid}"),
+                ];
+            });
+
+            // 通報: 10/分 user_id
+            RateLimiter::for('reports', function (Request $request) {
+                $uid = $request->user()?->id;
+                return Limit::perMinute(10)->by($uid ? "user:{$uid}" : 'ip:' . $request->ip());
+            });
+
+            // お知らせ返信: 5/分 user_id
+            RateLimiter::for('notice_reply', function (Request $request) {
+                $uid = $request->user()?->id;
+                return Limit::perMinute(5)->by($uid ? "user:{$uid}" : 'ip:' . $request->ip());
+            });
+
+            // 改善要望: 3/分 user_id
+            RateLimiter::for('suggestions', function (Request $request) {
+                $uid = $request->user()?->id;
+                $ip = $request->ip();
+                return Limit::perMinute(3)->by($uid ? "user:{$uid}" : "ip:{$ip}");
+            });
+
+            // ログイン試行: 20 req/min IP, 5 req/min ログイン対象メール（user_id 単位）
+            RateLimiter::for('login', function (Request $request) {
+                $ip = $request->ip();
+                $email = $request->input('email');
+                $emailKey = $email !== null && $email !== '' ? 'email:' . strtolower(trim($email)) : 'email:unknown';
+                return [
+                    Limit::perMinute(20)->by("ip:{$ip}"),
+                    Limit::perMinute(5)->by($emailKey),
+                ];
             });
         },
     )
@@ -48,6 +158,8 @@ return Application::configure(basePath: dirname(__DIR__))
             | Request::HEADER_X_FORWARDED_PORT
             | Request::HEADER_X_FORWARDED_PROTO
         );
+        // CF-Connecting-IP を X-Forwarded-For に反映し、$request->ip() でクライアントIPを取得（TrustProxies と併用）
+        $middleware->prepend(\App\Http\Middleware\TrustCloudflareProxies::class);
         // CSPヘッダー追加（nonce対応）
         $middleware->append(\App\Http\Middleware\CspMiddleware::class);
         
@@ -61,6 +173,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.basic' => \App\Http\Middleware\AdminBasicAuth::class,
             'admin.visit' => \App\Http\Middleware\AdminVisitLogger::class,
+            // リクエストの user_id / from_user_id が認証ユーザーと一致するか検証（権限制御）
+            'request.user' => \App\Http\Middleware\EnsureRequestUserAuthorized::class,
         ]);
 
         // ゲストアクセス記録

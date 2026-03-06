@@ -167,6 +167,13 @@ class ProfileController extends Controller
             'language' => 'required|string|in:JA,EN',
         ], $messages);
 
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('profile.update', $user->user_id);
+        if (!$lock) {
+            return back()->withErrors(['email' => \App\Services\LanguageService::trans('duplicate_submission', $lang)])->withInput();
+        }
+        try {
+
         // usernameとuser_identifierは変更不可（bioはUI廃止のためフォームから除外、DBカラムは残置）
         $data = $request->only(['email', 'phone', 'residence', 'language']);
 
@@ -281,6 +288,9 @@ class ProfileController extends Controller
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return redirect()->route('profile.index')->with('success', \App\Services\LanguageService::trans('profile_updated', $lang));
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

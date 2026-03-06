@@ -47,7 +47,7 @@
             getUrl: function(offset) {
                 const loadMoreBtn = document.getElementById('load-more-threads');
                 const userId = loadMoreBtn ? loadMoreBtn.getAttribute('data-user-id') : null;
-                return userId ? `/user/${userId}/threads/more?offset=${offset}` : `/profile/threads/more?offset=${offset}`;
+                return userId ? `/api/user/${userId}/threads/more?offset=${offset}` : `/api/profile/threads/more?offset=${offset}`;
             },
             translations: translations
         });

@@ -11,6 +11,15 @@ class SuggestionController extends Controller
 {
     public function store(Request $request)
     {
+        // 重複実行防止（認証時は user_id、未認証時はセッションID）
+        $userKey = auth()->check() ? auth()->user()->user_id : session()->getId();
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('suggestion.store', $userKey);
+        if (!$lock) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return back()->withErrors(['message' => \App\Services\LanguageService::trans('duplicate_submission', $lang)]);
+        }
+        try {
+
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:1000'],
         ]);
@@ -49,6 +58,9 @@ class SuggestionController extends Controller
         $successMessage = LanguageService::trans('suggestion_success', $language);
         
         return back()->with('success', $successMessage);
+        } finally {
+            $lock->release();
+        }
     }
 }
 

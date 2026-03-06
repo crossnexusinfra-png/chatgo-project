@@ -179,7 +179,14 @@ class NotificationsController extends Controller
         
         // IDOR防止: メッセージに返信する権限をチェック
         Gate::authorize('reply', $message);
-        
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.reply', $userId, (string) $message->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+
         $request->validate([
             'body' => 'required|string|max:2000',
         ]);
@@ -214,6 +221,9 @@ class NotificationsController extends Controller
         }
         
         return response()->json(['success' => true]);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -259,7 +269,14 @@ class NotificationsController extends Controller
 
         // IDOR防止: メッセージからコインを受け取る権限をチェック
         Gate::authorize('receiveCoin', $message);
-        
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.receive-coin', $userId, (string) $message->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+
         // 既にコインを受け取っているかチェック
         if ($message->hasReceivedCoin($userId)) {
             return response()->json(['error' => \App\Services\LanguageService::trans('notification_coin_already_received', $lang)], 400);
@@ -293,6 +310,9 @@ class NotificationsController extends Controller
             ]);
             return response()->json(['error' => \App\Services\LanguageService::trans('notification_coin_receive_failed', $lang)], 500);
         }
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -309,7 +329,14 @@ class NotificationsController extends Controller
         
         // IDOR防止: R18変更リクエストを承認する権限をチェック
         Gate::authorize('approveR18Change', $message);
-        
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.r18-approve', $userId, (string) $message->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+
         // R18変更リクエストのお知らせかチェック（Policyでチェック済みだが、念のため）
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
             return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
@@ -361,6 +388,9 @@ class NotificationsController extends Controller
             ]);
             return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_approve_failed', $lang)], 500);
         }
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -377,7 +407,14 @@ class NotificationsController extends Controller
         
         // IDOR防止: R18変更リクエストを拒否する権限をチェック
         Gate::authorize('rejectR18Change', $message);
-        
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.r18-reject', $userId, (string) $message->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+
         // R18変更リクエストのお知らせかチェック（Policyでチェック済みだが、念のため）
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
             return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
@@ -387,8 +424,6 @@ class NotificationsController extends Controller
         if ($message->reply_used) {
             return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_already_processed', $lang)], 400);
         }
-        
-        $userId = auth()->id();
         
         try {
             // メッセージを処理済みにマーク
@@ -404,6 +439,9 @@ class NotificationsController extends Controller
                 'error' => $e->getMessage()
             ]);
             return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_reject_failed', $lang)], 500);
+        }
+        } finally {
+            $lock->release();
         }
     }
 }

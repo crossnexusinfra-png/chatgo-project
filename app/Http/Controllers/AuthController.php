@@ -12,36 +12,77 @@ use App\Models\User;
 use App\Models\Admin;
 use App\Services\PhoneNumberService;
 use App\Services\VeriphoneService;
+use App\Services\LoginFailureService;
+use App\Mail\AbnormalLoginMail;
 
 class AuthController extends Controller
 {
     /**
      * ログイン画面を表示
+     * 直前の入力メールで失敗回数・ロック状態を取得し、CAPTCHA・パスワード初期化リンク表示を制御
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
-        return view('auth.login');
+        $email = $request->old('email', '');
+        $failureCount = $email !== '' ? LoginFailureService::getFailureCount($email) : 0;
+        $lockExpiry = $email !== '' ? LoginFailureService::getLockExpiry($email) : null;
+        $isLoginDisabled = $email !== '' && LoginFailureService::isLoginDisabled($email);
+        $isLocked = $email !== '' && LoginFailureService::isLocked($email);
+        $showCaptchaAndResetLink = $email !== '' && LoginFailureService::shouldShowCaptchaAndResetLink($email);
+
+        return view('auth.login', [
+            'failureCount' => $failureCount,
+            'lockExpiry' => $lockExpiry,
+            'isLoginDisabled' => $isLoginDisabled,
+            'isLocked' => $isLocked,
+            'showCaptchaAndResetLink' => $showCaptchaAndResetLink,
+        ]);
     }
 
     /**
      * ログイン処理
+     * 失敗回数に応じてロック・異常ログインメール・ログイン停止を適用（user_id＝メール単位）
+     * IP は 20 req/min で throttle:login により制限
      */
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'required|email|max:255',
+            'password' => 'required|string|max:255',
         ]);
+
+        $email = $credentials['email'];
+        $clientIp = $request->ip();
+        $country = $request->header('CF-IPCountry') ?: '—';
+
+        // 50回以上失敗でログイン停止（パスワード初期化で解除）
+        if (LoginFailureService::isLoginDisabled($email)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => \App\Services\LanguageService::trans('login_disabled_use_reset', $lang)]);
+        }
+
+        // ロック中は試行させない
+        if (LoginFailureService::isLocked($email)) {
+            $expiry = LoginFailureService::getLockExpiry($email);
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            $timeStr = $expiry ? $expiry->format('Y-m-d H:i') : '';
+            return back()->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => \App\Services\LanguageService::trans('login_locked', $lang, ['time' => $timeStr]),
+                ]);
+        }
 
         // まず通常のユーザーとしてログインを試みる
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-            
+            LoginFailureService::clearFailures($email);
+
             // セッションIDを再生成（セキュリティ対策）
             if ($request->hasSession()) {
                 $request->session()->regenerate();
             }
-            
+
             // 垢バンされたユーザーの場合、ログアウトページにリダイレクト
             if ($user->is_permanently_banned) {
                 $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -49,7 +90,7 @@ class AuthController extends Controller
                     'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
                 ]);
             }
-            
+
             // セッションに保存されたURLがあればそこにリダイレクト、なければトップページ
             $intendedUrl = session('intended_url', '/');
             \Log::info('AuthController login: intended_url', [
@@ -58,7 +99,7 @@ class AuthController extends Controller
                 'all_session_data' => session()->all()
             ]);
             session()->forget('intended_url');
-            
+
             // 承認待ちのレスポンスがあれば承認フラグを設定
             $allSessionData = session()->all();
             foreach ($allSessionData as $key => $value) {
@@ -68,39 +109,34 @@ class AuthController extends Controller
                     session()->forget($key);
                 }
             }
-            
+
             return redirect($intendedUrl);
         }
 
-        // ユーザーとしてログインできなかった場合、管理者アカウントを確認
+        // 管理者アカウントを確認
         $admin = Admin::where('email', $credentials['email'])->first();
-        
+
         if ($admin && Hash::check($credentials['password'], $admin->password)) {
-            // 管理者アカウントが見つかった場合、同じメールアドレスでユーザーアカウントを検索
             $user = User::where('email', $credentials['email'])->first();
-            
+
             if ($user) {
-                // ユーザーアカウントも存在する場合、そのユーザーとしてログイン
+                LoginFailureService::clearFailures($email);
                 Auth::login($user);
-                
-                // セッションIDを再生成（セキュリティ対策）
+
                 if ($request->hasSession()) {
                     $request->session()->regenerate();
                 }
-                
-                // 垢バンされたユーザーの場合、ログアウトページにリダイレクト
+
                 if ($user->is_permanently_banned) {
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
                     return redirect()->route('logout')->withErrors([
                         'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
                     ]);
                 }
-                
-                // セッションに保存されたURLがあればそこにリダイレクト、なければトップページ
+
                 $intendedUrl = session('intended_url', '/');
                 session()->forget('intended_url');
-                
-                // 承認待ちのレスポンスがあれば承認フラグを設定
+
                 $allSessionData = session()->all();
                 foreach ($allSessionData as $key => $value) {
                     if (strpos($key, 'pending_acknowledge_response_') === 0) {
@@ -109,15 +145,189 @@ class AuthController extends Controller
                         session()->forget($key);
                     }
                 }
-                
+
                 return redirect($intendedUrl);
             }
         }
 
+        // ログイン失敗: 失敗回数を増やし、閾値に応じてロック・異常メールを適用
+        $count = LoginFailureService::incrementFailures($email);
+
+        if ($count >= LoginFailureService::THRESHOLD_LOCK_12H) {
+            LoginFailureService::setLockIfLonger($email, LoginFailureService::LOCK_MINUTES_12H);
+        } elseif ($count >= LoginFailureService::THRESHOLD_LOCK_30) {
+            LoginFailureService::setLockIfLonger($email, LoginFailureService::LOCK_MINUTES_30);
+            if (!LoginFailureService::hasSentAbnormalEmailForThreshold($email, LoginFailureService::THRESHOLD_LOCK_30)) {
+                $this->sendAbnormalLoginMail($email, $clientIp, $country);
+                LoginFailureService::markAbnormalEmailSent($email, LoginFailureService::THRESHOLD_LOCK_30);
+            }
+        } elseif ($count >= LoginFailureService::THRESHOLD_LOCK_10) {
+            LoginFailureService::setLockIfLonger($email, LoginFailureService::LOCK_MINUTES_10);
+            if (!LoginFailureService::hasSentAbnormalEmailForThreshold($email, LoginFailureService::THRESHOLD_LOCK_10)) {
+                $this->sendAbnormalLoginMail($email, $clientIp, $country);
+                LoginFailureService::markAbnormalEmailSent($email, LoginFailureService::THRESHOLD_LOCK_10);
+            }
+        }
+
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        return back()->withErrors([
+        return back()->withInput($request->only('email'))->withErrors([
             'email' => \App\Services\LanguageService::trans('login_failed', $lang),
         ]);
+    }
+
+    /**
+     * 異常ログイン検知メールを送信（IP, Country, Time）
+     */
+    private function sendAbnormalLoginMail(string $toEmail, string $ip, string $country): void
+    {
+        try {
+            Mail::to($toEmail)->send(new AbnormalLoginMail(
+                $ip,
+                $country,
+                now()->format('Y-m-d H:i:s T')
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning('AuthController: Failed to send abnormal login email', [
+                'email' => $toEmail,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * パスワード初期化フォーム表示（電話番号・メールアドレス入力）
+     */
+    public function showPasswordResetForm()
+    {
+        return view('auth.password-reset');
+    }
+
+    /**
+     * パスワード初期化リクエスト（電話+メール一致でSMS+メール認証コード送信）
+     */
+    public function requestPasswordReset(Request $request)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $request->validate([
+            'email' => 'required|email',
+            'phone_country' => 'required|string|max:10',
+            'phone_local' => 'required|string|max:20',
+        ]);
+
+        try {
+            $internationalPhone = PhoneNumberService::convertToInternational(
+                $request->phone_country,
+                $request->phone_local
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['phone_country' => $e->getMessage()])->withInput();
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user || $user->phone !== $internationalPhone) {
+            return back()->withErrors(['email' => \App\Services\LanguageService::trans('login_failed', $lang)])
+                ->withInput($request->only('email'));
+        }
+
+        $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        Cache::put('password_reset_sms:' . $internationalPhone, $smsCode, 300);
+        Cache::put('password_reset_email:' . $request->email, $emailCode, 600);
+
+        \Log::info('Password reset codes', ['sms' => $smsCode, 'email' => $emailCode, 'user_id' => $user->user_id]);
+
+        session([
+            'password_reset_user_id' => $user->user_id,
+            'password_reset_email' => $user->email,
+            'password_reset_phone' => $internationalPhone,
+        ]);
+
+        return redirect()->route('login.password-reset.verify');
+    }
+
+    /**
+     * パスワード初期化・認証コード入力画面表示
+     */
+    public function showPasswordResetVerify()
+    {
+        if (!session('password_reset_user_id')) {
+            return redirect()->route('login.password-reset');
+        }
+        return view('auth.password-reset-verify');
+    }
+
+    /**
+     * パスワード初期化・SMS+メール認証コード検証→強制パスワード変更へ
+     */
+    public function verifyPasswordReset(Request $request)
+    {
+        if (!session('password_reset_user_id')) {
+            return redirect()->route('login.password-reset');
+        }
+
+        $request->validate([
+            'sms_code' => 'required|string|size:6',
+            'email_code' => 'required|string|size:6',
+        ]);
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $phone = session('password_reset_phone');
+        $email = session('password_reset_email');
+        $cachedSms = Cache::get('password_reset_sms:' . $phone);
+        $cachedEmail = Cache::get('password_reset_email:' . $email);
+
+        if (!$cachedSms || $cachedSms !== $request->sms_code) {
+            return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
+        }
+        if (!$cachedEmail || $cachedEmail !== $request->email_code) {
+            return back()->withErrors(['email_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
+        }
+
+        Cache::forget('password_reset_sms:' . $phone);
+        Cache::forget('password_reset_email:' . $email);
+        session(['password_reset_verified' => true]);
+
+        return redirect()->route('login.password-reset.change');
+    }
+
+    /**
+     * 強制パスワード変更画面表示
+     */
+    public function showPasswordResetChange()
+    {
+        if (!session('password_reset_verified') || !session('password_reset_user_id')) {
+            return redirect()->route('login.password-reset');
+        }
+        return view('auth.password-reset-change');
+    }
+
+    /**
+     * 強制パスワード変更実行→ログイン停止解除→ログインへ
+     */
+    public function submitPasswordResetChange(Request $request)
+    {
+        if (!session('password_reset_verified') || !session('password_reset_user_id')) {
+            return redirect()->route('login.password-reset');
+        }
+
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = User::find(session('password_reset_user_id'));
+        if (!$user) {
+            session()->forget(['password_reset_user_id', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
+            return redirect()->route('login.password-reset');
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        LoginFailureService::clearFailures($user->email);
+        session()->forget(['password_reset_user_id', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
     }
 
     /**

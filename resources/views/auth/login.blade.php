@@ -1,6 +1,9 @@
 @php
-    // ViewComposerから渡された$langを使用、なければ取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $showCaptchaAndResetLink = $showCaptchaAndResetLink ?? false;
+    $isLoginDisabled = $isLoginDisabled ?? false;
+    $isLocked = $isLocked ?? false;
+    $lockExpiry = $lockExpiry ?? null;
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $lang }}">
@@ -18,10 +21,25 @@
                 <h1>{{ \App\Services\LanguageService::trans('login_title', $lang) }}</h1>
                 <p>{{ \App\Services\LanguageService::trans('login_subtitle', $lang) }}</p>
             </div>
-            
+
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+
+            @if ($isLoginDisabled)
+                <div class="alert alert-danger">
+                    <p>{{ \App\Services\LanguageService::trans('login_disabled_use_reset', $lang) }}</p>
+                    <p><a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_password_reset_link', $lang) }}</a></p>
+                </div>
+            @else
+                @if ($isLocked && $lockExpiry)
+                    <div class="alert alert-warning">
+                        {{ \App\Services\LanguageService::trans('login_locked', $lang, ['time' => $lockExpiry->format('Y-m-d H:i')]) }}
+                        <p><a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_password_reset_link', $lang) }}</a></p>
+                    </div>
+                @endif
             <form method="POST" action="{{ route('login') }}" class="auth-form">
                 @csrf
-                
                 <div class="form-group">
                     <label for="email">{{ \App\Services\LanguageService::trans('login_email_label', $lang) }}</label>
                     <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus>
@@ -29,7 +47,6 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                
                 <div class="form-group">
                     <label for="password">{{ \App\Services\LanguageService::trans('login_password_label', $lang) }}</label>
                     <input type="password" id="password" name="password" required>
@@ -37,10 +54,20 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                
+
+                @if ($showCaptchaAndResetLink)
+                <div class="form-group captcha-reset-group">
+                    <p class="captcha-notice">{{ \App\Services\LanguageService::trans('login_captcha_notice', $lang) }}</p>
+                    <p><a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_password_reset_link', $lang) }}</a></p>
+                    {{-- CAPTCHA: reCAPTCHA v2 等をここに組み込む場合は #captcha-container に表示 --}}
+                    <div id="captcha-container" class="captcha-container"></div>
+                </div>
+                @endif
+
                 <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('login_submit', $lang) }}</button>
             </form>
-            
+            @endif
+
             <div class="auth-footer">
                 <p>{{ \App\Services\LanguageService::trans('login_no_account', $lang) }} <a href="{{ route('auth.terms') }}">{{ \App\Services\LanguageService::trans('login_register_link', $lang) }}</a></p>
                 <a href="{{ route('auth.choice') }}" class="back-link">{{ \App\Services\LanguageService::trans('login_back', $lang) }}</a>

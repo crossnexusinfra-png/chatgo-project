@@ -203,7 +203,15 @@ class FriendController extends Controller
         if (!$policy->sendCoins($user, $friend)) {
             abort(403, 'この操作を実行する権限がありません');
         }
-        
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('coins.send', $user->user_id, (string) $friend->user_id);
+        if (!$lock) {
+            $lang = LanguageService::getCurrentLanguage();
+            return response()->json(['success' => false, 'message' => LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+
         $result = $this->friendService->sendCoinsToFriend($user, $friend);
         
         $lang = LanguageService::getCurrentLanguage();
@@ -218,6 +226,9 @@ class FriendController extends Controller
                 'success' => false,
                 'message' => $result['message'],
             ], 400);
+        }
+        } finally {
+            $lock->release();
         }
     }
 

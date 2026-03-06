@@ -243,8 +243,8 @@ class LanguageService
         }
 
         // CF-IPCountry がない場合（Cloudflare 未経由・ローカル等）：IPは使わずデフォルト扱い
-        // 開発環境でプライベートIPのときのみ FORCE_JA_ON_PRIVATE_IP を参照
-        $ip = request()->header('CF-Connecting-IP') ?: (request()->ip() ?? '');
+        // 開発環境でプライベートIPのときのみ FORCE_JA_ON_PRIVATE_IP を参照（TrustProxies により request()->ip() でクライアントIP取得）
+        $ip = request()->ip() ?? '';
         $isPrivateIp = empty($ip) || $ip === '127.0.0.1' || $ip === '::1' ||
             strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0 ||
             (preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip) === 1);

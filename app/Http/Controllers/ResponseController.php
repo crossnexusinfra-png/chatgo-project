@@ -31,6 +31,14 @@ class ResponseController extends Controller
         }
         Gate::authorize('create', Response::class);
 
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('response.store', auth()->user()->user_id, (string) $thread->thread_id);
+        if (!$lock) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return back()->withErrors(['body' => \App\Services\LanguageService::trans('duplicate_submission', $lang)])->withInput();
+        }
+        try {
+
         // $_FILESを直接チェック（PHPの設定が原因でファイルが到達しない場合の診断用）
         $filesSuperglobal = isset($_FILES['media_file']) ? [
             'name' => $_FILES['media_file']['name'] ?? 'not set',
@@ -119,7 +127,7 @@ class ResponseController extends Controller
         
         // バリデーションルールを動的に設定（ファイルが存在しない場合はfileルールを適用しない）
         $rules = [
-            'body' => 'nullable',
+            'body' => 'nullable|string|max:1000',
         ];
         
         if ($request->hasFile('media_file')) {
@@ -416,6 +424,9 @@ class ResponseController extends Controller
 
         // レスポンスを保存した後、スレッド詳細ページにリダイレクトします。
         return redirect()->route('threads.show', $thread);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -435,6 +446,15 @@ class ResponseController extends Controller
             return redirect()->route('auth.choice');
         }
         Gate::authorize('create', Response::class);
+
+        // 重複実行防止
+        $resourceId = $thread->thread_id . ':' . $response->response_id;
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('response.reply', auth()->user()->user_id, $resourceId);
+        if (!$lock) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return back()->withErrors(['body' => \App\Services\LanguageService::trans('duplicate_submission', $lang)])->withInput();
+        }
+        try {
 
         // $_FILESを直接チェック（PHPの設定が原因でファイルが到達しない場合の診断用）
         $filesSuperglobal = isset($_FILES['media_file']) ? [
@@ -476,12 +496,13 @@ class ResponseController extends Controller
         }
 
         // フォームから送信されたリクエストデータを検証します。
-        // bodyまたはmedia_fileのいずれかが必要
+        // bodyまたはmedia_fileのいずれかが必要。本文はスレッド本文と同様に1000文字まで。メディアは10MBまで。
         $request->validate([
-            'body' => 'nullable',
-            'media_file' => 'nullable|file',
+            'body' => 'nullable|string|max:1000',
+            'media_file' => 'nullable|file|max:' . (10 * 1024),
         ], [
             'media_file.file' => \App\Services\LanguageService::trans('media_file_upload_failed', $lang),
+            'media_file.max' => \App\Services\LanguageService::trans('media_file_too_large', $lang),
         ]);
 
         // bodyまたはmedia_fileのいずれかが必要
@@ -770,6 +791,9 @@ class ResponseController extends Controller
 
         // レスポンスを保存した後、スレッド詳細ページにリダイレクトします。
         return redirect()->route('threads.show', $thread);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

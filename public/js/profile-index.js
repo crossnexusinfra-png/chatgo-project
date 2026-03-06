@@ -56,7 +56,7 @@
             buttonId: 'load-more-threads',
             listId: 'threads-list',
             getUrl: function(offset) {
-                return `/profile/threads/more?offset=${offset}`;
+                return `/api/profile/threads/more?offset=${offset}`;
             },
             translations: translations
         });

@@ -108,6 +108,15 @@ class ReportController extends Controller
         // IDOR防止: 通報を作成する権限をチェック
         \Illuminate\Support\Facades\Gate::authorize('create', Report::class);
 
+        // 重複実行防止
+        $userId = Auth::id();
+        $resourceId = $request->input('thread_id') ?: $request->input('response_id') ?: $request->input('reported_user_id');
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('report.store', $userId, $resourceId ? (string) $resourceId : null);
+        if (!$lock) {
+            return back()->withErrors(['report' => \App\Services\LanguageService::trans('duplicate_submission', $lang)]);
+        }
+        try {
+
         // バリデーション
         $validated = $request->validate([
             'thread_id' => 'nullable|exists:threads,thread_id',
@@ -154,8 +163,6 @@ class ReportController extends Controller
         if ($validated['reported_user_id'] && !in_array($validated['reason'], $profileReasons)) {
             return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_profile_reason_only', $lang)]);
         }
-
-        $userId = Auth::id();
 
         // 通報数上限チェック（未処理の通報数が10件以上の場合、通報を拒否）
         $pendingReportCount = Report::where('user_id', $userId)
@@ -311,6 +318,9 @@ class ReportController extends Controller
         }
 
         return back()->with('success', $message);
+        } finally {
+            $lock->release();
+        }
     }
 }
 

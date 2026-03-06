@@ -558,6 +558,12 @@ class ThreadController extends Controller
                 ->withInput();
         }
 
+        // 重複実行防止: 同一ユーザーの連続送信をロック
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('thread.store', $user->user_id);
+        if (!$lock) {
+            return back()->withErrors(['title' => \App\Services\LanguageService::trans('duplicate_submission', $lang)])->withInput();
+        }
+        try {
         // 画像アップロードの処理
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -815,6 +821,9 @@ class ThreadController extends Controller
 
         return redirect()->route('threads.show', $thread->thread_id)
             ->with('success', \App\Services\LanguageService::trans('thread_created_success', $lang));
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

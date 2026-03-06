@@ -350,6 +350,8 @@ return [
     
     // 認証・ログイン
     'login_required' => 'ログインが必要です。',
+    'request_user_mismatch' => 'この操作を実行する権限がありません。',
+    'duplicate_submission' => '送信が重複しています。しばらく待ってから再度お試しください。',
     'login_failed' => 'ログイン情報が正しくありません。',
     'login_required_error' => 'ログインが必要です',
     'acknowledgment_success' => '注意事項を了承しました。',
@@ -579,7 +581,16 @@ return [
     'login_no_account' => 'アカウントをお持ちでない方は',
     'login_register_link' => '新規登録',
     'login_back' => '← 戻る',
-    
+    'login_disabled_use_reset' => 'ログインが停止されています。パスワードを初期化してください。',
+    'login_locked' => 'ログインは :time まで一時的に制限されています。',
+    'login_captcha_notice' => '複数回の失敗が検知されました。下記のリンクからパスワードを初期化できます。',
+    'login_password_reset_link' => 'パスワードを初期化する',
+    'login_reset_title' => 'パスワード初期化',
+    'login_reset_enter_phone_email' => '登録済みの電話番号とメールアドレスを入力してください。認証後、パスワードを変更できます。',
+    'login_reset_verify_sms_email' => 'SMSとメールで送信された認証コードを入力してください。',
+    'login_reset_new_password' => '新しいパスワードを設定してください。',
+    'login_reset_success' => 'パスワードを変更しました。新しいパスワードでログインしてください。',
+
     // 認証選択画面
     'auth_choice_title' => 'ログイン / 新規登録 - BBS',
     'auth_choice_welcome' => 'BBSへようこそ',
