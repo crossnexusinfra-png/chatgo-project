@@ -1,2 +1,11 @@
+# サイト全体のクロールを許可（Google AdSense 審査用）
+# https://support.google.com/adsense/answer/10532
 User-agent: *
-Disallow:
+Allow: /
+
+# AdSense クローラのアクセスを明示的に許可
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: Google-Display-Ads-Bot
+Allow: /
