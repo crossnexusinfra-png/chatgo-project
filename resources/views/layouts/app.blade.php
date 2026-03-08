@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
     @stack('styles')
+    {{-- Google AdSense（審査用） --}}
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1438145064622040"
+         crossorigin="anonymous"></script>
 </head>
 <body>
     @if(!request()->routeIs('admin.*'))

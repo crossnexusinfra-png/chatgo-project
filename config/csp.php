@@ -23,6 +23,7 @@ return [
         'script-src' => [
             "'self'",
             "'unsafe-inline'", // onclick 等のインラインイベントハンドラ用（画像プレビュー等）
+            'https://pagead2.googlesyndication.com', // Google AdSense
             // nonceは動的に追加されます
         ],
         'style-src' => [
@@ -34,6 +35,10 @@ return [
             'data:',
             'blob:',
             'https://flagcdn.com',
+            'https://tpc.googlesyndication.com',
+            'https://googleads.g.doubleclick.net',
+            'https://www.googletagservices.com',
+            'https://www.google.com',
         ],
         'font-src' => [
             "'self'",
@@ -41,6 +46,9 @@ return [
         ],
         'connect-src' => [
             "'self'",
+            'https://pagead2.googlesyndication.com',
+            'https://googleads.g.doubleclick.net',
+            'https://tpc.googlesyndication.com',
         ],
         'media-src' => [
             "'self'",
@@ -55,6 +63,12 @@ return [
         ],
         'form-action' => [
             "'self'",
+        ],
+        'frame-src' => [
+            'https://tpc.googlesyndication.com',
+            'https://googleads.g.doubleclick.net',
+            'https://fundingchoicesmessages.google.com',
+            'https://*.google.com',
         ],
         'frame-ancestors' => [
             "'none'",
