@@ -200,8 +200,11 @@ class ProfileController extends Controller
             
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             
-            if (!$verificationResult['is_valid'] || $verificationResult['is_voip']) {
+            if (!$verificationResult['is_valid']) {
                 return back()->withErrors(['phone' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+            }
+            if ($verificationResult['is_voip']) {
+                return back()->withErrors(['phone' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
             }
             
             $data['sms_verified_at'] = null;

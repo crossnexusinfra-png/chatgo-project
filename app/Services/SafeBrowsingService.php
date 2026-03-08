@@ -28,6 +28,16 @@ class SafeBrowsingService
     public function checkUrl(string $url): array
     {
         try {
+            // サーバー環境で Safe Browsing を無効にしている場合はチェックをスキップ
+            if (!config('services.safebrowsing.enabled', true)) {
+                Log::info('SafeBrowsingService: URL check skipped (SAFEBROWSING_ENABLED is false)');
+                return [
+                    'safe' => true,
+                    'error' => null,
+                    'threats' => []
+                ];
+            }
+
             // APIキーが空の場合のチェック
             $apiKey = $this->getApiKey();
             if (empty($apiKey)) {

@@ -531,7 +531,8 @@ curl -X POST https://あなたのサイト/login \
 | `CSP_ENABLED` | `true` 推奨 |
 | `VERIPHONE_API_KEY` | 電話番号検証を使う場合。本番では `VERIPHONE_SKIP_WHEN_NO_KEY=true` にしない |
 | `OPENAI_API_KEY` | 翻訳APIを使う場合 |
-| `SAFEBROWSING_API_KEY` | URL 安全チェックを使う場合（Google Safe Browsing） |
+| `SAFEBROWSING_ENABLED` | `true` で URL 安全チェックを有効化。`false` にすると Safe Browsing API を呼ばずスキップ |
+| `SAFEBROWSING_API_KEY` | 有効時は必須（Google Safe Browsing）。未設定なら投稿は拒否（安全側） |
 | `CLAMAV_ENABLED` | メディアのウイルススキャンを使う場合。`SKIP_MEDIA_VALIDATION_TOOLS` は本番では `false` |
 | `SENTRY_LARAVEL_DSN` / `SENTRY_ENVIRONMENT` | エラー監視（Sentry）を使う場合。`SENTRY_ENVIRONMENT=production` など |
 | `MAIL_*` | 本番でメール送信（認証コード等）を行う場合のSMTP等の設定 |
@@ -593,6 +594,23 @@ curl -X POST https://あなたのサイト/login \
 | **HTTP クライアント制限** | 外部 API 用にタイムアウト・レスポンスサイズ上限（SecureHttpClientService）。 |
 
 重い処理（メール・Safe Browsing・翻訳）は同期的だが、上記の制限で呼び出し頻度と入力サイズが抑えられている。
+
+### 外部API利用上限（設定済み）
+
+**はい、設定済みです。** 次の2段階で上限がかかっています。
+
+1. **HTTPクライアント共通**（`SecureHttpClientService` 経由の全リクエスト）
+   - **タイムアウト**: デフォルト 10 秒（`config/security.php` の `http_client.timeout`、環境変数 `HTTP_CLIENT_TIMEOUT`）
+   - **最大リダイレクト**: デフォルト 0（リダイレクト禁止）
+   - **最大レスポンスサイズ**: デフォルト 10MB（`http_client.max_response_size`、環境変数 `HTTP_CLIENT_MAX_RESPONSE_SIZE`）
+   - ドメインホワイトリスト・内部IP遮断も適用（上記「実装済みセキュリティ対策」参照）
+
+2. **API別の呼び出し回数制限**
+   - **Safe Browsing**: 20 回/分（user または IP）。`SafeBrowsingService` 内で `RateLimiter::tooManyAttempts('safebrowsing:...', 20)` をチェック。
+   - **Veriphone**: 5 回/分（IP と user の両方）。ルートに `throttle:veriphone` を付与。
+   - **OpenAI（翻訳）**: 10 回/分（user または IP）。`TranslationService` 内で `RateLimiter::tooManyAttempts('openai:...', 10)` をチェック。
+
+Safe Browsing・Veriphone・翻訳・Cloudflare ログ送信はいずれも `SecureHttpClientService` を使用しているため、上記のタイムアウト・レスポンスサイズ上限が共通でかかります。
 
 ### CSRF の実装
 

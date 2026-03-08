@@ -10,9 +10,12 @@ class VeriphoneService
 {
     private const API_BASE_URL = 'https://api.veriphone.io/v2/verify';
     
-    // 開発環境でAPIリクエストをスキップする場合にtrueに設定
-    // 仮想サーバーやWSL環境で外部APIにアクセスできない場合はtrueに設定
-    private const SKIP_API_IN_DEV = true;
+    // 開発環境でAPIリクエストをスキップするか（.env の VERIPHONE_SKIP_IN_DEV で上書き可能）
+    // APIキーを取得済みで検証を試したい場合は false または .env で VERIPHONE_SKIP_IN_DEV=false に設定
+    private static function skipApiInDev(): bool
+    {
+        return config('services.veriphone.skip_in_dev', false);
+    }
 
     /**
      * APIキーを取得
@@ -31,6 +34,18 @@ class VeriphoneService
     public static function verifyPhone(string $phoneNumber): array
     {
         try {
+            // 本番含む全環境で検証を無効化する場合（VERIPHONE_ENABLED=false）
+            if (!config('services.veriphone.enabled', true)) {
+                Log::info('VeriphoneService: 検証が無効です（VERIPHONE_ENABLED=false）', [
+                    'phone' => $phoneNumber,
+                ]);
+                return [
+                    'is_valid' => true,
+                    'is_voip' => false,
+                    'message' => '有効な電話番号です。（検証無効）',
+                ];
+            }
+
             // APIキーが空の場合のチェック
             $apiKey = self::getApiKey();
             if (empty($apiKey)) {
@@ -55,8 +70,8 @@ class VeriphoneService
                 ];
             }
 
-            // 開発環境でAPIリクエストをスキップする場合
-            if (self::SKIP_API_IN_DEV && app()->environment('local')) {
+            // 開発環境でAPIリクエストをスキップする場合（設定で有効時のみ）
+            if (self::skipApiInDev() && app()->environment('local')) {
                 Log::info('VeriphoneService: APIリクエストをスキップ（開発環境）', [
                     'phone' => $phoneNumber,
                 ]);
@@ -167,7 +182,7 @@ class VeriphoneService
 
             $data = $response->json();
 
-            // APIレスポンスの確認
+            // APIレスポンスの確認（v2/verify は status: "success"|"error", phone_valid: true|false を返す）
             if (!isset($data['status'])) {
                 Log::warning('Veriphone API invalid response', [
                     'phone' => $cleanPhone,
@@ -181,12 +196,25 @@ class VeriphoneService
                 ];
             }
 
-            // 電話番号が無効な場合
-            if ($data['status'] !== 'valid') {
+            // リクエスト失敗時
+            if ($data['status'] === 'error') {
+                Log::warning('Veriphone API request error', [
+                    'phone' => $cleanPhone,
+                    'response' => $data,
+                ]);
+                return [
+                    'is_valid' => false,
+                    'is_voip' => false,
+                    'message' => '無効な電話番号です。',
+                ];
+            }
+
+            // 電話番号が無効な場合（status=success でも phone_valid が false のとき）
+            if (!($data['phone_valid'] ?? false)) {
                 Log::warning('Veriphone API invalid phone number', [
                     'phone' => $cleanPhone,
                     'original_phone' => $phoneNumber,
-                    'status' => $data['status'] ?? 'unknown',
+                    'phone_valid' => $data['phone_valid'] ?? null,
                     'response' => $data,
                 ]);
                 

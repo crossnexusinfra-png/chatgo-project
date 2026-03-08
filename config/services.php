@@ -37,12 +37,18 @@ return [
 
     'veriphone' => [
         'api_key' => env('VERIPHONE_API_KEY'),
+        // false にすると全環境で検証をスキップ（本番で一時的に無効化したい場合など）
+        'enabled' => env('VERIPHONE_ENABLED', true),
         // テスト時のみ: APIキー未設定でも電話番号を許可（本番では true にしないこと）
         'skip_when_no_key' => env('VERIPHONE_SKIP_WHEN_NO_KEY', false),
+        // 開発環境でAPI呼び出しをスキップするか。false にすると local でも Veriphone を叩く（APIキー必須）
+        'skip_in_dev' => env('VERIPHONE_SKIP_IN_DEV', false),
     ],
 
     'safebrowsing' => [
         'api_key' => env('SAFEBROWSING_API_KEY'),
+        // false にすると Safe Browsing API を呼ばず URL チェックをスキップ（本番で無効化したい場合など）
+        'enabled' => env('SAFEBROWSING_ENABLED', true),
     ],
 
     'openai' => [

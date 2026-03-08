@@ -515,7 +515,7 @@ class AuthController extends Controller
         }
         
         if ($verificationResult['is_voip']) {
-            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
         }
 
         // 登録データをセッションに保存
@@ -608,8 +608,11 @@ class AuthController extends Controller
         
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         
-        if (!$verificationResult['is_valid'] || $verificationResult['is_voip']) {
+        if (!$verificationResult['is_valid']) {
             return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)]);
+        }
+        if ($verificationResult['is_voip']) {
+            return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)]);
         }
 
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
