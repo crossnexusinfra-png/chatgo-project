@@ -22,8 +22,17 @@
     @endif
     
     <main class="main-content">
-        @if (session('translation_api_called'))
-            <script nonce="{{ $csp_nonce ?? '' }}">alert('テスト用: 翻訳APIが呼び出されました');</script>
+        @php
+            $externalApisCalled = \App\Services\ExternalApiAlertService::getRecorded();
+            if (empty($externalApisCalled) && session('translation_api_called')) {
+                $externalApisCalled = ['翻訳API (OpenAI)'];
+            }
+            $externalApiAlertMessage = !empty($externalApisCalled)
+                ? '以下の外部APIが呼び出されました:' . "\n" . implode("\n", $externalApisCalled)
+                : '';
+        @endphp
+        @if ($externalApiAlertMessage !== '')
+            <script nonce="{{ $csp_nonce ?? '' }}">alert({!! \Illuminate\Support\Js::from($externalApiAlertMessage) !!});</script>
         @endif
         @if (session('login_reward_message'))
             <div class="alert alert-success alert-margin">

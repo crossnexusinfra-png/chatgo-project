@@ -304,8 +304,9 @@ class TranslationService
         }
         RateLimiter::hit($rateLimitKey, 60);
 
-        // テスト用: 翻訳APIを呼び出す直前にセッションにフラグを立て、表示側でアラート可能にする
-        if (config('services.openai.translation_debug_alert')) {
+        if (config('app.external_api_debug_alert')) {
+            ExternalApiAlertService::record('翻訳API (OpenAI)');
+        } elseif (config('services.openai.translation_debug_alert')) {
             session()->flash('translation_api_called', true);
         }
 

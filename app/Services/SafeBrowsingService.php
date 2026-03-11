@@ -106,6 +106,8 @@ class SafeBrowsingService
                 'url' => $normalizedUrl
             ]);
 
+            ExternalApiAlertService::record('Safe Browsing API (Google)');
+
             // セキュアなHTTPクライアントを使用
             $url = self::API_URL . '?key=' . $this->getApiKey();
             $response = SecureHttpClientService::post($url, $requestData, [

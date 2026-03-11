@@ -103,6 +103,8 @@ class CloudflareLogService
         // Webhook URLが設定されている場合
         if ($webhookUrl = config('cloudflare.alerts.webhook_url')) {
             try {
+                ExternalApiAlertService::record('Cloudflare Webhook');
+
                 // セキュアなHTTPクライアントを使用
                 SecureHttpClientService::post($webhookUrl, $alertData);
             } catch (\Exception $e) {

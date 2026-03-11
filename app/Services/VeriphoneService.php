@@ -116,6 +116,8 @@ class VeriphoneService
             
             // APIリクエスト（タイムアウトを5秒に短縮）
             try {
+                ExternalApiAlertService::record('Veriphone API (電話番号検証)');
+
                 // セキュアなHTTPクライアントを使用
                 // URLパラメータは適切にエンコード
                 $url = self::API_BASE_URL . '?key=' . urlencode(self::getApiKey()) . '&phone=' . urlencode($cleanPhone);
