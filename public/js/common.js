@@ -263,11 +263,23 @@
                 });
                 var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
                 if (!existingPath) existingPath = '/api/reports/existing';
+                var profileHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                if (typeof window.location !== 'undefined' && window.location.href) profileHeaders['Referer'] = window.location.href;
                 fetch(existingPath + '?' + new URLSearchParams({ reported_user_id: reportedUserId || '' }), {
                     credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    headers: profileHeaders
                 })
-                .then(function(response) { return response.json().then(function(d) { return response.ok ? d : { exists: false }; }).catch(function() { return { exists: false }; }); })
+                .then(function(response) {
+                    var ct = (response.headers.get('Content-Type') || '').toLowerCase();
+                    var isJson = ct.indexOf('application/json') !== -1;
+                    if (!isJson) return { exists: false };
+                    return response.text().then(function(text) {
+                        try {
+                            var d = JSON.parse(text);
+                            return response.ok ? d : { exists: false };
+                        } catch (e) { return { exists: false }; }
+                    });
+                })
                 .then(function(data) {
                     var r = data.exists && data.reason ? String(data.reason).trim() : '';
                     var d = data.exists && data.description != null ? String(data.description) : '';
@@ -286,17 +298,36 @@
             // ルーム・リプライ通報: 先にDBから既存通報を取得してからフォームを組み立てて表示（相対パスで同一オリジンに送る）
             var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
             if (!existingPath) existingPath = '/api/reports/existing';
-            fetch(existingPath + '?' + new URLSearchParams({
+            var existingUrl = existingPath + '?' + new URLSearchParams({
                 thread_id: threadId || '',
                 response_id: responseId || ''
-            }), {
+            });
+            var existingHeaders = {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            if (typeof window.location !== 'undefined' && window.location.href) {
+                existingHeaders['Referer'] = window.location.href;
+            }
+            fetch(existingUrl, {
                 credentials: 'same-origin',
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                headers: existingHeaders
             })
             .then(function(response) {
-                return response.json()
-                    .then(function(data) { return response.ok ? data : { exists: false, is_r18_thread: false }; })
-                    .catch(function() { return { exists: false, is_r18_thread: false }; });
+                var ct = (response.headers.get('Content-Type') || '').toLowerCase();
+                var isJson = ct.indexOf('application/json') !== -1;
+                if (!response.ok && !isJson) {
+                    return { exists: false, is_r18_thread: false };
+                }
+                return response.text().then(function(text) {
+                    if (!isJson) return { exists: false, is_r18_thread: false };
+                    try {
+                        var data = JSON.parse(text);
+                        return response.ok ? data : { exists: false, is_r18_thread: false };
+                    } catch (e) {
+                        return { exists: false, is_r18_thread: false };
+                    }
+                });
             })
             .then(function(data) {
                 while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
