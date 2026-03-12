@@ -242,45 +242,63 @@
             }
             
             const reportReasonSelect = document.getElementById('report_reason');
+            const reportDescriptionInput = document.getElementById('report_description');
             if (!reportReasonSelect) return;
-            
-            // 既存のオプションをすべて削除（最初の空オプションを除く）
-            while (reportReasonSelect.options.length > 1) {
-                reportReasonSelect.remove(1);
-            }
             
             // プロフィール通報の場合
             if (reportedUserId) {
-                // プロフィール通報専用の理由を追加
-                const profileReasons = [
+                // 既存オプションを削除してプロフィール用を追加
+                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
+                [
                     { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
                     { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
                     { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
                     { value: 'なりすまし・虚偽の人物情報', label: translations.reportReasonImpersonation || '' },
                     { value: 'その他', label: translations.other || '' }
-                ];
-                
-                profileReasons.forEach(reason => {
-                    const option = document.createElement('option');
-                    option.value = reason.value;
-                    option.textContent = reason.label;
-                    reportReasonSelect.appendChild(option);
+                ].forEach(function(reason) {
+                    var opt = document.createElement('option');
+                    opt.value = reason.value;
+                    opt.textContent = reason.label;
+                    reportReasonSelect.appendChild(opt);
                 });
-            } else {
-                // ルーム・リプライ通報の場合
-                const threadImageReasons = [
-                    { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
-                    { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
-                    { value: 'ルーム画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
-                ];
-                
-                const adultContentReason = {
-                    value: '成人向けコンテンツが含まれる',
-                    label: translations.reportReasonAdultContent || ''
-                };
-                
-                // 基本の通報理由を追加
-                const baseReasons = [
+                var existingRoute = routes.existingReportRoute || '/reports/existing';
+                fetch(existingRoute + '?' + new URLSearchParams({ reported_user_id: reportedUserId || '' }), {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) { return response.json().then(function(d) { return response.ok ? d : { exists: false }; }).catch(function() { return { exists: false }; }); })
+                .then(function(data) {
+                    var r = data.exists && data.reason ? String(data.reason).trim() : '';
+                    var d = data.exists && data.description != null ? String(data.description) : '';
+                    reportReasonSelect.value = r;
+                    if (reportDescriptionInput) reportDescriptionInput.value = d;
+                    reportModal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                })
+                .catch(function() {
+                    reportModal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                });
+                return;
+            }
+            
+            // ルーム・リプライ通報: 先にDBから既存通報を取得してからフォームを組み立てて表示
+            var existingRoute = routes.existingReportRoute || '/reports/existing';
+            fetch(existingRoute + '?' + new URLSearchParams({
+                thread_id: threadId || '',
+                response_id: responseId || ''
+            }), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) {
+                return response.json()
+                    .then(function(data) { return response.ok ? data : { exists: false, is_r18_thread: false }; })
+                    .catch(function() { return { exists: false, is_r18_thread: false }; });
+            })
+            .then(function(data) {
+                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
+                var baseReasons = [
                     { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
                     { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
                     { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
@@ -288,123 +306,61 @@
                     { value: '異なる思想に関しての意見の押し付け、妨害', label: translations.reportReasonOpinionImposition || '' },
                     { value: 'その他', label: translations.other || '' }
                 ];
-                
-                baseReasons.forEach(reason => {
-                    const option = document.createElement('option');
-                    option.value = reason.value;
-                    option.textContent = reason.label;
-                    reportReasonSelect.appendChild(option);
+                baseReasons.forEach(function(reason) {
+                    var opt = document.createElement('option');
+                    opt.value = reason.value;
+                    opt.textContent = reason.label;
+                    reportReasonSelect.appendChild(opt);
                 });
-                
-                const existingRoute = routes.existingReportRoute || '/reports/existing';
-                fetch(existingRoute + '?' + new URLSearchParams({
-                    thread_id: threadId || '',
-                    response_id: responseId || ''
-                }), {
-                    credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function(response) {
-                    return response.json()
-                        .then(function(data) {
-                            if (!response.ok) return { exists: false, is_r18_thread: false };
-                            return data;
-                        })
-                        .catch(function() { return { exists: false, is_r18_thread: false }; });
-                })
-                .then(function(data) {
-                    const isR18Thread = data.is_r18_thread || false;
-                    const contentViolationOption = reportReasonSelect.querySelector('option[value="成人向け以外のコンテンツ規制違反"]');
-                    const otherOption = reportReasonSelect.querySelector('option[value="その他"]');
-                    
-                    if (!isR18Thread) {
-                        const adultContentOption = document.createElement('option');
-                        adultContentOption.value = adultContentReason.value;
-                        adultContentOption.textContent = adultContentReason.label;
-                        if (contentViolationOption) {
-                            reportReasonSelect.insertBefore(adultContentOption, contentViolationOption);
-                        } else if (otherOption) {
-                            reportReasonSelect.insertBefore(adultContentOption, otherOption);
-                        }
-                    }
-                    
-                    if (threadId && !responseId) {
-                        threadImageReasons.forEach(reason => {
-                            const option = document.createElement('option');
-                            option.value = reason.value;
-                            option.textContent = reason.label;
-                            if (otherOption) {
-                                reportReasonSelect.insertBefore(option, otherOption);
-                            }
-                        });
-                    }
-                    
-                    const reportReasonInput = document.getElementById('report_reason');
-                    const reportDescriptionInput = document.getElementById('report_description');
-                    const reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
-                    const descValue = data.exists && data.description != null ? String(data.description) : '';
-                    
-                    if (reasonValue) {
-                        const hasOption = Array.from(reportReasonSelect.options).some(function(opt) { return opt.value === reasonValue; });
-                        if (!hasOption) {
-                            const existingOpt = document.createElement('option');
-                            existingOpt.value = reasonValue;
-                            existingOpt.textContent = reasonValue;
-                            reportReasonSelect.appendChild(existingOpt);
-                        }
-                    }
-                    if (reportReasonInput) {
-                        reportReasonInput.value = reasonValue;
-                    }
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = descValue;
-                    }
-                    
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                })
-                .catch(error => {
-                    console.error('Error fetching existing report:', error);
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                });
-                return;
-            }
-            
-            // プロフィール通報の場合の既存通報取得
-            const existingRoute = routes.existingReportRoute || '/reports/existing';
-            fetch(existingRoute + '?' + new URLSearchParams({
-                reported_user_id: reportedUserId || ''
-            }), {
-                credentials: 'same-origin',
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(response) {
-                return response.json()
-                    .then(function(data) {
-                        if (!response.ok) return { exists: false };
-                        return data;
-                    })
-                    .catch(function() { return { exists: false }; });
-            })
-            .then(function(data) {
-                const reportReasonInput = document.getElementById('report_reason');
-                const reportDescriptionInput = document.getElementById('report_description');
-                const reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
-                const descValue = data.exists && data.description != null ? String(data.description) : '';
-                
-                if (reportReasonInput) {
-                    reportReasonInput.value = reasonValue;
+                var otherOpt = reportReasonSelect.querySelector('option[value="その他"]');
+                if (!data.is_r18_thread) {
+                    var ac = document.createElement('option');
+                    ac.value = '成人向けコンテンツが含まれる';
+                    ac.textContent = translations.reportReasonAdultContent || '';
+                    reportReasonSelect.insertBefore(ac, otherOpt || reportReasonSelect.options[reportReasonSelect.options.length - 1]);
                 }
-                if (reportDescriptionInput) {
-                    reportDescriptionInput.value = descValue;
+                if (threadId && !responseId) {
+                    [
+                        { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
+                        { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
+                        { value: 'ルーム画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
+                    ].forEach(function(reason) {
+                        var o = document.createElement('option');
+                        o.value = reason.value;
+                        o.textContent = reason.label;
+                        if (otherOpt) reportReasonSelect.insertBefore(o, otherOpt);
+                        else reportReasonSelect.appendChild(o);
+                    });
                 }
-                
+                var reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
+                var descValue = data.exists && data.description != null ? String(data.description) : '';
+                if (reasonValue && !Array.from(reportReasonSelect.options).some(function(opt) { return opt.value === reasonValue; })) {
+                    var ex = document.createElement('option');
+                    ex.value = reasonValue;
+                    ex.textContent = reasonValue;
+                    reportReasonSelect.appendChild(ex);
+                }
+                reportReasonSelect.value = reasonValue;
+                if (reportDescriptionInput) reportDescriptionInput.value = descValue;
                 reportModal.classList.add('show');
                 document.body.style.overflow = 'hidden';
             })
-            .catch(error => {
-                console.error('Error fetching existing report:', error);
+            .catch(function(err) {
+                console.error('Error fetching existing report:', err);
+                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
+                [
+                    { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
+                    { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
+                    { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
+                    { value: '成人向け以外のコンテンツ規制違反', label: translations.reportReasonContentViolation || '' },
+                    { value: '異なる思想に関しての意見の押し付け、妨害', label: translations.reportReasonOpinionImposition || '' },
+                    { value: 'その他', label: translations.other || '' }
+                ].forEach(function(reason) {
+                    var opt = document.createElement('option');
+                    opt.value = reason.value;
+                    opt.textContent = reason.label;
+                    reportReasonSelect.appendChild(opt);
+                });
                 reportModal.classList.add('show');
                 document.body.style.overflow = 'hidden';
             });

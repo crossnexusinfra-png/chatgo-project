@@ -501,4 +501,16 @@
         })();
     </script>
     <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+    <script nonce="{{ $csp_nonce ?? '' }}">
+    (function(){
+        var btn = document.getElementById('reply-target-cancel-btn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.cancelReply === 'function') window.cancelReply();
+            });
+        }
+    })();
+    </script>
 @endsection 
