@@ -456,7 +456,9 @@ body {
     object-fit: cover;
 }
 
-/* スレッド画像の改善：縦横比を保ったまま全体を表示、余白部分はぼかし */
+/* ルーム画像：固定比率16:9。画像が比率と合わない場合は余白をぼかしで埋める。
+ * ぼかし＝同画像を比率維持のまま領域を埋めるよう拡大(cover)してブラー。
+ * 手前の画像＝比率維持のまま領域からはみ出さない最大まで拡大(contain)。 */
 .thread-image-wrapper {
     position: relative;
     overflow: hidden;

@@ -150,6 +150,7 @@ return [
     
     // Favorites & Recent Access
     'favorite_threads' => 'Favorite Rooms',
+    'no_favorite_threads' => 'No favorite rooms yet',
     'recent_access_threads' => 'Recently Accessed Rooms',
     
     // Tag Page

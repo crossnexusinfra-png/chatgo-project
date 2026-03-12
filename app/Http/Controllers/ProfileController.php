@@ -52,8 +52,23 @@ class ProfileController extends Controller
         $user->residence_display = $this->getCountryName($user->residence);
         $user->nationality_display = $this->getCountryName($user->nationality);
         
+        // お気に入りルームを取得（お気に入り登録日の新しい順、最大5件）
+        $favoriteThreadIds = \App\Models\ThreadFavorite::where('user_id', $user->user_id)
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->pluck('thread_id')
+            ->toArray();
+        $favoriteThreads = collect();
+        if (!empty($favoriteThreadIds)) {
+            $favoriteThreads = \App\Models\Thread::whereIn('thread_id', $favoriteThreadIds)->get();
+            $favoriteThreads = $favoriteThreads->sortBy(function ($t) use ($favoriteThreadIds) {
+                $pos = array_search($t->thread_id, $favoriteThreadIds);
+                return $pos === false ? 999 : $pos;
+            })->values();
+            \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($favoriteThreads, $lang);
+        }
+
         // ユーザーが作成したスレッドを取得（新しい順、最初の5件のみ）
-        // user_idで直接検索してパフォーマンス向上
         $threadsQuery = \App\Models\Thread::where('user_id', $user->user_id)
             ->orderBy('created_at', 'desc');
         
@@ -61,18 +76,15 @@ class ProfileController extends Controller
         $threads = $threadsQuery->take(5)->get();
         \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
         
-        // スレッドの制限情報と画像通報スコアを取得
+        // スレッドの制限情報と画像通報スコアを取得（お気に入り＋作成の両方）
         $threadRestrictionData = [];
         $threadImageReportScoreData = [];
-        if ($threads->isNotEmpty()) {
-            // ThreadControllerのメソッドを使用して制限情報を取得（メインページと統一）
+        $allThreads = $threads->merge($favoriteThreads)->unique('thread_id');
+        if ($allThreads->isNotEmpty()) {
             $threadController = new \App\Http\Controllers\ThreadController();
-            $threadRestrictionData = $threadController->getThreadRestrictionData($threads);
-            
-            $threadIds = $threads->pluck('thread_id')->toArray();
-            foreach ($threadIds as $threadId) {
+            $threadRestrictionData = $threadController->getThreadRestrictionData($allThreads);
+            foreach ($allThreads->pluck('thread_id') as $threadId) {
                 $score = \App\Models\Report::calculateThreadImageReportScore($threadId);
-                // スレッド画像関連の通報理由で削除された場合は画像も非表示
                 $isDeletedByImageReport = \App\Models\Report::isThreadDeletedByImageReport($threadId);
                 $threadImageReportScoreData[$threadId] = [
                     'score' => $score,
@@ -115,7 +127,7 @@ class ProfileController extends Controller
             ['day' => 200, 'coins' => $coinService->calculateConsecutiveLoginReward(200), 'isBonus' => true],
         ];
 
-        return view('profile.index', compact('user', 'threads', 'lang', 'totalCount', 'threadRestrictionData', 'threadImageReportScoreData', 'lastLoginAt', 'consecutiveLoginDays', 'coinRewardTable'))->with('hideSearch', true);
+        return view('profile.index', compact('user', 'threads', 'favoriteThreads', 'lang', 'totalCount', 'threadRestrictionData', 'threadImageReportScoreData', 'lastLoginAt', 'consecutiveLoginDays', 'coinRewardTable'))->with('hideSearch', true);
     }
 
     /**

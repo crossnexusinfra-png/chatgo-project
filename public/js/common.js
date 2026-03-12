@@ -196,6 +196,7 @@
                         isR18Checkbox.checked = true;
                         isR18Checkbox.disabled = true;
                     } else {
+                        isR18Checkbox.checked = false;
                         isR18Checkbox.disabled = false;
                     }
                 }

@@ -150,6 +150,7 @@ return [
     
     // お気に入り・最近アクセス
     'favorite_threads' => 'お気に入りのルーム',
+    'no_favorite_threads' => 'お気に入りのルームはまだありません',
     'recent_access_threads' => '最近アクセスしたルーム',
     
     // タグページ

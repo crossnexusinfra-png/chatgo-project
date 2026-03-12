@@ -931,8 +931,9 @@ class ThreadController extends Controller
         $userReportedThreadRejected = false;
         $userReportedResponses = collect();
         $userReportedResponseRejected = [];
-        $existingReportByResponseId = []; // 通報変更用: response_id => [reason, description]
-        $existingThreadReport = []; // 通報変更用: [reason, description]（スレッド通報時のみ）
+        // 通報変更用: 自分の通報内容をHTMLに埋め込み（API経由だとCDNチャレンジで403になるため。取得条件は getExisting API と同じ user_id のみ）
+        $existingReportByResponseId = [];
+        $existingThreadReport = [];
         
         if ($currentUser) {
             // スレッドの通報状況を確認

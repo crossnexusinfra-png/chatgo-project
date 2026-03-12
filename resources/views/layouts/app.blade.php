@@ -63,11 +63,6 @@
                         @csrf
                         <div class="js-create-thread-fields">
                         <div class="form-group">
-                            <label for="user_name">{{ \App\Services\LanguageService::trans('thread_author', $lang) }}:</label>
-                            <input type="text" id="user_name" name="user_name" class="js-create-thread-user_name" value="{{ Auth::check() ? Auth::user()->username : old('user_name') }}" maxlength="20" required>
-                            <small>20{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
-                        </div>
-                        <div class="form-group">
                             <label for="title">{{ \App\Services\LanguageService::trans('thread_title', $lang) }}:</label>
                             <input type="text" id="title" name="title" class="js-create-thread-title" value="{{ old('title') }}" maxlength="50" required>
                             <small>50{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
