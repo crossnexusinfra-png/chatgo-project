@@ -1379,65 +1379,6 @@
             if (url) window.openImageModal(url);
         });
 
-        // 返信取り消し・続き要望・広告・返信元スクロール（CSP対応でインラインonclickを使わない）
-        document.addEventListener('click', function(e) {
-            const cancelBtn = e.target.closest('.reply-target-cancel');
-            if (cancelBtn) {
-                e.preventDefault();
-                if (typeof window.cancelReply === 'function') window.cancelReply();
-                return;
-            }
-            const toggleBtn = e.target.closest('[data-action="toggle-continuation"]');
-            if (toggleBtn && !toggleBtn.disabled) {
-                e.preventDefault();
-                const tid = toggleBtn.getAttribute('data-thread-id');
-                if (tid && typeof window.toggleContinuationRequest === 'function') window.toggleContinuationRequest(parseInt(tid, 10));
-                return;
-            }
-            const watchAdBtn = e.target.closest('[data-action="watch-ad-thread"]');
-            if (watchAdBtn) {
-                e.preventDefault();
-                if (typeof window.watchAdFromThread === 'function') window.watchAdFromThread();
-                return;
-            }
-            const closeAdBtn = e.target.closest('[data-action="close-ad-video-thread"]');
-            if (closeAdBtn) {
-                e.preventDefault();
-                if (typeof window.closeAdVideoFromThread === 'function') window.closeAdVideoFromThread();
-                return;
-            }
-            const scrollSource = e.target.closest('.reply-source[data-action="scroll-to-response"]');
-            if (scrollSource) {
-                e.preventDefault();
-                const rid = scrollSource.getAttribute('data-response-id');
-                if (rid && typeof window.scrollToResponse === 'function') window.scrollToResponse(parseInt(rid, 10));
-                return;
-            }
-        });
-        document.addEventListener('keydown', function(e) {
-            if (e.key !== 'Enter' && e.key !== ' ') return;
-            const scrollSource = e.target.closest('.reply-source[data-action="scroll-to-response"]');
-            if (!scrollSource) return;
-            e.preventDefault();
-            const rid = scrollSource.getAttribute('data-response-id');
-            if (rid && typeof window.scrollToResponse === 'function') window.scrollToResponse(parseInt(rid, 10));
-        });
-
-        // 動画再生トグル（CSP対応）
-        document.addEventListener('click', function(e) {
-            const videoEl = e.target.closest('.media-video-thumbnail[data-action="toggle-video-play"]');
-            if (videoEl && typeof window.toggleVideoPlay === 'function') {
-                e.preventDefault();
-                window.toggleVideoPlay(videoEl);
-                return;
-            }
-            const overlay = e.target.closest('.media-video-overlay[data-action="toggle-video-play"]');
-            if (overlay && overlay.previousElementSibling && typeof window.toggleVideoPlay === 'function') {
-                e.preventDefault();
-                window.toggleVideoPlay(overlay.previousElementSibling);
-            }
-        });
-
         // メディアファイルハンドラーの初期化
         initMediaFileHandlers();
 
@@ -1467,5 +1408,60 @@
     // ページを離れる前にポーリングを停止
     window.addEventListener('beforeunload', function() {
         stopPolling();
+    });
+
+    // 返信取り消し・続き要望・広告・返信元スクロール・動画トグルはスクリプト読み込み直後に委譲を登録（runWhenReady の実行順に依存しない）
+    document.addEventListener('click', function(e) {
+        const cancelBtn = e.target.closest('.reply-target-cancel');
+        if (cancelBtn) {
+            e.preventDefault();
+            if (typeof window.cancelReply === 'function') window.cancelReply();
+            return;
+        }
+        const toggleBtn = e.target.closest('[data-action="toggle-continuation"]');
+        if (toggleBtn && !toggleBtn.disabled) {
+            e.preventDefault();
+            const tid = toggleBtn.getAttribute('data-thread-id');
+            if (tid && typeof window.toggleContinuationRequest === 'function') window.toggleContinuationRequest(parseInt(tid, 10));
+            return;
+        }
+        const watchAdBtn = e.target.closest('[data-action="watch-ad-thread"]');
+        if (watchAdBtn) {
+            e.preventDefault();
+            if (typeof window.watchAdFromThread === 'function') window.watchAdFromThread();
+            return;
+        }
+        const closeAdBtn = e.target.closest('[data-action="close-ad-video-thread"]');
+        if (closeAdBtn) {
+            e.preventDefault();
+            if (typeof window.closeAdVideoFromThread === 'function') window.closeAdVideoFromThread();
+            return;
+        }
+        const scrollSource = e.target.closest('.reply-source[data-action="scroll-to-response"]');
+        if (scrollSource) {
+            e.preventDefault();
+            const rid = scrollSource.getAttribute('data-response-id');
+            if (rid && typeof window.scrollToResponse === 'function') window.scrollToResponse(parseInt(rid, 10));
+            return;
+        }
+        const videoEl = e.target.closest('.media-video-thumbnail[data-action="toggle-video-play"]');
+        if (videoEl && typeof window.toggleVideoPlay === 'function') {
+            e.preventDefault();
+            window.toggleVideoPlay(videoEl);
+            return;
+        }
+        const overlay = e.target.closest('.media-video-overlay[data-action="toggle-video-play"]');
+        if (overlay && overlay.previousElementSibling && typeof window.toggleVideoPlay === 'function') {
+            e.preventDefault();
+            window.toggleVideoPlay(overlay.previousElementSibling);
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const scrollSource = e.target.closest('.reply-source[data-action="scroll-to-response"]');
+        if (!scrollSource) return;
+        e.preventDefault();
+        const rid = scrollSource.getAttribute('data-response-id');
+        if (rid && typeof window.scrollToResponse === 'function') window.scrollToResponse(parseInt(rid, 10));
     });
 })();

@@ -2579,12 +2579,12 @@ form.form-submitting input[readonly] {
 }
 
 .filter-apply-btn {
-    padding: 12px 24px;
+    padding: 8px 16px;
     background-color: #667eea;
     color: #fff;
     border: none;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
