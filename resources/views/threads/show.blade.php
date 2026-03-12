@@ -126,7 +126,7 @@
                         @if(isset($userReportedThreadRejected) && $userReportedThreadRejected)
                             <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
                         @else
-                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-reason="{{ e($existingThreadReport['reason'] ?? '') }}" data-report-description="{{ e($existingThreadReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                         @endif
                     @else
                         <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
@@ -227,6 +227,7 @@
                     'thread' => $thread,
                     'isReported' => $isReported ?? false,
                     'isReportRejected' => $isReportRejected ?? false,
+                    'existingReportByResponseId' => $existingReportByResponseId ?? [],
                     'lang' => $lang
                 ])
             @empty

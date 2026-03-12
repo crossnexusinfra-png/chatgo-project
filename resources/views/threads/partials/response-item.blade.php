@@ -373,7 +373,10 @@
                     @if(isset($isReportRejected) && $isReportRejected)
                         <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
                     @else
-                        <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                        @php
+                            $existingReport = isset($existingReportByResponseId) && isset($existingReportByResponseId[$response->response_id]) ? $existingReportByResponseId[$response->response_id] : [];
+                        @endphp
+                        <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}" data-report-reason="{{ e($existingReport['reason'] ?? '') }}" data-report-description="{{ e($existingReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                     @endif
                 @else
                     <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>

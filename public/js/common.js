@@ -219,13 +219,16 @@
             const threadId = btn.dataset.reportThreadId || null;
             const responseId = btn.dataset.reportResponseId || null;
             const reportedUserId = btn.dataset.reportUserId || null;
+            // 通報変更ボタンはサーバーで既存内容を埋め込んでいるのでAPI不要
+            const embeddedReason = (btn.dataset.reportReason !== undefined && btn.dataset.reportReason !== '') ? btn.dataset.reportReason : null;
+            const embeddedDescription = (btn.dataset.reportDescription !== undefined) ? btn.dataset.reportDescription : null;
             if (window.openReportModal) {
                 e.preventDefault();
-                window.openReportModal(threadId, responseId, reportedUserId);
+                window.openReportModal(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription);
             }
         });
 
-        window.openReportModal = function(threadId, responseId, reportedUserId) {
+        window.openReportModal = function(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription) {
             if (!reportModal) return;
             
             const reportThreadIdInput = document.getElementById('report_thread_id');
@@ -295,7 +298,20 @@
                 return;
             }
             
-            // ルーム・リプライ通報: 先にDBから既存通報を取得してからフォームを組み立てて表示（相対パスで同一オリジンに送る）
+            // ルーム・リプライ通報: 通報変更ボタンなら data 属性の既存内容を使う（API不要・Cloudflare通過）
+            var data;
+            if (embeddedReason !== undefined && embeddedReason !== null && String(embeddedReason).trim() !== '') {
+                data = {
+                    exists: true,
+                    reason: String(embeddedReason).trim(),
+                    description: (embeddedDescription != null) ? String(embeddedDescription) : '',
+                    is_r18_thread: false
+                };
+                runReportModalWithData(data, threadId, responseId);
+                return;
+            }
+            
+            // 新規通報または data が無い場合のみ API で取得
             var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
             if (!existingPath) existingPath = '/api/reports/existing';
             var existingUrl = existingPath + '?' + new URLSearchParams({
@@ -330,74 +346,66 @@
                 });
             })
             .then(function(data) {
-                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
-                var baseReasons = [
-                    { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
-                    { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
-                    { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
-                    { value: '成人向け以外のコンテンツ規制違反', label: translations.reportReasonContentViolation || '' },
-                    { value: '異なる思想に関しての意見の押し付け、妨害', label: translations.reportReasonOpinionImposition || '' },
-                    { value: 'その他', label: translations.other || '' }
-                ];
-                baseReasons.forEach(function(reason) {
-                    var opt = document.createElement('option');
-                    opt.value = reason.value;
-                    opt.textContent = reason.label;
-                    reportReasonSelect.appendChild(opt);
-                });
-                var otherOpt = reportReasonSelect.querySelector('option[value="その他"]');
-                if (!data.is_r18_thread) {
-                    var ac = document.createElement('option');
-                    ac.value = '成人向けコンテンツが含まれる';
-                    ac.textContent = translations.reportReasonAdultContent || '';
-                    reportReasonSelect.insertBefore(ac, otherOpt || reportReasonSelect.options[reportReasonSelect.options.length - 1]);
-                }
-                if (threadId && !responseId) {
-                    [
-                        { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
-                        { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
-                        { value: 'ルーム画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
-                    ].forEach(function(reason) {
-                        var o = document.createElement('option');
-                        o.value = reason.value;
-                        o.textContent = reason.label;
-                        if (otherOpt) reportReasonSelect.insertBefore(o, otherOpt);
-                        else reportReasonSelect.appendChild(o);
-                    });
-                }
-                var reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
-                var descValue = data.exists && data.description != null ? String(data.description) : '';
-                if (reasonValue && !Array.from(reportReasonSelect.options).some(function(opt) { return opt.value === reasonValue; })) {
-                    var ex = document.createElement('option');
-                    ex.value = reasonValue;
-                    ex.textContent = reasonValue;
-                    reportReasonSelect.appendChild(ex);
-                }
-                reportReasonSelect.value = reasonValue;
-                if (reportDescriptionInput) reportDescriptionInput.value = descValue;
-                reportModal.classList.add('show');
-                document.body.style.overflow = 'hidden';
+                runReportModalWithData(data, threadId, responseId);
             })
-            .catch(function(err) {
-                console.error('Error fetching existing report:', err);
-                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
-                [
-                    { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
-                    { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
-                    { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
-                    { value: '成人向け以外のコンテンツ規制違反', label: translations.reportReasonContentViolation || '' },
-                    { value: '異なる思想に関しての意見の押し付け、妨害', label: translations.reportReasonOpinionImposition || '' },
-                    { value: 'その他', label: translations.other || '' }
-                ].forEach(function(reason) {
-                    var opt = document.createElement('option');
-                    opt.value = reason.value;
-                    opt.textContent = reason.label;
-                    reportReasonSelect.appendChild(opt);
-                });
-                reportModal.classList.add('show');
-                document.body.style.overflow = 'hidden';
+            .catch(function() {
+                runReportModalWithData({ exists: false, is_r18_thread: false }, threadId, responseId);
             });
-        };
+        }
+        
+        function runReportModalWithData(data, threadId, responseId) {
+            var reportReasonSelect = document.getElementById('report_reason');
+            var reportDescriptionInput = document.getElementById('report_description');
+            var reportModal = document.getElementById('reportModal');
+            if (!reportReasonSelect || !reportModal) return;
+            while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
+            var baseReasons = [
+                { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
+                { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
+                { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
+                { value: '成人向け以外のコンテンツ規制違反', label: translations.reportReasonContentViolation || '' },
+                { value: '異なる思想に関しての意見の押し付け、妨害', label: translations.reportReasonOpinionImposition || '' },
+                { value: 'その他', label: translations.other || '' }
+            ];
+            baseReasons.forEach(function(reason) {
+                var opt = document.createElement('option');
+                opt.value = reason.value;
+                opt.textContent = reason.label;
+                reportReasonSelect.appendChild(opt);
+            });
+            var otherOpt = reportReasonSelect.querySelector('option[value="その他"]');
+            if (!data.is_r18_thread) {
+                var ac = document.createElement('option');
+                ac.value = '成人向けコンテンツが含まれる';
+                ac.textContent = translations.reportReasonAdultContent || '';
+                reportReasonSelect.insertBefore(ac, otherOpt || reportReasonSelect.options[reportReasonSelect.options.length - 1]);
+            }
+            if (threadId && !responseId) {
+                [
+                    { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
+                    { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },
+                    { value: 'ルーム画像に不適切な内容が含まれている', label: translations.reportReasonThreadImageInappropriate || '' }
+                ].forEach(function(reason) {
+                    var o = document.createElement('option');
+                    o.value = reason.value;
+                    o.textContent = reason.label;
+                    if (otherOpt) reportReasonSelect.insertBefore(o, otherOpt);
+                    else reportReasonSelect.appendChild(o);
+                });
+            }
+            var reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
+            var descValue = data.exists && data.description != null ? String(data.description) : '';
+            if (reasonValue && !Array.from(reportReasonSelect.options).some(function(opt) { return opt.value === reasonValue; })) {
+                var ex = document.createElement('option');
+                ex.value = reasonValue;
+                ex.textContent = reasonValue;
+                reportReasonSelect.appendChild(ex);
+            }
+            reportReasonSelect.value = reasonValue;
+            if (reportDescriptionInput) reportDescriptionInput.value = descValue;
+            reportModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
 
         if (closeReportModal && reportModal) {
             closeReportModal.addEventListener('click', function() {

@@ -931,6 +931,8 @@ class ThreadController extends Controller
         $userReportedThreadRejected = false;
         $userReportedResponses = collect();
         $userReportedResponseRejected = [];
+        $existingReportByResponseId = []; // 通報変更用: response_id => [reason, description]
+        $existingThreadReport = []; // 通報変更用: [reason, description]（スレッド通報時のみ）
         
         if ($currentUser) {
             // スレッドの通報状況を確認
@@ -940,11 +942,15 @@ class ThreadController extends Controller
             
             if ($threadReport) {
                 $userReportedThread = true;
+                $existingThreadReport = [
+                    'reason' => $threadReport->reason ?? '',
+                    'description' => $threadReport->description ?? '',
+                ];
                 // 拒否された通報かどうか
                 $userReportedThreadRejected = $threadReport->approved_at && $threadReport->is_approved === false;
             }
             
-            // レスポンスの通報状況を確認（通報済みのレスポンスIDのリストを取得）
+            // レスポンスの通報状況を確認（通報済みのレスポンスIDのリストと内容を取得）
             $responseReports = \App\Models\Report::where('user_id', $currentUser->user_id)
                 ->whereIn('response_id', $initialResponses->pluck('response_id'))
                 ->get();
@@ -952,6 +958,10 @@ class ThreadController extends Controller
             $reportedResponseIds = [];
             foreach ($responseReports as $report) {
                 $reportedResponseIds[] = $report->response_id;
+                $existingReportByResponseId[$report->response_id] = [
+                    'reason' => $report->reason ?? '',
+                    'description' => $report->description ?? '',
+                ];
                 // 拒否された通報かどうか
                 if ($report->approved_at && $report->is_approved === false) {
                     $userReportedResponseRejected[$report->response_id] = true;
@@ -1165,7 +1175,7 @@ class ThreadController extends Controller
 
         return view('threads.show', compact(
             'thread', 'users', 'currentUser', 'userReportedThread', 'userReportedThreadRejected',
-            'userReportedResponses', 'userReportedResponseRejected',
+            'userReportedResponses', 'userReportedResponseRejected', 'existingReportByResponseId', 'existingThreadReport',
             'isThreadRestricted', 'threadRestrictionReasons', 'isFavorited', 'isThreadDeletedByReport',
             'responseRestrictionData', 'lang', 'phpUploadMaxSize', 'phpPostMaxSize',
             'threadImageReportScore', 'isThreadImageBlurred', 'threadImageUrl', 'isR18Thread',
@@ -1224,6 +1234,7 @@ class ThreadController extends Controller
         $currentUser = auth()->user();
         $userReportedResponses = collect();
         $userReportedResponseRejected = [];
+        $existingReportByResponseId = [];
         
         if ($currentUser) {
             $responseReports = \App\Models\Report::where('user_id', $currentUser->user_id)
@@ -1233,6 +1244,10 @@ class ThreadController extends Controller
             $reportedResponseIds = [];
             foreach ($responseReports as $report) {
                 $reportedResponseIds[] = $report->response_id;
+                $existingReportByResponseId[$report->response_id] = [
+                    'reason' => $report->reason ?? '',
+                    'description' => $report->description ?? '',
+                ];
                 if ($report->approved_at && $report->is_approved === false) {
                     $userReportedResponseRejected[$report->response_id] = true;
                 }
@@ -1347,6 +1362,7 @@ class ThreadController extends Controller
                 'thread' => $thread,
                 'isReported' => $isReported,
                 'isReportRejected' => $isReportRejected,
+                'existingReportByResponseId' => $existingReportByResponseId,
                 'lang' => $lang,
                 'responseRestrictionData' => $responseRestrictionData,
                 'currentUser' => $currentUser,
@@ -1421,6 +1437,7 @@ class ThreadController extends Controller
         $currentUser = auth()->user();
         $userReportedResponses = collect();
         $userReportedResponseRejected = [];
+        $existingReportByResponseId = [];
         
         if ($currentUser) {
             $responseReports = \App\Models\Report::where('user_id', $currentUser->user_id)
@@ -1430,6 +1447,10 @@ class ThreadController extends Controller
             $reportedResponseIds = [];
             foreach ($responseReports as $report) {
                 $reportedResponseIds[] = $report->response_id;
+                $existingReportByResponseId[$report->response_id] = [
+                    'reason' => $report->reason ?? '',
+                    'description' => $report->description ?? '',
+                ];
                 if ($report->approved_at && $report->is_approved === false) {
                     $userReportedResponseRejected[$report->response_id] = true;
                 }
@@ -1544,6 +1565,7 @@ class ThreadController extends Controller
                 'thread' => $thread,
                 'isReported' => $isReported,
                 'isReportRejected' => $isReportRejected,
+                'existingReportByResponseId' => $existingReportByResponseId,
                 'lang' => $lang,
                 'responseRestrictionData' => $responseRestrictionData,
                 'currentUser' => $currentUser,
