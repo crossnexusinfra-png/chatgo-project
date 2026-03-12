@@ -1222,8 +1222,8 @@
         }
     });
 
-    // DOMContentLoaded時の初期化
-    document.addEventListener('DOMContentLoaded', function() {
+    // DOMContentLoaded時の初期化（スクリプトが遅延読み込みの場合は即実行）
+    function runWhenReady() {
         setTimeout(scrollToBottom, 100);
         setTimeout(scrollToBottom, 500);
 
@@ -1449,7 +1449,12 @@
 
         // リアルタイム更新のポーリングを開始
         startPolling();
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runWhenReady);
+    } else {
+        runWhenReady();
+    }
 
     window.addEventListener('load', function() {
         setTimeout(scrollToBottom, 100);

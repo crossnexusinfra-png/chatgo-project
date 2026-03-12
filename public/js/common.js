@@ -60,8 +60,8 @@
         });
     };
 
-    // DOMが読み込まれた後に実行
-    document.addEventListener('DOMContentLoaded', function() {
+    // DOMが読み込まれた後に実行（スクリプトがbody末尾の場合は即実行）
+    function runWhenReady() {
         // UTC日時をローカルタイムゾーンに変換
         window.convertAllUtcDatesToLocal();
         
@@ -538,5 +538,10 @@
                 }
             });
         }
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runWhenReady);
+    } else {
+        runWhenReady();
+    }
 })();
