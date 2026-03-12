@@ -330,7 +330,7 @@
                     <div class="reply-target-content">
                         <span class="reply-target-user"></span>
                         <span class="reply-target-body"></span>
-                        <button type="button" class="reply-target-cancel" data-action="cancel-reply">×</button>
+                        <button type="button" id="reply-target-cancel-btn" class="reply-target-cancel" data-action="cancel-reply">×</button>
                     </div>
                 </div>
 

@@ -300,7 +300,7 @@
                 fetch(existingRoute + '?' + new URLSearchParams({
                     thread_id: threadId || '',
                     response_id: responseId || ''
-                }))
+                }), { credentials: 'same-origin' })
                 .then(response => response.json())
                 .then(data => {
                     const isR18Thread = data.is_r18_thread || false;
@@ -331,21 +331,23 @@
                     
                     const reportReasonInput = document.getElementById('report_reason');
                     const reportDescriptionInput = document.getElementById('report_description');
+                    const reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
+                    const descValue = data.exists && data.description != null ? String(data.description) : '';
                     
-                    if (data.exists) {
-                        if (reportReasonInput) {
-                            reportReasonInput.value = data.reason || '';
+                    if (reasonValue) {
+                        const hasOption = Array.from(reportReasonSelect.options).some(function(opt) { return opt.value === reasonValue; });
+                        if (!hasOption) {
+                            const existingOpt = document.createElement('option');
+                            existingOpt.value = reasonValue;
+                            existingOpt.textContent = reasonValue;
+                            reportReasonSelect.appendChild(existingOpt);
                         }
-                        if (reportDescriptionInput) {
-                            reportDescriptionInput.value = data.description || '';
-                        }
-                    } else {
-                        if (reportReasonInput) {
-                            reportReasonInput.value = '';
-                        }
-                        if (reportDescriptionInput) {
-                            reportDescriptionInput.value = '';
-                        }
+                    }
+                    if (reportReasonInput) {
+                        reportReasonInput.value = reasonValue;
+                    }
+                    if (reportDescriptionInput) {
+                        reportDescriptionInput.value = descValue;
                     }
                     
                     reportModal.classList.add('show');
@@ -363,26 +365,19 @@
             const existingRoute = routes.existingReportRoute || '/reports/existing';
             fetch(existingRoute + '?' + new URLSearchParams({
                 reported_user_id: reportedUserId || ''
-            }))
+            }), { credentials: 'same-origin' })
             .then(response => response.json())
             .then(data => {
                 const reportReasonInput = document.getElementById('report_reason');
                 const reportDescriptionInput = document.getElementById('report_description');
+                const reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
+                const descValue = data.exists && data.description != null ? String(data.description) : '';
                 
-                if (data.exists) {
-                    if (reportReasonInput) {
-                        reportReasonInput.value = data.reason || '';
-                    }
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = data.description || '';
-                    }
-                } else {
-                    if (reportReasonInput) {
-                        reportReasonInput.value = '';
-                    }
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = '';
-                    }
+                if (reportReasonInput) {
+                    reportReasonInput.value = reasonValue;
+                }
+                if (reportDescriptionInput) {
+                    reportDescriptionInput.value = descValue;
                 }
                 
                 reportModal.classList.add('show');

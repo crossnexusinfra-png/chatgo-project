@@ -388,6 +388,16 @@
         textarea.value = '';
     };
 
+    // 返信取り消しボタンに直接クリックをバインド（確実に動作するように）
+    const replyCancelBtn = document.getElementById('reply-target-cancel-btn');
+    if (replyCancelBtn) {
+        replyCancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof window.cancelReply === 'function') window.cancelReply();
+        });
+    }
+
     // リプライ元をクリックしたときに該当のリプライにスクロール
     window.scrollToResponse = function(responseId) {
         const targetResponse = document.querySelector(`[data-response-id="${responseId}"]`);
