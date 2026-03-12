@@ -261,8 +261,9 @@
                     opt.textContent = reason.label;
                     reportReasonSelect.appendChild(opt);
                 });
-                var existingRoute = routes.existingReportRoute || '/reports/existing';
-                fetch(existingRoute + '?' + new URLSearchParams({ reported_user_id: reportedUserId || '' }), {
+                var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
+                if (!existingPath) existingPath = '/api/reports/existing';
+                fetch(existingPath + '?' + new URLSearchParams({ reported_user_id: reportedUserId || '' }), {
                     credentials: 'same-origin',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 })
@@ -282,9 +283,10 @@
                 return;
             }
             
-            // ルーム・リプライ通報: 先にDBから既存通報を取得してからフォームを組み立てて表示
-            var existingRoute = routes.existingReportRoute || '/reports/existing';
-            fetch(existingRoute + '?' + new URLSearchParams({
+            // ルーム・リプライ通報: 先にDBから既存通報を取得してからフォームを組み立てて表示（相対パスで同一オリジンに送る）
+            var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
+            if (!existingPath) existingPath = '/api/reports/existing';
+            fetch(existingPath + '?' + new URLSearchParams({
                 thread_id: threadId || '',
                 response_id: responseId || ''
             }), {
