@@ -116,7 +116,7 @@
                 $parentDisplayUserName = $parentBaseName . '@' . ($parentResponseUser->user_identifier ?? $parentResponseUser->user_id);
             }
         @endphp
-        <div class="reply-source" onclick="scrollToResponse({{ $response->parentResponse->response_id }})">
+        <div class="reply-source" data-action="scroll-to-response" data-response-id="{{ $response->parentResponse->response_id }}" role="button" tabindex="0">
             <span class="reply-source-user">{{ $parentDisplayUserName }}</span>
             <span class="reply-source-body">{!! linkify_urls($response->parentResponse->display_body ?? $response->parentResponse->body) !!}</span>
         </div>
@@ -325,11 +325,11 @@
                     $videoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
                 @endphp
                 <div class="media-preview-video">
-                    <video class="media-video-thumbnail" preload="metadata" onclick="toggleVideoPlay(this)" data-video-src="{{ $videoUrl }}">
+                    <video class="media-video-thumbnail" preload="metadata" data-action="toggle-video-play" data-video-src="{{ $videoUrl }}">
                         <source src="{{ $videoUrl }}" type="video/{{ pathinfo($response->media_file, PATHINFO_EXTENSION) === 'webm' ? 'webm' : 'mp4' }}">
                         {{ \App\Services\LanguageService::trans('video_not_supported', $lang) }}
                     </video>
-                    <div class="media-video-overlay" onclick="toggleVideoPlay(this.previousElementSibling)">
+                    <div class="media-video-overlay" data-action="toggle-video-play" role="button" tabindex="0">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
                             <path d="M8 5v14l11-7z"/>
                         </svg>
@@ -373,10 +373,10 @@
                     @if(isset($isReportRejected) && $isReportRejected)
                         <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
                     @else
-                        <button type="button" class="report-btn" onclick="openReportModal(null, {{ $response->response_id }})">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                        <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                     @endif
                 @else
-                    <button type="button" class="report-btn" onclick="openReportModal(null, {{ $response->response_id }})">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
+                    <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                 @endif
             @endauth
         </div>

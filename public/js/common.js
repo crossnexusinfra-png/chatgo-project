@@ -212,6 +212,19 @@
         const closeReportModal = document.getElementById('closeReportModal');
         const cancelReport = document.getElementById('cancelReport');
 
+        // 通報ボタン：インラインonclickを避けCSP対応（イベント委譲）
+        document.addEventListener('click', function(e) {
+            const btn = e.target && e.target.closest && e.target.closest('.report-btn');
+            if (!btn || btn.classList.contains('reported-badge') || btn.tagName !== 'BUTTON') return;
+            const threadId = btn.dataset.reportThreadId || null;
+            const responseId = btn.dataset.reportResponseId || null;
+            const reportedUserId = btn.dataset.reportUserId || null;
+            if (window.openReportModal) {
+                e.preventDefault();
+                window.openReportModal(threadId, responseId, reportedUserId);
+            }
+        });
+
         window.openReportModal = function(threadId, responseId, reportedUserId) {
             if (!reportModal) return;
             

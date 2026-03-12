@@ -2574,6 +2574,30 @@ form.form-submitting input[readonly] {
     margin: 0;
 }
 
+.filter-actions {
+    align-self: flex-end;
+}
+
+.filter-apply-btn {
+    padding: 8px 20px;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.filter-apply-btn:hover {
+    background: #5a6fd6;
+}
+
+.filter-apply-btn:active {
+    transform: scale(0.98);
+}
+
 @media (max-width: 768px) {
     .filter-form {
         flex-direction: column;

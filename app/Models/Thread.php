@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\ThreadChangeLog;
 
@@ -256,8 +257,9 @@ class Thread extends Model
      * - 2文字以上で検索を有効化
      * - 空白（全角or半角）でAND検索
      * - -(半角)で除外検索（文頭または空白直後）
+     * - $lang 指定時は、その言語の翻訳（日本語選択時は日本語訳または元の日本語）も検索対象にする
      */
-    public function scopeSearch(Builder $query, string $searchTerm)
+    public function scopeSearch(Builder $query, string $searchTerm, ?string $lang = null)
     {
         // 検索クエリを解析（AND検索と除外検索）
         $keywords = $this->parseSearchQuery($searchTerm);
@@ -270,17 +272,43 @@ class Thread extends Model
         if (empty($validKeywords)) {
             return $query->whereRaw('1 = 0'); // 何も返さない
         }
-        
-        return $query->where(function($q) use ($validKeywords, $keywords) {
-            // AND検索（含むべきキーワード）
+
+        $targetLang = $lang ? \App\Services\TranslationService::normalizeLang($lang) : null;
+
+        return $query->where(function($q) use ($validKeywords, $keywords, $targetLang) {
+            // AND検索（含むべきキーワード）：タイトルまたは翻訳文に一致
             foreach ($validKeywords as $keyword) {
-                $q->where('title', 'like', '%' . $keyword . '%');
+                $q->where(function($q2) use ($keyword, $targetLang) {
+                    $q2->where('threads.title', 'like', '%' . $keyword . '%');
+                    if ($targetLang) {
+                        $q2->orWhereExists(function($sub) use ($keyword, $targetLang) {
+                            $sub->select(DB::raw(1))
+                                ->from('translation_caches')
+                                ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                ->whereNull('translation_caches.response_id')
+                                ->where('translation_caches.target_lang', $targetLang)
+                                ->where('translation_caches.translated_text', 'like', '%' . $keyword . '%');
+                        });
+                    }
+                });
             }
-            
-            // 除外検索（除外すべきキーワード）
+
+            // 除外検索：タイトルにも翻訳にも含まれない
             foreach ($keywords['exclude'] as $excludeKeyword) {
                 if (mb_strlen($excludeKeyword) >= 2) {
-                    $q->where('title', 'not like', '%' . $excludeKeyword . '%');
+                    $q->where(function($q2) use ($excludeKeyword, $targetLang) {
+                        $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
+                        if ($targetLang) {
+                            $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
+                                $sub->select(DB::raw(1))
+                                    ->from('translation_caches')
+                                    ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                    ->whereNull('translation_caches.response_id')
+                                    ->where('translation_caches.target_lang', $targetLang)
+                                    ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
+                            });
+                        }
+                    });
                 }
             }
         });
@@ -326,8 +354,9 @@ class Thread extends Model
 
     /**
      * タグと検索ワードの両方でフィルタリングするスコープ
+     * $lang 指定時は、その言語の翻訳も検索対象にする
      */
-    public function scopeByTagAndSearch(Builder $query, string $tag, string $searchTerm)
+    public function scopeByTagAndSearch(Builder $query, string $tag, string $searchTerm, ?string $lang = null)
     {
         // 検索クエリを解析（AND検索と除外検索）
         $keywords = $this->parseSearchQuery($searchTerm);
@@ -340,18 +369,41 @@ class Thread extends Model
         if (empty($validKeywords)) {
             return $query->whereRaw('1 = 0'); // 何も返さない
         }
-        
-        return $query->where('tag', $tag)
-                    ->where(function($q) use ($validKeywords, $keywords) {
-                        // AND検索（含むべきキーワード）
+
+        $targetLang = $lang ? \App\Services\TranslationService::normalizeLang($lang) : null;
+
+        return $query->where('threads.tag', $tag)
+                    ->where(function($q) use ($validKeywords, $keywords, $targetLang) {
                         foreach ($validKeywords as $keyword) {
-                            $q->where('title', 'like', '%' . $keyword . '%');
+                            $q->where(function($q2) use ($keyword, $targetLang) {
+                                $q2->where('threads.title', 'like', '%' . $keyword . '%');
+                                if ($targetLang) {
+                                    $q2->orWhereExists(function($sub) use ($keyword, $targetLang) {
+                                        $sub->select(DB::raw(1))
+                                            ->from('translation_caches')
+                                            ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                            ->whereNull('translation_caches.response_id')
+                                            ->where('translation_caches.target_lang', $targetLang)
+                                            ->where('translation_caches.translated_text', 'like', '%' . $keyword . '%');
+                                    });
+                                }
+                            });
                         }
-                        
-                        // 除外検索（除外すべきキーワード）
                         foreach ($keywords['exclude'] as $excludeKeyword) {
                             if (mb_strlen($excludeKeyword) >= 2) {
-                                $q->where('title', 'not like', '%' . $excludeKeyword . '%');
+                                $q->where(function($q2) use ($excludeKeyword, $targetLang) {
+                                    $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
+                                    if ($targetLang) {
+                                        $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
+                                            $sub->select(DB::raw(1))
+                                                ->from('translation_caches')
+                                                ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                                ->whereNull('translation_caches.response_id')
+                                                ->where('translation_caches.target_lang', $targetLang)
+                                                ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
+                                        });
+                                    }
+                                });
                             }
                         }
                     });

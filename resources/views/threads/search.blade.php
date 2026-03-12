@@ -69,6 +69,9 @@
                             <label><input type="radio" name="completion" value="completed" {{ ($completionStatus ?? 'all') === 'completed' ? 'checked' : '' }} onchange="this.form.submit()">{{ \App\Services\LanguageService::trans('filter_completed', $lang) }}</label>
                         </div>
                     </div>
+                    <div class="filter-group filter-actions">
+                        <button type="submit" class="filter-apply-btn">{{ \App\Services\LanguageService::trans('apply_filters', $lang) }}</button>
+                    </div>
                 </form>
             </div>
             

@@ -126,10 +126,10 @@
                         @if(isset($userReportedThreadRejected) && $userReportedThreadRejected)
                             <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
                         @else
-                            <button type="button" class="report-btn" onclick="openReportModal({{ $thread->thread_id }}, null)">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                         @endif
                     @else
-                        <button type="button" class="report-btn" onclick="openReportModal({{ $thread->thread_id }}, null)">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
+                        <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                     @endif
                 </div>
                 <div class="meta-item">
@@ -289,7 +289,7 @@
                         <button 
                             type="button" 
                             id="continuation-request-btn" 
-                            onclick="toggleContinuationRequest({{ $thread->thread_id }})"
+                            data-action="toggle-continuation" data-thread-id="{{ $thread->thread_id }}"
                             @if(!$canRequest) disabled @endif
                             class="{{ $buttonClass }}">
                             @if($isLimitReached && !isset($hasUserContinuationRequest) && !$isThreadOwner)
@@ -330,7 +330,7 @@
                     <div class="reply-target-content">
                         <span class="reply-target-user"></span>
                         <span class="reply-target-body"></span>
-                        <button type="button" class="reply-target-cancel" onclick="cancelReply()">×</button>
+                        <button type="button" class="reply-target-cancel" data-action="cancel-reply">×</button>
                     </div>
                 </div>
 
@@ -350,7 +350,7 @@
                                         <div class="alert alert-danger alert-danger-inline">
                                             {{ $message }}<br>
                                             @auth
-                                            <button type="button" class="btn btn-primary watch-ad-button-small" onclick="watchAdFromThread()">
+                                            <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
                                             <span id="adWatchStatusThread" class="ad-status-thread"></span>
@@ -396,7 +396,7 @@
     <!-- このルームページ専用の広告動画モーダル -->
     <div id="adVideoModalThread" class="ad-video-modal">
         <div class="ad-video-container">
-            <button onclick="closeAdVideoFromThread()" class="ad-video-close-button">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
+            <button type="button" class="ad-video-close-button" data-action="close-ad-video-thread">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
             <video id="adVideoThread" controls class="ad-video-player" preload="auto">
                 <source src="{{ config('ads.test_ad_url') }}" type="video/mp4">
                 @foreach(config('ads.test_ad_fallback_urls', []) as $fallbackUrl)

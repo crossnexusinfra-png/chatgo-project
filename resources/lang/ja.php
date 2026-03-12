@@ -141,6 +141,7 @@ return [
     'filter_all' => 'すべて',
     'filter_incomplete' => '未完結',
     'filter_completed' => '完結済み',
+    'apply_filters' => '反映する',
     'author' => '作成者',
     'tag_label' => 'タグ',
     'created_at_label' => '作成日時',

@@ -270,9 +270,11 @@ class ThreadController extends Controller
             $searchQuery = $query; // ヘッダーの検索欄に表示するため
             return view('threads.search', compact('threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery'));
         }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
-        // 検索クエリでスレッドを取得
-        $threadsQuery = Thread::search($query);
+        // 検索クエリでスレッドを取得（使用言語の翻訳も検索対象）
+        $threadsQuery = Thread::search($query, $lang);
         
         // R18タグのフィルタリング（未成年ログイン時のみ）
         $isLoggedIn = auth()->check();
@@ -304,8 +306,7 @@ class ThreadController extends Controller
         $threads = $threadsQuery->with('user')->take(20)->get();
         $searchQuery = $query; // ヘッダーの検索欄に表示するため
 
-        // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        // 上で取得した$langで翻訳タイトルを適用
         \App\Services\TranslationService::applyTranslatedThreadTitlesToCollection($threads, $lang);
 
         // スレッドの制限情報を一括取得（N+1問題を回避）
@@ -391,10 +392,10 @@ class ThreadController extends Controller
                 return view('threads.tag', compact('threads', 'tag', 'searchQuery', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'lang'))->with('selectedTag', $tag);
         }
         
-        // スレッドを取得
+        // スレッドを取得（使用言語の翻訳も検索対象）
         if ($searchQuery) {
             // タグと検索ワードのAND検索
-            $threadsQuery = Thread::byTagAndSearch($tag, $searchQuery);
+            $threadsQuery = Thread::byTagAndSearch($tag, $searchQuery, $lang);
         } else {
             // タグのみでの検索
             $threadsQuery = Thread::byTag($tag);
@@ -1598,6 +1599,9 @@ class ThreadController extends Controller
         
         // キーワードを空白で分割（AND検索用）
         $keywords = array_filter(array_map('trim', explode(' ', $query)));
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $targetLang = \App\Services\TranslationService::normalizeLang($lang);
         
         // 全レスポンスを取得（userリレーションを読み込む）
         $responses = $thread->responses()
@@ -1605,8 +1609,15 @@ class ThreadController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
         
+        // 使用言語の翻訳キャッシュを一括取得（リプライ本文の検索対象に含める）
+        $responseIds = $responses->pluck('response_id')->toArray();
+        $translationByResponseId = \App\Models\TranslationCache::whereIn('response_id', $responseIds)
+            ->where('target_lang', $targetLang)
+            ->get()
+            ->keyBy('response_id');
+        
         // 削除されたレスポンスのIDを取得
-        $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responses->pluck('response_id'))
+        $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
             ->where('is_approved', true)
             ->pluck('response_id')
             ->toArray();
@@ -1624,14 +1635,18 @@ class ThreadController extends Controller
                 $responseIndex++;
                 continue;
             }
+            // 検索対象テキスト：使用言語の翻訳があればそれも検索対象（日本語選択時は日本語訳または元の本文）
+            $bodySearchText = ($translationByResponseId->get($response->response_id) && $translationByResponseId->get($response->response_id)->isValid())
+                ? $translationByResponseId->get($response->response_id)->translated_text
+                : $response->body;
             $matchesAll = true;
             
             foreach ($keywords as $keyword) {
                 $matchesKeyword = false;
                 
-                // 検索対象に応じてマッチング
+                // 検索対象に応じてマッチング（本文は表示言語の翻訳または元の本文を対象）
                 if ($target === 'body' || $target === 'both') {
-                    if (mb_stripos($response->body, $keyword) !== false) {
+                    if (mb_stripos($bodySearchText, $keyword) !== false) {
                         $matchesKeyword = true;
                     }
                 }
@@ -2642,10 +2657,12 @@ class ThreadController extends Controller
                 'total' => 0,
             ]);
         }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
-        // スレッドを取得
+        // スレッドを取得（使用言語の翻訳も検索対象）
         if ($searchQuery) {
-            $threadsQuery = Thread::byTagAndSearch($tag, $searchQuery);
+            $threadsQuery = Thread::byTagAndSearch($tag, $searchQuery, $lang);
         } else {
             $threadsQuery = Thread::byTag($tag);
         }
@@ -2750,9 +2767,11 @@ class ThreadController extends Controller
                 'total' => 0,
             ]);
         }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
-        // 検索クエリでスレッドを取得
-        $threadsQuery = Thread::search($query);
+        // 検索クエリでスレッドを取得（使用言語の翻訳も検索対象）
+        $threadsQuery = Thread::search($query, $lang);
         
         // R18タグのフィルタリング
         $isLoggedIn = auth()->check();

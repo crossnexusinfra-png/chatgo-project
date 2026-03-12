@@ -141,6 +141,7 @@ return [
     'filter_all' => 'All',
     'filter_incomplete' => 'Incomplete',
     'filter_completed' => 'Completed',
+    'apply_filters' => 'Apply',
     'author' => 'Author',
     'tag_label' => 'Tag',
     'created_at_label' => 'Created',
