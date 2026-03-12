@@ -33,6 +33,21 @@
     let isSearchMode = false;
     let searchInput, searchResults, searchResultsArea, searchResultsList, responsesContainer, chatInput;
 
+    // 返信を取り消す（スクリプト読み込み直後に定義し、どこからでも確実に呼べるようにする）
+    window.cancelReply = function() {
+        const replyTarget = document.getElementById('reply-target');
+        const form = document.getElementById('response-form');
+        const parentResponseIdInput = document.getElementById('parent_response_id');
+        const textarea = document.getElementById('body');
+        if (replyTarget) replyTarget.classList.remove('show');
+        if (form && routes.storeRoute) form.action = routes.storeRoute;
+        if (parentResponseIdInput) parentResponseIdInput.value = '';
+        if (textarea) {
+            textarea.placeholder = translations.messagePlaceholder || '';
+            textarea.value = '';
+        }
+    };
+
     // ページ読み込み時に一番下までスクロール
     function scrollToBottom() {
         const responsesContainer = document.getElementById('responsesContainer');
@@ -369,33 +384,6 @@
         
         parentResponseIdInput.value = responseId;
         textarea.placeholder = translations.replyPlaceholderDetail || '';
-    }
-
-    // 返信をキャンセル（グローバル関数）
-    window.cancelReply = function() {
-        const replyTarget = document.getElementById('reply-target');
-        const form = document.getElementById('response-form');
-        const parentResponseIdInput = document.getElementById('parent_response_id');
-        const textarea = document.getElementById('body');
-        
-        replyTarget.classList.remove('show');
-        
-        if (routes.storeRoute) {
-            form.action = routes.storeRoute;
-        }
-        parentResponseIdInput.value = '';
-        textarea.placeholder = translations.messagePlaceholder || '';
-        textarea.value = '';
-    };
-
-    // 返信取り消しボタンに直接クリックをバインド（確実に動作するように）
-    const replyCancelBtn = document.getElementById('reply-target-cancel-btn');
-    if (replyCancelBtn) {
-        replyCancelBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (typeof window.cancelReply === 'function') window.cancelReply();
-        });
     }
 
     // リプライ元をクリックしたときに該当のリプライにスクロール
@@ -1237,6 +1225,17 @@
         setTimeout(scrollToBottom, 100);
         setTimeout(scrollToBottom, 500);
 
+        // 返信取り消しボタンに直接クリックをバインド（DOM準備後に確実に紐づける）
+        var replyCancelBtn = document.getElementById('reply-target-cancel-btn');
+        if (replyCancelBtn && !replyCancelBtn._cancelReplyBound) {
+            replyCancelBtn._cancelReplyBound = true;
+            replyCancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.cancelReply === 'function') window.cancelReply();
+            });
+        }
+
         responsesContainer = document.getElementById('responsesContainer');
         if (responsesContainer) {
             const loadingIndicator = document.createElement('div');
@@ -1420,11 +1419,12 @@
         stopPolling();
     });
 
-    // 返信取り消し・続き要望・広告・返信元スクロール・動画トグルはスクリプト読み込み直後に委譲を登録（runWhenReady の実行順に依存しない）
+    // 返信取り消し・続き要望・広告・返信元スクロール・動画トグルはスクリプト読み込み直後に委譲を登録
     document.addEventListener('click', function(e) {
-        const cancelBtn = e.target.closest('.reply-target-cancel');
+        const cancelBtn = e.target.closest('.reply-target-cancel') || (e.target.id === 'reply-target-cancel-btn' ? e.target : null);
         if (cancelBtn) {
             e.preventDefault();
+            e.stopPropagation();
             if (typeof window.cancelReply === 'function') window.cancelReply();
             return;
         }

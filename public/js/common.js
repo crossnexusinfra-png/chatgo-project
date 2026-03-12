@@ -300,9 +300,19 @@
                 fetch(existingRoute + '?' + new URLSearchParams({
                     thread_id: threadId || '',
                     response_id: responseId || ''
-                }), { credentials: 'same-origin' })
-                .then(response => response.json())
-                .then(data => {
+                }), {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    return response.json()
+                        .then(function(data) {
+                            if (!response.ok) return { exists: false, is_r18_thread: false };
+                            return data;
+                        })
+                        .catch(function() { return { exists: false, is_r18_thread: false }; });
+                })
+                .then(function(data) {
                     const isR18Thread = data.is_r18_thread || false;
                     const contentViolationOption = reportReasonSelect.querySelector('option[value="成人向け以外のコンテンツ規制違反"]');
                     const otherOption = reportReasonSelect.querySelector('option[value="その他"]');
@@ -365,9 +375,19 @@
             const existingRoute = routes.existingReportRoute || '/reports/existing';
             fetch(existingRoute + '?' + new URLSearchParams({
                 reported_user_id: reportedUserId || ''
-            }), { credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
+            }), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) {
+                return response.json()
+                    .then(function(data) {
+                        if (!response.ok) return { exists: false };
+                        return data;
+                    })
+                    .catch(function() { return { exists: false }; });
+            })
+            .then(function(data) {
                 const reportReasonInput = document.getElementById('report_reason');
                 const reportDescriptionInput = document.getElementById('report_description');
                 const reasonValue = data.exists && data.reason ? String(data.reason).trim() : '';
