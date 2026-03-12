@@ -22,7 +22,7 @@ class ReportPolicy
      */
     public function view(User $user, Report $report): bool
     {
-        // 自分の通報のみ表示可能
-        return $user->user_id === $report->user_id;
+        // 自分の通報のみ表示可能（型差による誤判定を防ぐため数値比較）
+        return $user->user_id != null && (int) $user->user_id === (int) $report->user_id;
     }
 }
