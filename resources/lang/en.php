@@ -34,7 +34,11 @@ return [
     'thread_deleted' => 'Room deleted',
     'image_help' => 'If not selected, a sample image will be used.',
     'image_aspect_ratio' => 'Cropped to 16:9',
-    
+    'thread_body_coin_per_100' => 'chars = 1 coin',
+    'thread_coin_room' => 'Room',
+    'thread_coin_body' => 'Body',
+    'thread_coin_total' => 'Total',
+
     // Reply
     'response_body' => 'Reply Content',
     'post_response' => 'Post Reply',

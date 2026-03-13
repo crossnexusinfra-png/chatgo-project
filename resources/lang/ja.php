@@ -34,6 +34,10 @@ return [
     'thread_deleted' => 'ルームを削除しました',
     'image_help' => '未選択の場合はサンプル画像が使用されます。',
     'image_aspect_ratio' => '16:9でトリミング',
+    'thread_body_coin_per_100' => 'ごとに1コイン消費',
+    'thread_coin_room' => 'ルーム',
+    'thread_coin_body' => '本文',
+    'thread_coin_total' => '合計',
     
     // リプライ
     'response_body' => 'リプライ内容',

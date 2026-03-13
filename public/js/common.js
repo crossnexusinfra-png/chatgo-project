@@ -133,12 +133,40 @@
         const closeCreateThreadModal = document.getElementById('closeCreateThreadModal');
         const cancelCreateThread = document.getElementById('cancelCreateThread');
 
+        function updateThreadCreateCoinDisplay() {
+            var bodyEl = document.getElementById('body');
+            var displayEl = document.getElementById('threadCreateCoinDisplay');
+            if (!bodyEl || !displayEl) return;
+            var baseCoin = parseInt(bodyEl.getAttribute('data-base-coin'), 10) || 2;
+            var bodyText = (bodyEl.value || '');
+            var charCount = 0;
+            try {
+                charCount = (Array.from && Array.from(bodyText).length) || bodyText.length;
+            } catch (e) {
+                charCount = bodyText.length;
+            }
+            var bodyCoin = Math.floor(charCount / 100);
+            var total = baseCoin + bodyCoin;
+            var roomLabel = displayEl.getAttribute('data-room-label') || 'Room';
+            var bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';
+            var totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
+            displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + roomLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
+        }
+
         if (openCreateThreadModal && createThreadModal) {
             openCreateThreadModal.addEventListener('click', function() {
                 createThreadModal.classList.add('show');
                 document.body.style.overflow = 'hidden';
+                updateThreadCreateCoinDisplay();
             });
         }
+
+        var bodyInput = document.getElementById('body');
+        if (bodyInput) {
+            bodyInput.addEventListener('input', updateThreadCreateCoinDisplay);
+            bodyInput.addEventListener('change', updateThreadCreateCoinDisplay);
+        }
+        updateThreadCreateCoinDisplay();
 
         if (closeCreateThreadModal && createThreadModal) {
             closeCreateThreadModal.addEventListener('click', function() {

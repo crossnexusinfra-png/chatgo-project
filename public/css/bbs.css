@@ -462,7 +462,8 @@ body {
 .thread-image-wrapper {
     position: relative;
     overflow: hidden;
-    background: transparent !important; /* 背景色を削除（余白部分にはぼかし画像を表示） */
+    background: transparent !important;
+    background-image: none !important; /* 余白は::beforeのぼかしのみ表示（wrapperの背景は出さない） */
 }
 
 /* 余白部分に表示するぼかし画像（横幅いっぱいに拡大） */

@@ -68,9 +68,10 @@
                             <small>50{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
                         </div>
                         <div class="form-group">
-                            <label for="body">{{ \App\Services\LanguageService::trans('thread_body', $lang) }}:</label>
-                            <textarea id="body" name="body" class="js-create-thread-body" rows="5" maxlength="1000" required>{{ old('body') }}</textarea>
-                            <small>1000{{ \App\Services\LanguageService::trans('characters', $lang) }}以内</small>
+                            <label for="body">{{ \App\Services\LanguageService::trans('thread_body', $lang) }} ({{ \App\Services\LanguageService::trans('optional', $lang) }}):</label>
+                            <textarea id="body" name="body" class="js-create-thread-body" rows="5" maxlength="1000" data-base-coin="{{ (new \App\Services\CoinService())->getThreadCreationCost() }}">{{ old('body') }}</textarea>
+                            <small>1000{{ \App\Services\LanguageService::trans('characters', $lang) }}以内。100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
+                            <p class="thread-create-coin-display" id="threadCreateCoinDisplay" data-room-label="{{ \App\Services\LanguageService::trans('thread_coin_room', $lang) }}" data-body-label="{{ \App\Services\LanguageService::trans('thread_coin_body', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}"></p>
                         </div>
                         @php
                             $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;

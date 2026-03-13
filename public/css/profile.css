@@ -301,6 +301,7 @@
     overflow: hidden;
     border-radius: 6px;
     background: transparent;
+    background-image: none !important; /* 余白は::beforeのぼかしのみ */
     align-self: flex-start; /* flexboxのalign-itemsの影響を受けないように */
 }
 

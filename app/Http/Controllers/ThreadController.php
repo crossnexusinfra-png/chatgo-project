@@ -528,7 +528,7 @@ class ThreadController extends Controller
         $request->validate([
             'title' => 'required|max:50',
             'tag' => 'required|max:100',
-            'body' => 'required|max:1000',
+            'body' => 'nullable|max:1000',
             'is_r18' => 'nullable|boolean',
             'image' => 'nullable|file',
         ]);
@@ -765,12 +765,15 @@ class ThreadController extends Controller
             }
         }
 
-        // コインを消費（スレッド作成に2コイン必要）
+        // コインを消費（ルーム2コイン＋本文は100文字ごとに1コイン）
+        $bodyForCost = $request->body ?? '';
         if (auth()->check()) {
             $coinService = new \App\Services\CoinService();
-            $cost = $coinService->getThreadCreationCost();
+            $baseCost = $coinService->getThreadCreationCost();
+            $bodyCost = $coinService->getThreadBodyCoinCost($bodyForCost);
+            $cost = $baseCost + $bodyCost;
             $user = auth()->user();
-            
+
             if (!$coinService->consumeCoins($user, $cost)) {
                 return back()->withErrors(['title' => \App\Services\LanguageService::trans('insufficient_coins', $lang)])
                     ->withInput();
@@ -783,10 +786,12 @@ class ThreadController extends Controller
             return back()->withErrors(['title' => \App\Services\LanguageService::trans('login_required', $lang)])
                 ->withInput();
         }
-        
-        $userId = auth()->user()->user_id;
 
+        $userId = auth()->user()->user_id;
         $sendTimeLang = \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN');
+
+        // 最初のレスポンスがあるか（本文が空でなければ1件）
+        $hasFirstResponse = $bodyForCost !== '' && trim($bodyForCost) !== '';
 
         // スレッドを作成（送信時の表示言語を保存）
         $thread = Thread::create([
@@ -794,7 +799,7 @@ class ThreadController extends Controller
             'source_lang' => $sendTimeLang,
             'tag' => $request->tag,
             'user_id' => $userId,
-            'responses_count' => 1, // 最初のレスポンスを含む
+            'responses_count' => $hasFirstResponse ? 1 : 0,
             'is_r18' => $isR18,
             'image_path' => $imagePath,
         ]);
@@ -806,13 +811,15 @@ class ThreadController extends Controller
             $sendTimeLang
         );
 
-        // 最初のレスポンスを作成（送信時の表示言語を保存）
-        $thread->responses()->create([
-            'user_id' => $userId,
-            'body' => $request->body,
-            'source_lang' => $sendTimeLang,
-            'responses_num' => 1,
-        ]);
+        // 本文がある場合のみ1リプライ目を作成
+        if ($hasFirstResponse) {
+            $thread->responses()->create([
+                'user_id' => $userId,
+                'body' => $bodyForCost,
+                'source_lang' => $sendTimeLang,
+                'responses_num' => 1,
+            ]);
+        }
 
         // キャッシュをクリア
         Cache::forget('threads_index_');

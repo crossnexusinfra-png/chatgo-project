@@ -31,11 +31,22 @@ class CoinService
     }
 
     /**
-     * スレッド作成に必要なコインを計算
+     * スレッド作成に必要なコイン（ルーム分のみ）
      */
     public function getThreadCreationCost(): int
     {
         return 2;
+    }
+
+    /**
+     * ルーム作成時の本文コイン（100文字ごとに1コイン）
+     */
+    public function getThreadBodyCoinCost(string $body): int
+    {
+        if ($body === '') {
+            return 0;
+        }
+        return (int) floor(mb_strlen($body) / 100);
     }
 
     /**
