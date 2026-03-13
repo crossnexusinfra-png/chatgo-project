@@ -39,14 +39,18 @@ class CoinService
     }
 
     /**
-     * ルーム作成時の本文コイン（100文字ごとに1コイン）
+     * ルーム作成時の本文コイン（1〜100文字で1コイン、101〜200で2コイン…）
      */
     public function getThreadBodyCoinCost(string $body): int
     {
-        if ($body === '') {
+        if ($body === '' || trim($body) === '') {
             return 0;
         }
-        return (int) floor(mb_strlen($body) / 100);
+        $len = mb_strlen(trim($body));
+        if ($len <= 0) {
+            return 0;
+        }
+        return (int) ceil($len / 100);
     }
 
     /**

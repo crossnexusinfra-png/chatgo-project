@@ -138,14 +138,14 @@
             var displayEl = document.getElementById('threadCreateCoinDisplay');
             if (!bodyEl || !displayEl) return;
             var baseCoin = parseInt(bodyEl.getAttribute('data-base-coin'), 10) || 2;
-            var bodyText = (bodyEl.value || '');
+            var bodyText = (bodyEl.value || '').trim();
             var charCount = 0;
             try {
                 charCount = (Array.from && Array.from(bodyText).length) || bodyText.length;
             } catch (e) {
                 charCount = bodyText.length;
             }
-            var bodyCoin = Math.floor(charCount / 100);
+            var bodyCoin = charCount > 0 ? Math.ceil(charCount / 100) : 0;
             var total = baseCoin + bodyCoin;
             var roomLabel = displayEl.getAttribute('data-room-label') || 'Room';
             var bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';

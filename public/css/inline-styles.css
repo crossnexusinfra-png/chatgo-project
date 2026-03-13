@@ -473,9 +473,9 @@ body {
     background-image: var(--thread-bg-image);
 }
 
-/* Thread image wrapper with dynamic background */
+/* 余白は bbs.css の ::before のぼかしで表示するため、wrapper には背景を出さない */
 .thread-image-wrapper {
-    background-image: var(--thread-bg-image, url(''));
+    background-image: none !important;
 }
 
 /* Post list margin */
