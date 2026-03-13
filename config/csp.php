@@ -40,6 +40,7 @@ return [
             'https://googleads.g.doubleclick.net',
             'https://www.googletagservices.com',
             'https://www.google.com',
+            'https://*.adtrafficquality.google', // Google AdSense 計測用画像（sodar 等）
         ],
         'font-src' => [
             "'self'",
