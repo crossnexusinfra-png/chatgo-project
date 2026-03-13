@@ -28,6 +28,7 @@ return [
         ],
         'style-src' => [
             "'self'",
+            "'unsafe-inline'", // Google AdSense のスクリプトがインライン style を注入するため（審査・表示に必要）
             // nonceは動的に追加されます
         ],
         'img-src' => [
@@ -49,6 +50,7 @@ return [
             'https://pagead2.googlesyndication.com',
             'https://googleads.g.doubleclick.net',
             'https://tpc.googlesyndication.com',
+            'https://ep1.adtrafficquality.google', // Google AdSense 広告品質・配信用
         ],
         'media-src' => [
             "'self'",
