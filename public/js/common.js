@@ -580,9 +580,8 @@
             });
         }
 
-        // ルーム画像：縦横比に応じてぼかし背景の表示を調整（a:b=画像、c:d=表示領域16:9）
-        // a*d < b*c → 幅基準で領域を埋める → background-size: 100% auto
-        // b*c < a*d → 高さ基準で領域を埋める → background-size: auto 100%
+        // ルーム画像：CSP 対応のためインライン style は使わずクラスで background-size を適用
+        // a*d <= b*c → 幅基準 → .thread-image-blur--w (100% auto)、そうでない → .thread-image-blur--h (auto 100%)
         function applyThreadImageBlurSize(wrapper) {
             var blur = wrapper.querySelector('.thread-image-blur');
             var img = wrapper.querySelector('img');
@@ -591,11 +590,8 @@
             var b = img.naturalHeight;
             var c = 16;
             var d = 9;
-            if (a * d <= b * c) {
-                blur.style.backgroundSize = '100% auto';
-            } else {
-                blur.style.backgroundSize = 'auto 100%';
-            }
+            blur.classList.remove('thread-image-blur--w', 'thread-image-blur--h');
+            blur.classList.add(a * d <= b * c ? 'thread-image-blur--w' : 'thread-image-blur--h');
         }
         function initThreadImageAspectRatios() {
             document.querySelectorAll('.thread-image-wrapper').forEach(function(wrapper) {
@@ -607,6 +603,29 @@
                     img.addEventListener('load', function() { applyThreadImageBlurSize(wrapper); });
                 }
             });
+        }
+
+        // ルーム画像：CSP で style 属性がブロックされるため、data-bg-url を nonce 付き <style> で注入
+        var nonce = document.body.getAttribute('data-csp-nonce') || '';
+        var blurEls = document.querySelectorAll('.thread-image-blur[data-bg-url]');
+        if (blurEls.length && nonce) {
+            var rules = [];
+            blurEls.forEach(function(el, i) {
+                var url = el.getAttribute('data-bg-url');
+                if (!url) return;
+                var id = 'thread-blur-' + i + '-' + (Math.random().toString(36).slice(2, 10));
+                el.id = id;
+                try {
+                    rules.push('#' + id + '{ background-image: url(' + JSON.stringify(url) + '); }');
+                } catch (e) { /* URL が不正な場合はスキップ */ }
+                el.removeAttribute('data-bg-url');
+            });
+            if (rules.length) {
+                var styleEl = document.createElement('style');
+                styleEl.nonce = nonce;
+                styleEl.textContent = rules.join('\n');
+                (document.head || document.documentElement).appendChild(styleEl);
+            }
         }
         initThreadImageAspectRatios();
     }

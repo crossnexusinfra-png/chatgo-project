@@ -16,7 +16,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1438145064622040"
          crossorigin="anonymous"></script>
 </head>
-<body>
+<body data-csp-nonce="{{ $csp_nonce ?? '' }}">
     @if(!request()->routeIs('admin.*'))
         @include('layouts.header', ['lang' => $lang])
     @endif

@@ -177,8 +177,8 @@
                         @endphp
                         <div class="thread-card">
                             @if(!$isDeletedByImageReport)
-                            <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}" style="--thread-bg-image: url('{{ $threadImageUrl }}');">
-                                <div class="thread-image-blur" style="background-image: url('{{ str_replace("'", "\\'", $threadImageUrl) }}');"></div>
+                            <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}">
+                                <div class="thread-image-blur" data-bg-url="{{ e($threadImageUrl) }}"></div>
                                 <img src="{{ $threadImageUrl }}" alt="{{ $thread->display_title ?? $thread->title }}">
                                 @if($isImageBlurred)
                                     <div class="thread-image-reported-message">{{ \App\Services\LanguageService::trans('thread_image_reported', $lang) }}</div>
@@ -266,8 +266,8 @@
                         @endif
                         <div class="thread-card">
                             @if(!$isDeletedByImageReport)
-                            <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}" style="--thread-bg-image: url('{{ $threadImageUrl }}');">
-                                <div class="thread-image-blur" style="background-image: url('{{ str_replace("'", "\\'", $threadImageUrl) }}');"></div>
+                            <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}">
+                                <div class="thread-image-blur" data-bg-url="{{ e($threadImageUrl) }}"></div>
                                 <img src="{{ $threadImageUrl }}" alt="{{ $thread->display_title ?? $thread->title }}">
                                 @if($isImageBlurred)
                                     <div class="thread-image-reported-message">{{ \App\Services\LanguageService::trans('thread_image_reported', $lang) }}</div>

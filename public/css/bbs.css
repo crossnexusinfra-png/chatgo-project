@@ -466,7 +466,7 @@ body {
     background-image: none !important;
 }
 
-/* 余白部分に表示するぼかしレイヤー（実要素）。JS で a*d vs b*c に応じて 100% auto / auto 100% に上書き */
+/* 余白部分に表示するぼかしレイヤー（実要素）。JS でクラス --w / --h を付与（CSP でインライン style 不可） */
 .thread-image-blur {
     position: absolute;
     top: 0;
@@ -481,6 +481,8 @@ body {
     filter: blur(20px);
     z-index: 0;
 }
+.thread-image-blur--w { background-size: 100% auto; }
+.thread-image-blur--h { background-size: auto 100%; }
 
 /* ::before は変数が効かない環境用のフォールバック（実要素を優先） */
 .thread-image-wrapper::before {
