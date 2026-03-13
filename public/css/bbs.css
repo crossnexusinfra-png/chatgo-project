@@ -462,7 +462,7 @@ body {
 .thread-image-wrapper {
     position: relative;
     overflow: hidden;
-    background: #e0e0e0; /* 画像未読時やぼかしレイヤーがない場合のフォールバック */
+    background: transparent;
     background-image: none !important;
 }
 
@@ -473,11 +473,15 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100%;
+    height: 100%;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     filter: blur(20px);
     z-index: 0;
+    /* ぼかしで端が透けないよう少し拡大して表示 */
+    transform: scale(1.08);
 }
 
 /* ::before は変数が効かない環境用のフォールバック（実要素を優先） */
