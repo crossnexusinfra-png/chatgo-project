@@ -579,6 +579,36 @@
                 }
             });
         }
+
+        // ルーム画像：縦横比に応じてぼかし背景の表示を調整（a:b=画像、c:d=表示領域16:9）
+        // a*d < b*c → 幅基準で領域を埋める → background-size: 100% auto
+        // b*c < a*d → 高さ基準で領域を埋める → background-size: auto 100%
+        function applyThreadImageBlurSize(wrapper) {
+            var blur = wrapper.querySelector('.thread-image-blur');
+            var img = wrapper.querySelector('img');
+            if (!blur || !img || !img.naturalWidth || !img.naturalHeight) return;
+            var a = img.naturalWidth;
+            var b = img.naturalHeight;
+            var c = 16;
+            var d = 9;
+            if (a * d <= b * c) {
+                blur.style.backgroundSize = '100% auto';
+            } else {
+                blur.style.backgroundSize = 'auto 100%';
+            }
+        }
+        function initThreadImageAspectRatios() {
+            document.querySelectorAll('.thread-image-wrapper').forEach(function(wrapper) {
+                var img = wrapper.querySelector('img');
+                if (!img || !wrapper.querySelector('.thread-image-blur')) return;
+                if (img.complete && img.naturalWidth) {
+                    applyThreadImageBlurSize(wrapper);
+                } else {
+                    img.addEventListener('load', function() { applyThreadImageBlurSize(wrapper); });
+                }
+            });
+        }
+        initThreadImageAspectRatios();
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', runWhenReady);
