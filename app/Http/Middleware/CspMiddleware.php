@@ -69,8 +69,8 @@ class CspMiddleware
         foreach ($policies as $directive => $sources) {
             $sourceList = is_array($sources) ? $sources : [$sources];
             
-            // script-srcとstyle-srcにnonceを追加
-            if (in_array($directive, ['script-src', 'style-src'])) {
+            // script-src にのみ nonce を追加。style-src には付けない（nonce があると 'unsafe-inline' が無視され AdSense のインライン style がブロックされるため）
+            if ($directive === 'script-src') {
                 $sourceList[] = "'nonce-{$nonce}'";
             }
             

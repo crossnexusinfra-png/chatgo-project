@@ -50,7 +50,8 @@ return [
             'https://pagead2.googlesyndication.com',
             'https://googleads.g.doubleclick.net',
             'https://tpc.googlesyndication.com',
-            'https://ep1.adtrafficquality.google', // Google AdSense 広告品質・配信用
+            'https://ep1.adtrafficquality.google',
+            'https://csi.gstatic.com', // Google AdSense 計測・CSI 用
         ],
         'media-src' => [
             "'self'",
@@ -71,6 +72,7 @@ return [
             'https://googleads.g.doubleclick.net',
             'https://fundingchoicesmessages.google.com',
             'https://*.google.com',
+            'https://*.adtrafficquality.google', // Google AdSense 広告品質 iframe 用（ep1, ep2 等）
         ],
         'frame-ancestors' => [
             "'none'",
