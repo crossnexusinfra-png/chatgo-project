@@ -457,16 +457,30 @@ body {
 }
 
 /* ルーム画像：固定比率16:9。画像が比率と合わない場合は余白をぼかしで埋める。
- * ぼかし＝同画像を比率維持のまま領域を埋めるよう拡大(cover)してブラー。
- * 手前の画像＝比率維持のまま領域からはみ出さない最大まで拡大(contain)。 */
+ * .thread-image-blur＝同画像をcoverで拡大してブラー表示。
+ * img＝比率維持のままcontainで手前に表示。 */
 .thread-image-wrapper {
     position: relative;
     overflow: hidden;
-    background: transparent !important;
-    background-image: none !important; /* 余白は::beforeのぼかしのみ表示（wrapperの背景は出さない） */
+    background: #e0e0e0; /* 画像未読時やぼかしレイヤーがない場合のフォールバック */
+    background-image: none !important;
 }
 
-/* 余白部分に表示するぼかし画像（横幅いっぱいに拡大） */
+/* 余白部分に表示するぼかしレイヤー（実要素で確実に表示） */
+.thread-image-blur {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(20px);
+    z-index: 0;
+}
+
+/* ::before は変数が効かない環境用のフォールバック（実要素を優先） */
 .thread-image-wrapper::before {
     content: '';
     position: absolute;
@@ -475,21 +489,15 @@ body {
     right: 0;
     bottom: 0;
     background-image: var(--thread-bg-image, none);
-    /* 横幅いっぱいに拡大し、高さが足りない場合は縦方向に拡大して全体をカバー */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     filter: blur(20px);
     z-index: 0;
-    /* ぼかし画像が確実に表示されるようにする */
-    opacity: 1;
-    /* 横幅いっぱいに拡大 */
     width: 100%;
     height: 100%;
-    /* 画像が存在しない場合でも背景を表示 */
-    background-color: transparent;
-    /* ぼかし画像が確実に表示されるようにする */
     display: block;
+    pointer-events: none;
 }
 
 .thread-image-wrapper img {

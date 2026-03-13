@@ -197,7 +197,8 @@
                             @endphp
                             @if(!$isDeletedByImageReport)
                             <div class="thread-image-wrapper {{ $isImageBlurred ? 'image-reported' : '' }}" style="--thread-bg-image: url('{{ $threadImageUrl }}');">
-                                <img src="{{ $threadImageUrl }}" alt="{{ $thread->display_title ?? $thread->title }}">
+                                <div class="thread-image-blur" style="background-image: url('{{ str_replace("'", "\\'", $threadImageUrl) }}');"></div>
+                                                    <img src="{{ $threadImageUrl }}" alt="{{ $thread->display_title ?? $thread->title }}">
                                     @if($isImageBlurred)
                                         <div class="thread-image-reported-message">{{ \App\Services\LanguageService::trans('thread_image_reported', $lang) }}</div>
                                     @endif
