@@ -40,12 +40,12 @@
     position: relative;
 }
 
-/* 通報ボタン：カード領域の左上に配置 */
+/* 通報ボタン：カード領域の左下に配置 */
 .profile-card-report-wrap {
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
-    padding: 12px 0 0 0;
+    padding: 0 0 12px 0;
     margin: 0;
 }
 

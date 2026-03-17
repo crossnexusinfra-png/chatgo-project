@@ -65,7 +65,7 @@
                 @endphp
                 <div class="profile-card-report-wrap">
                     @if($existingReport && !$existingReport->approved_at)
-                        <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}" data-report-reason="{{ e($existingReport->reason ?? '') }}" data-report-description="{{ e($existingReport->description ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                        <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                     @else
                         <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                     @endif

@@ -277,7 +277,7 @@
             const reportDescriptionInput = document.getElementById('report_description');
             if (!reportReasonSelect) return;
             
-            // プロフィール通報の場合
+            // プロフィール通報の場合：常にAPIでDBから既存通報を取得して表示
             if (reportedUserId) {
                 // 既存オプションを削除してプロフィール用を追加
                 while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
@@ -293,14 +293,6 @@
                     opt.textContent = reason.label;
                     reportReasonSelect.appendChild(opt);
                 });
-                // 通報内容を修正時：data 属性の既存内容を表示（ルーム・リプライと同様）
-                if (embeddedReason !== undefined && embeddedReason !== null && String(embeddedReason).trim() !== '') {
-                    reportReasonSelect.value = String(embeddedReason).trim();
-                    if (reportDescriptionInput) reportDescriptionInput.value = (embeddedDescription != null) ? String(embeddedDescription) : '';
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                    return;
-                }
                 var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
                 if (!existingPath) existingPath = '/api/reports/existing';
                 var profileHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
@@ -321,14 +313,16 @@
                     });
                 })
                 .then(function(data) {
-                    var r = data.exists && data.reason ? String(data.reason).trim() : '';
-                    var d = data.exists && data.description != null ? String(data.description) : '';
+                    var r = (data.exists && data.reason != null) ? String(data.reason).trim() : '';
+                    var d = (data.exists && data.description != null) ? String(data.description) : '';
                     reportReasonSelect.value = r;
                     if (reportDescriptionInput) reportDescriptionInput.value = d;
                     reportModal.classList.add('show');
                     document.body.style.overflow = 'hidden';
                 })
                 .catch(function() {
+                    reportReasonSelect.value = '';
+                    if (reportDescriptionInput) reportDescriptionInput.value = '';
                     reportModal.classList.add('show');
                     document.body.style.overflow = 'hidden';
                 });
