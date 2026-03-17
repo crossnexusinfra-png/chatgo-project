@@ -85,7 +85,15 @@
                                 ->first();
                         @endphp
                         @if($existingProfileReport && !$existingProfileReport->approved_at)
-                            <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                            <button
+                                type="button"
+                                class="report-btn"
+                                data-report-user-id="{{ $user->user_id }}"
+                                data-report-reason="{{ e($existingProfileReport->reason ?? '') }}"
+                                data-report-description="{{ e($existingProfileReport->description ?? '') }}"
+                            >
+                                {{ \App\Services\LanguageService::trans('report_change', $lang) }}
+                            </button>
                         @else
                             <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                         @endif
