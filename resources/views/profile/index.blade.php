@@ -80,7 +80,9 @@
     $residenceCode = $user->residence ?? '';
 @endphp
             <div class="profile-info">
-                <h2>{{ $displayUserName }}</h2>
+                <div class="profile-info-name-row">
+                    <h2>{{ $displayUserName }}</h2>
+                </div>
 
                 <div class="profile-details">
                     <div class="detail-item">
