@@ -40,13 +40,11 @@
     position: relative;
 }
 
-/* ユーザー名と通報ボタン：通報ボタンをユーザー名の左端に配置 */
+/* ユーザー名と通報ボタン：通報ボタンは左端、ユーザー名@IDは中央寄せ */
 .profile-info-name-row {
     display: flex;
     align-items: center;
-    justify-content: center; /* ユーザー名＠ID全体を中央寄せ */
     gap: 12px;
-    flex-wrap: wrap;
     margin-bottom: 20px;
 }
 
@@ -57,6 +55,8 @@
 
 .profile-info-name-row h2 {
     margin: 0;
+    flex: 1;
+    text-align: center;
 }
 
 .profile-image-section {
