@@ -277,8 +277,11 @@
             const reportDescriptionInput = document.getElementById('report_description');
             if (!reportReasonSelect) return;
             
-            // プロフィール通報の場合：常にAPIでDBから既存通報を取得して表示
+            // プロフィール通報の場合：常にAPIでDBから「押したユーザーがその対象を通報した履歴」を取得し、初期値として反映
             if (reportedUserId) {
+                // フォームの隠しフィールドをクリア（プロフィール通報では thread_id / response_id は空）
+                if (reportThreadIdInput) reportThreadIdInput.value = '';
+                if (reportResponseIdInput) reportResponseIdInput.value = '';
                 // 既存オプションを削除してプロフィール用を追加
                 while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
                 [
@@ -293,11 +296,14 @@
                     opt.textContent = reason.label;
                     reportReasonSelect.appendChild(opt);
                 });
-                var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
-                if (!existingPath) existingPath = '/api/reports/existing';
+                reportReasonSelect.value = '';
+                if (reportDescriptionInput) reportDescriptionInput.value = '';
+                var existingUrl = (routes.existingReportRoute && routes.existingReportRoute) ? String(routes.existingReportRoute) : '';
+                if (!existingUrl) existingUrl = (typeof window.location !== 'undefined' && window.location.origin) ? window.location.origin + '/api/reports/existing' : '/api/reports/existing';
+                var query = new URLSearchParams({ reported_user_id: reportedUserId || '' }).toString();
                 var profileHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
                 if (typeof window.location !== 'undefined' && window.location.href) profileHeaders['Referer'] = window.location.href;
-                fetch(existingPath + '?' + new URLSearchParams({ reported_user_id: reportedUserId || '' }), {
+                fetch(existingUrl + (existingUrl.indexOf('?') !== -1 ? '&' : '?') + query, {
                     credentials: 'same-origin',
                     headers: profileHeaders
                 })
@@ -313,15 +319,15 @@
                     });
                 })
                 .then(function(data) {
-                    var r = (data.exists && data.reason != null) ? String(data.reason).trim() : '';
-                    var d = (data.exists && data.description != null) ? String(data.description) : '';
-                    reportReasonSelect.value = r;
+                    var r = (data && data.exists && data.reason != null && data.reason !== undefined) ? String(data.reason).trim() : '';
+                    var d = (data && data.exists && data.description != null && data.description !== undefined) ? String(data.description) : '';
+                    reportReasonSelect.value = r || (reportReasonSelect.options[0] ? reportReasonSelect.options[0].value : '');
                     if (reportDescriptionInput) reportDescriptionInput.value = d;
                     reportModal.classList.add('show');
                     document.body.style.overflow = 'hidden';
                 })
                 .catch(function() {
-                    reportReasonSelect.value = '';
+                    reportReasonSelect.value = reportReasonSelect.options[0] ? reportReasonSelect.options[0].value : '';
                     if (reportDescriptionInput) reportDescriptionInput.value = '';
                     reportModal.classList.add('show');
                     document.body.style.overflow = 'hidden';
