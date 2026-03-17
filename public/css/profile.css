@@ -37,6 +37,20 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    position: relative;
+}
+
+/* 通報ボタン：カード領域の左上に配置 */
+.profile-card-report-wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 12px 0 0 0;
+    margin: 0;
+}
+
+.profile-card-report-wrap .report-btn {
+    margin: 0;
 }
 
 .profile-image-section {

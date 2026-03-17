@@ -57,6 +57,20 @@
 
     <div class="profile-content">
         <div class="profile-card">
+            @if(\Illuminate\Support\Facades\Auth::check() && !$isMyProfile)
+                @php
+                    $existingReport = \App\Models\Report::where('user_id', $currentUser->user_id)
+                        ->where('reported_user_id', $user->user_id)
+                        ->first();
+                @endphp
+                <div class="profile-card-report-wrap">
+                    @if($existingReport && !$existingReport->approved_at)
+                        <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}" data-report-reason="{{ e($existingReport->reason ?? '') }}" data-report-description="{{ e($existingReport->description ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                    @else
+                        <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
+                    @endif
+                </div>
+            @endif
             <div class="profile-image-section">
                 @if($user->profile_image)
                     @php
@@ -77,21 +91,7 @@
             </div>
 
             <div class="profile-info">
-                <div class="profile-info-header">
-                    <h2>{{ $displayUserName }}</h2>
-                    @if(\Illuminate\Support\Facades\Auth::check() && !$isMyProfile)
-                        @php
-                            $existingReport = \App\Models\Report::where('user_id', $currentUser->user_id)
-                                ->where('reported_user_id', $user->user_id)
-                                ->first();
-                        @endphp
-                        @if($existingReport && !$existingReport->approved_at)
-                            <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
-                        @else
-                            <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
-                        @endif
-                    @endif
-                </div>
+                <h2>{{ $displayUserName }}</h2>
 
                 <div class="profile-details">
                     <div class="detail-item">

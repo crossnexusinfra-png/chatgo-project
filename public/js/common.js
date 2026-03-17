@@ -293,6 +293,14 @@
                     opt.textContent = reason.label;
                     reportReasonSelect.appendChild(opt);
                 });
+                // 通報内容を修正時：data 属性の既存内容を表示（ルーム・リプライと同様）
+                if (embeddedReason !== undefined && embeddedReason !== null && String(embeddedReason).trim() !== '') {
+                    reportReasonSelect.value = String(embeddedReason).trim();
+                    if (reportDescriptionInput) reportDescriptionInput.value = (embeddedDescription != null) ? String(embeddedDescription) : '';
+                    reportModal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                    return;
+                }
                 var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace) ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '') : '';
                 if (!existingPath) existingPath = '/api/reports/existing';
                 var profileHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
