@@ -40,23 +40,24 @@
     position: relative;
 }
 
-/* ユーザー名と通報ボタン：通報ボタンは左端、ユーザー名@IDは中央寄せ */
+/* ユーザー名@ユーザーID：領域の中央に1行で配置 */
 .profile-info-name-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.profile-info-name-row .report-btn {
-    margin: 0;
-    flex-shrink: 0;
+    text-align: center;
+    margin-bottom: 12px;
 }
 
 .profile-info-name-row h2 {
     margin: 0;
-    flex: 1;
-    text-align: center;
+}
+
+/* 通報ボタン：ユーザー名の一行下で左端に配置 */
+.profile-info-report-row {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.profile-info-report-row .report-btn {
+    margin: 0;
 }
 
 .profile-image-section {

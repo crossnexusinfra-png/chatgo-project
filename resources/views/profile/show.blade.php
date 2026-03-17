@@ -78,12 +78,15 @@
 
             <div class="profile-info">
                 <div class="profile-info-name-row">
-                    @if(\Illuminate\Support\Facades\Auth::check() && !$isMyProfile)
-                        @php
-                            $existingProfileReport = \App\Models\Report::where('user_id', $currentUser->user_id)
-                                ->where('reported_user_id', $user->user_id)
-                                ->first();
-                        @endphp
+                    <h2>{{ $displayUserName }}</h2>
+                </div>
+                @if(\Illuminate\Support\Facades\Auth::check() && !$isMyProfile)
+                    @php
+                        $existingProfileReport = \App\Models\Report::where('user_id', $currentUser->user_id)
+                            ->where('reported_user_id', $user->user_id)
+                            ->first();
+                    @endphp
+                    <div class="profile-info-report-row">
                         @if($existingProfileReport && !$existingProfileReport->approved_at)
                             <button
                                 type="button"
@@ -97,9 +100,8 @@
                         @else
                             <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                         @endif
-                    @endif
-                    <h2>{{ $displayUserName }}</h2>
-                </div>
+                    </div>
+                @endif
 
                 <div class="profile-details">
                     <div class="detail-item">
