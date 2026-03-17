@@ -44,6 +44,7 @@
 .profile-info-name-row {
     display: flex;
     align-items: center;
+    justify-content: center; /* ユーザー名＠ID全体を中央寄せ */
     gap: 12px;
     flex-wrap: wrap;
     margin-bottom: 20px;
