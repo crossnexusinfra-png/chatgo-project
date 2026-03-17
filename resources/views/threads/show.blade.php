@@ -121,6 +121,7 @@
                     <span>📅 <span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span></span>
                 </div>
                 @auth
+                @if(auth()->id() !== (int) $thread->user_id)
                 <div class="meta-item">
                     @if(isset($userReportedThread) && $userReportedThread)
                         @if(isset($userReportedThreadRejected) && $userReportedThreadRejected)
@@ -132,6 +133,7 @@
                         <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                     @endif
                 </div>
+                @endif
                 <div class="meta-item">
                     <form action="{{ route('threads.favorite.toggle', $thread) }}" method="POST">
                         @csrf

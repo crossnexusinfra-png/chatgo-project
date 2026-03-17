@@ -50,7 +50,12 @@ class SpamDetectionService
     /**
      * URL投稿の最大回数（1日あたり）
      */
-    private const MAX_URL_POSTS_PER_DAY = 5;
+    private const MAX_URL_POSTS_PER_DAY = 30;
+
+    /**
+     * メディア投稿の最大回数（1日あたり）
+     */
+    private const MAX_MEDIA_POSTS_PER_DAY = 30;
 
     /**
      * スパム判定を行う
@@ -507,9 +512,9 @@ class SpamDetectionService
 
     /**
      * URL投稿回数チェック
-     * 同一ユーザーが今日（標準時の0時から24時まで）にURLを含むレスポンスを5回以上投稿していないかチェック
+     * 同一ユーザーが今日（標準時の0時から24時まで）にURLを含むレスポンスを上限回数以上投稿していないかチェック
      *
-     * @param string $userName ユーザー名
+     * @param int|null $userId ユーザーID
      * @return array ['is_spam' => bool, 'reason' => string|null]
      */
     private function checkUrlPostCount(?int $userId): array
@@ -545,13 +550,43 @@ class SpamDetectionService
             }
         }
 
-        // 5回以上の場合にブロック
+        // 上限回数以上の場合にブロック
         if ($urlPostCount >= self::MAX_URL_POSTS_PER_DAY) {
             return [
                 'is_spam' => true,
                 'reason' => 'url_post_limit',
                 'count' => $urlPostCount,
                 'limit' => self::MAX_URL_POSTS_PER_DAY,
+            ];
+        }
+
+        return ['is_spam' => false, 'reason' => null];
+    }
+
+    /**
+     * メディア投稿回数チェック（1日あたりの上限）
+     * 同一ユーザーが今日にメディア付きレスポンスを上限回数以上投稿していないかチェック
+     *
+     * @param int $userId ユーザーID
+     * @return array ['is_spam' => bool, 'reason' => string|null, 'count' => int, 'limit' => int]
+     */
+    public function checkMediaPostLimit(int $userId): array
+    {
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
+
+        $mediaPostCount = Response::where('user_id', $userId)
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->whereNotNull('media_file')
+            ->where('media_file', '!=', '')
+            ->count();
+
+        if ($mediaPostCount >= self::MAX_MEDIA_POSTS_PER_DAY) {
+            return [
+                'is_spam' => true,
+                'reason' => 'media_post_limit',
+                'count' => $mediaPostCount,
+                'limit' => self::MAX_MEDIA_POSTS_PER_DAY,
             ];
         }
 

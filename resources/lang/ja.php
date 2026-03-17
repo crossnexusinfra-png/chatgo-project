@@ -658,6 +658,8 @@ return [
     'report_thread_image_reason_thread_only' => 'ルーム画像関連の通報理由はルーム通報時のみ使用できます。',
     'report_profile_reason_only' => 'プロフィール通報では、プロフィール専用の通報理由のみ使用できます。',
     'report_cannot_report_self' => '自分自身のプロフィールを通報することはできません。',
+    'report_cannot_report_own_thread' => '自分のルームを通報することはできません。',
+    'report_cannot_report_own_response' => '自分のリプライを通報することはできません。',
     'report_restricted_profile' => 'このプロフィールは制限されているため、通報できません。',
     'thread_image_reported' => 'この画像は通報により表示できません',
     'thread_image_deleted' => '画像は削除されました',
@@ -689,7 +691,8 @@ return [
     'spam_ng_word_detected' => '投稿内容に不適切な表現が含まれているため、投稿できません。',
     'spam_similar_response_detected' => '12時間以内に類似のリプライを投稿しているため、投稿できません。',
     'spam_similar_url_detected' => '12時間以内に類似のURLを含むリプライを投稿しているため、投稿できません。',
-    'spam_url_post_limit_exceeded' => 'URLを含むリプライは1日5回までしか投稿できません。',
+    'spam_url_post_limit_exceeded' => 'URLを含むリプライは1日30回までしか投稿できません。',
+    'spam_media_post_limit_exceeded' => 'メディア付きリプライは1日30回までしか投稿できません。',
     
     // ユーザー凍結
     'user_frozen_message' => 'アカウントが凍結されているため、この操作は実行できません。',

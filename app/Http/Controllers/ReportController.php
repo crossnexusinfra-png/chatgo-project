@@ -212,6 +212,11 @@ class ReportController extends Controller
         if ($validated['thread_id']) {
             $thread = Thread::findOrFail($validated['thread_id']);
             
+            // 自分のルームは通報できない
+            if ((int) $thread->user_id === (int) $userId) {
+                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_own_thread', $lang)]);
+            }
+            
             // 警告状態（制限がかかっている）の場合、通報を拒否
             if ($thread->isRestricted()) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_restricted_thread', $lang)]);
@@ -255,6 +260,11 @@ class ReportController extends Controller
             }
         } elseif ($validated['response_id']) {
             $response = Response::findOrFail($validated['response_id']);
+            
+            // 自分のリプライは通報できない
+            if ((int) $response->user_id === (int) $userId) {
+                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_own_response', $lang)]);
+            }
             
             // 警告状態（制限がかかっている）の場合、通報を拒否
             if ($response->shouldBeHidden()) {

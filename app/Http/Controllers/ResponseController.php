@@ -379,6 +379,19 @@ class ResponseController extends Controller
             }
         }
 
+        // メディア投稿の1日制限チェック（メディア付き投稿の場合のみ）
+        if (!empty($mediaFile) && auth()->check()) {
+            $spamDetectionService = new SpamDetectionService();
+            $mediaLimitResult = $spamDetectionService->checkMediaPostLimit(auth()->user()->user_id);
+            if ($mediaLimitResult['is_spam']) {
+                \Log::warning('ResponseController: Media post limit exceeded (store)', [
+                    'user_id' => auth()->id(),
+                    'count' => $mediaLimitResult['count'] ?? null,
+                ]);
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_media_post_limit_exceeded', $lang)]);
+            }
+        }
+
         // レスポンス番号を計算（既存のレスポンス数 + 1）
         $responsesNum = $thread->responses()->count() + 1;
 
@@ -729,9 +742,22 @@ class ResponseController extends Controller
                     return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_similar_response_detected', $lang)]);
                 } elseif ($spamResult['reason'] === 'url_similarity') {
                     return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_similar_url_detected', $lang)]);
-                } elseif ($spamResult['reason'] === 'url_post_limit') {
+                } else                if ($spamResult['reason'] === 'url_post_limit') {
                     return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_url_post_limit_exceeded', $lang)]);
                 }
+            }
+        }
+
+        // メディア投稿の1日制限チェック（メディア付き投稿の場合のみ）
+        if (!empty($mediaFile) && auth()->check()) {
+            $spamDetectionService = new SpamDetectionService();
+            $mediaLimitResult = $spamDetectionService->checkMediaPostLimit(auth()->user()->user_id);
+            if ($mediaLimitResult['is_spam']) {
+                \Log::warning('ResponseController: Media post limit exceeded (reply)', [
+                    'user_id' => auth()->id(),
+                    'count' => $mediaLimitResult['count'] ?? null,
+                ]);
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_media_post_limit_exceeded', $lang)]);
             }
         }
 

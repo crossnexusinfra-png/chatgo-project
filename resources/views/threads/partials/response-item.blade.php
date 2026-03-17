@@ -369,6 +369,7 @@
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
             @auth
+                @if(!$isMyResponse)
                 @if(isset($isReported) && $isReported)
                     @if(isset($isReportRejected) && $isReportRejected)
                         <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
@@ -380,6 +381,7 @@
                     @endif
                 @else
                     <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
+                @endif
                 @endif
             @endauth
         </div>

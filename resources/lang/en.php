@@ -657,6 +657,8 @@ return [
     'report_thread_image_reason_thread_only' => 'Room image-related report reasons can only be used when reporting rooms.',
     'report_profile_reason_only' => 'Only profile-specific report reasons can be used when reporting profiles.',
     'report_cannot_report_self' => 'You cannot report your own profile.',
+    'report_cannot_report_own_thread' => 'You cannot report your own room.',
+    'report_cannot_report_own_response' => 'You cannot report your own reply.',
     'report_restricted_profile' => 'This profile is restricted and cannot be reported.',
     'thread_image_reported' => 'This image cannot be displayed due to reports',
     'thread_image_deleted' => 'Image has been deleted',
@@ -688,7 +690,8 @@ return [
     'spam_ng_word_detected' => 'Your post contains inappropriate content and cannot be posted.',
     'spam_similar_response_detected' => 'You have posted a similar reply within the last 12 hours. Please wait before posting again.',
     'spam_similar_url_detected' => 'You have posted a reply with a similar URL within the last 12 hours. Please wait before posting again.',
-    'spam_url_post_limit_exceeded' => 'You can only post replies containing URLs up to 5 times per day.',
+    'spam_url_post_limit_exceeded' => 'You can only post replies containing URLs up to 30 times per day.',
+    'spam_media_post_limit_exceeded' => 'You can only post replies with media files up to 30 times per day.',
     
     // User Freeze
     'user_frozen_message' => 'Your account is frozen and this operation cannot be performed.',
