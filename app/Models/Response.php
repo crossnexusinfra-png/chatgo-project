@@ -188,6 +188,20 @@ class Response extends Model
             $response->thread->updateResponsesCountUp();
         });
 
+        // 削除ログは deleting(削除前) に記録する
+        // deleted(削除後) だと response_change_logs のFK制約により挿入が失敗する
+        static::deleting(function ($response) {
+            try {
+                ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
+            } catch (\Throwable $e) {
+                \Log::warning('ResponseChangeLog::logDelete failed', [
+                    'response_id' => $response->response_id ?? null,
+                    'thread_id' => $response->thread_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
         // レスポンスが削除された時にスレッドのレスポンス数を更新
         static::deleted(function ($response) {
             // 通報等でスレッドが先にソフトデリートされている場合、
@@ -199,16 +213,6 @@ class Response extends Model
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Response deleted: updateResponsesCountDown failed', [
-                    'response_id' => $response->response_id ?? null,
-                    'thread_id' => $response->thread_id ?? null,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-            try {
-                // 削除ログを記録
-                ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
-            } catch (\Throwable $e) {
-                \Log::warning('ResponseChangeLog::logDelete failed', [
                     'response_id' => $response->response_id ?? null,
                     'thread_id' => $response->thread_id ?? null,
                     'error' => $e->getMessage(),

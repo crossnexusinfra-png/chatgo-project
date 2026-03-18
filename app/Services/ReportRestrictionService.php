@@ -274,14 +274,29 @@ class ReportRestrictionService
                 // 実DBの状態で結果を確定（「成功表示だが実際は未反映」を防ぐ）
                 try {
                     if ($type === 'thread' && $threadId) {
-                        $t = Thread::withTrashed()->find($threadId);
-                        $result['deleted_thread'] = (bool) ($t && $t->trashed());
-                        $result['approved_reports'] = (int) Report::where('thread_id', $threadId)->whereNotNull('approved_at')->count();
+                        // Eloquent のスコープ/接続差分を避けるため生クエリで検証
+                        $deletedAt = DB::table('threads')->where('thread_id', $threadId)->value('deleted_at');
+                        $result['deleted_thread'] = $deletedAt !== null;
+                        $result['approved_reports'] = (int) DB::table('reports')
+                            ->where('thread_id', $threadId)
+                            ->whereNotNull('approved_at')
+                            ->count();
                     } elseif ($type === 'response' && $responseId) {
-                        $result['deleted_response'] = !Response::where('response_id', $responseId)->exists();
-                        $result['approved_reports'] = (int) Report::where('response_id', $responseId)->whereNotNull('approved_at')->count();
+                        $result['deleted_response'] = !DB::table('responses')->where('response_id', $responseId)->exists();
+                        $result['approved_reports'] = (int) DB::table('reports')
+                            ->where('response_id', $responseId)
+                            ->whereNotNull('approved_at')
+                            ->count();
                     }
                 } catch (\Throwable $e) {
+                    if ($e instanceof \Illuminate\Database\QueryException) {
+                        $sqlState = $e->errorInfo[0] ?? null;
+                        $code = $e->errorInfo[1] ?? null;
+                        $step = '[ACK_STEP]post_verify_db'
+                            . ($sqlState ? " sqlstate={$sqlState}" : '')
+                            . ($code !== null ? " code={$code}" : '');
+                        throw new \RuntimeException($step, 0, $e);
+                    }
                     throw new \RuntimeException('[ACK_STEP]post_verify_failed', 0, $e);
                 }
 
