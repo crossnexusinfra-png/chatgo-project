@@ -118,8 +118,8 @@ class ReportRestrictionService
                     // 既に処理済み/存在しない or テーブル未反映の場合はメッセージの参照先で処理する
                     $fallbackType = $message->response_id ? 'response' : ($message->thread_id ? 'thread' : null);
                     if ($fallbackType === null) {
-                        // 対象不明
-                        return;
+                        // 対象不明（本番で admin_messages の thread_id/response_id カラムが未反映等）
+                        throw new \RuntimeException('[ACK_STEP]target_not_identified');
                     }
                     $type = $fallbackType;
                     $threadId = $message->thread_id ? (int) $message->thread_id : null;
