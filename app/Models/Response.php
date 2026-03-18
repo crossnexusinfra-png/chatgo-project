@@ -192,12 +192,28 @@ class Response extends Model
         static::deleted(function ($response) {
             // 通報等でスレッドが先にソフトデリートされている場合、
             // 通常のリレーションだと thread が null になるため withTrashed で取得する
-            $thread = $response->thread ?? Thread::withTrashed()->find($response->thread_id);
-            if ($thread) {
-                $thread->updateResponsesCountDown();
+            try {
+                $thread = $response->thread ?? Thread::withTrashed()->find($response->thread_id);
+                if ($thread) {
+                    $thread->updateResponsesCountDown();
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Response deleted: updateResponsesCountDown failed', [
+                    'response_id' => $response->response_id ?? null,
+                    'thread_id' => $response->thread_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
             }
-            // 削除ログを記録
-            ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
+            try {
+                // 削除ログを記録
+                ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
+            } catch (\Throwable $e) {
+                \Log::warning('ResponseChangeLog::logDelete failed', [
+                    'response_id' => $response->response_id ?? null,
+                    'thread_id' => $response->thread_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
     }
 }

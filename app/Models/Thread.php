@@ -23,7 +23,15 @@ class Thread extends Model
         
         // 削除時のログ記録
         static::deleting(function ($thread) {
-            ThreadChangeLog::logDelete($thread, 'スレッドが削除されました');
+            try {
+                ThreadChangeLog::logDelete($thread, 'スレッドが削除されました');
+            } catch (\Throwable $e) {
+                // ログ保存失敗で削除自体は止めない（request/auth が取れない環境でも削除は継続）
+                \Log::warning('ThreadChangeLog::logDelete failed', [
+                    'thread_id' => $thread->thread_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
     }
 
