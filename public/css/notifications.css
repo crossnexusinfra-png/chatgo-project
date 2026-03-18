@@ -368,6 +368,29 @@
     cursor: not-allowed;
 }
 
+.report-ack-btn {
+    padding: 8px 16px;
+    background: #fbbf24;
+    color: #78350f;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.report-ack-btn:hover {
+    background: #f59e0b;
+    color: #78350f;
+}
+
+.report-ack-btn:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
 .coin-received-message {
     padding: 8px;
     background: #d1fae5;
@@ -444,7 +467,7 @@
     text-align: center;
 }
 
-/* 通報制限了承セクション（ボタンは .coin-receive-btn でコイン受け取りと同じデザイン） */
+/* 通報制限了承セクション */
 .report-restriction-ack-section {
     display: none;
     margin-top: 12px;
