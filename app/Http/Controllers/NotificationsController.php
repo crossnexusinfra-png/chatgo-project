@@ -477,8 +477,8 @@ class NotificationsController extends Controller
 
             try {
                 $service = new \App\Services\ReportRestrictionService();
-                $service->acknowledgeFromMessage($message);
-                return response()->json(['success' => true]);
+                $result = $service->acknowledgeFromMessage($message);
+                return response()->json(['success' => true, 'result' => $result]);
             } catch (\Throwable $e) {
                 $step = null;
                 $msg = (string) $e->getMessage();

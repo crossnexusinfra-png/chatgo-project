@@ -535,6 +535,9 @@
                 }
                 const message = messagesData.find(m => m.id === messageId);
                 if (message) message.reply_used = true;
+                if (result.result) {
+                    console.log('report acknowledge result:', result.result);
+                }
                 alert(translations.reportAckSuccess);
             } else {
                 alert(result.error || translations.reportAckFailed);

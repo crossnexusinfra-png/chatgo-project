@@ -82,9 +82,12 @@ class ReportRestrictionService
         return (int) ReportRestriction::where('user_id', $userId)->where('status', 'active')->count();
     }
 
-    public function acknowledgeFromMessage(AdminMessage $message): void
+    /**
+     * @return array{found_restriction:bool, used_fallback:bool, type:?string, thread_id:?int, response_id:?int, approved_reports:int, deleted_thread:bool, deleted_response:bool}
+     */
+    public function acknowledgeFromMessage(AdminMessage $message): array
     {
-        DB::transaction(function () use ($message) {
+        return DB::transaction(function () use ($message) {
             try {
                 /** @var User|null $user */
                 $user = User::find($message->user_id);
@@ -114,6 +117,17 @@ class ReportRestrictionService
                     }
                 }
 
+                $result = [
+                    'found_restriction' => (bool) $restriction,
+                    'used_fallback' => false,
+                    'type' => null,
+                    'thread_id' => null,
+                    'response_id' => null,
+                    'approved_reports' => 0,
+                    'deleted_thread' => false,
+                    'deleted_response' => false,
+                ];
+
                 if (!$restriction) {
                     // 既に処理済み/存在しない or テーブル未反映の場合はメッセージの参照先で処理する
                     $fallbackType = $message->response_id ? 'response' : ($message->thread_id ? 'thread' : null);
@@ -124,6 +138,7 @@ class ReportRestrictionService
                     $type = $fallbackType;
                     $threadId = $message->thread_id ? (int) $message->thread_id : null;
                     $responseId = $message->response_id ? (int) $message->response_id : null;
+                    $result['used_fallback'] = true;
                 } else {
                     $type = $restriction->type;
                     $threadId = $restriction->thread_id ? (int) $restriction->thread_id : null;
@@ -132,6 +147,10 @@ class ReportRestrictionService
 
                 // 承認と同様に処理（仕様変更: 自認によるアウト数軽減は行わない）
                 $selfAckMultiplier = 1.0;
+
+                $result['type'] = $type;
+                $result['thread_id'] = $threadId;
+                $result['response_id'] = $responseId;
 
                 if ($type === 'thread' && $threadId) {
                     try {
@@ -165,6 +184,7 @@ class ReportRestrictionService
                             } catch (\Throwable $e) {
                                 throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
                             }
+                            $result['approved_reports']++;
                         }
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
@@ -185,6 +205,7 @@ class ReportRestrictionService
                         if (!$thread->trashed()) {
                             try {
                                 $thread->delete();
+                                $result['deleted_thread'] = true;
                             } catch (\Throwable $e) {
                                 throw new \RuntimeException('[ACK_STEP]thread_delete_failed', 0, $e);
                             }
@@ -225,6 +246,7 @@ class ReportRestrictionService
                             } catch (\Throwable $e) {
                                 throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
                             }
+                            $result['approved_reports']++;
                         }
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
@@ -244,11 +266,17 @@ class ReportRestrictionService
                         // リプライ削除（現状ソフトデリート無しのため削除）
                         try {
                             $response->delete();
+                            $result['deleted_response'] = true;
                         } catch (\Throwable $e) {
                             throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
                         }
                     }
                 }
+
+            // ここまでで何もできていないなら成功扱いにしない（「受け付けたが何も起きない」を防ぐ）
+            if ($result['approved_reports'] === 0 && !$result['deleted_thread'] && !$result['deleted_response']) {
+                throw new \RuntimeException('[ACK_STEP]no_target_action');
+            }
 
             // 制限を了承済みに
             // 本番DBのスキーマ差分に対応（存在するカラムのみ更新）
@@ -363,6 +391,8 @@ class ReportRestrictionService
                 $cls = get_class($e);
                 throw new \RuntimeException('[ACK_STEP]unhandled ' . $cls, 0, $e);
             }
+
+            return $result;
         });
     }
 
