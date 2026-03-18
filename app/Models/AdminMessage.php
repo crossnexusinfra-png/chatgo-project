@@ -10,7 +10,7 @@ class AdminMessage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title_key', 'body_key', 'title', 'body', 'audience', 'published_at', 'user_id', 'thread_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount',
+        'title_key', 'body_key', 'title', 'body', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount',
         'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 

@@ -327,6 +327,31 @@ class ReportController extends Controller
             $message = \App\Services\LanguageService::trans('report_submitted', $lang);
         }
 
+        // 通報により制限が発生した場合、対象ユーザーに了承ボタン付き通知を送る（初回のみ）
+        try {
+            $restrictionService = new \App\Services\ReportRestrictionService();
+            if (!empty($validated['thread_id'])) {
+                $t = Thread::find($validated['thread_id']);
+                if ($t) {
+                    $restrictionService->ensureRestrictionCreatedForThread($t);
+                }
+            } elseif (!empty($validated['response_id'])) {
+                $r = Response::find($validated['response_id']);
+                if ($r) {
+                    $restrictionService->ensureRestrictionCreatedForResponse($r);
+                }
+            } elseif (!empty($validated['reported_user_id'])) {
+                $u = User::find($validated['reported_user_id']);
+                if ($u) {
+                    $restrictionService->ensureRestrictionCreatedForProfile($u);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to create report restriction notification', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return back()->with('success', $message);
         } finally {
             $lock->release();

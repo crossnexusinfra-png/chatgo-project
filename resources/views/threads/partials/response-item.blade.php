@@ -370,17 +370,18 @@
             </button>
             @auth
                 @if(!$isMyResponse)
-                @if(isset($isReported) && $isReported)
-                    @if(isset($isReportRejected) && $isReportRejected)
-                        <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
+                {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
+                @if(!$shouldBeHidden && !$isDeletedByReport)
+                    @if(isset($isReported) && $isReported)
+                        @if(!(isset($isReportRejected) && $isReportRejected))
+                            @php
+                                $existingReport = isset($existingReportByResponseId) && isset($existingReportByResponseId[$response->response_id]) ? $existingReportByResponseId[$response->response_id] : [];
+                            @endphp
+                            <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}" data-report-reason="{{ e($existingReport['reason'] ?? '') }}" data-report-description="{{ e($existingReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                        @endif
                     @else
-                        @php
-                            $existingReport = isset($existingReportByResponseId) && isset($existingReportByResponseId[$response->response_id]) ? $existingReportByResponseId[$response->response_id] : [];
-                        @endphp
-                        <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}" data-report-reason="{{ e($existingReport['reason'] ?? '') }}" data-report-description="{{ e($existingReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                        <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                     @endif
-                @else
-                    <button type="button" class="report-btn" data-report-response-id="{{ $response->response_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                 @endif
                 @endif
             @endauth

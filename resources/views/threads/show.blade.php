@@ -123,14 +123,15 @@
                 @auth
                 @if(auth()->id() !== (int) $thread->user_id)
                 <div class="meta-item">
-                    @if(isset($userReportedThread) && $userReportedThread)
-                        @if(isset($userReportedThreadRejected) && $userReportedThreadRejected)
-                            <span class="report-btn reported-badge">{{ \App\Services\LanguageService::trans('reported', $lang) }}</span>
+                    {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
+                    @if(!(isset($isThreadRestricted) && $isThreadRestricted) && empty($isThreadDeletedByReport))
+                        @if(isset($userReportedThread) && $userReportedThread)
+                            @if(!(isset($userReportedThreadRejected) && $userReportedThreadRejected))
+                                <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-reason="{{ e($existingThreadReport['reason'] ?? '') }}" data-report-description="{{ e($existingThreadReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                            @endif
                         @else
-                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-reason="{{ e($existingThreadReport['reason'] ?? '') }}" data-report-description="{{ e($existingThreadReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                         @endif
-                    @else
-                        <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                     @endif
                 </div>
                 @endif
