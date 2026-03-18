@@ -106,6 +106,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'is_verified' => 'boolean',
             'frozen_until' => 'datetime',
+            'profile_update_locked_until' => 'datetime',
             'is_permanently_banned' => 'boolean',
         ];
     }

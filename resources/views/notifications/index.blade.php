@@ -75,6 +75,14 @@
                             </button>
                         </div>
                     </div>
+                @elseif(isset($m->title_key) && $m->title_key === 'report_restriction_ack_title' && !($m->reply_used ?? false))
+                    <div class="report-restriction-ack-section" data-message-id="{{ $m->id }}">
+                        <div class="report-restriction-ack-buttons">
+                            <button type="button" class="report-ack-btn" data-message-id="{{ $m->id }}">
+                                {{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}
+                            </button>
+                        </div>
+                    </div>
                 @elseif(isset($m->allows_reply) && $m->allows_reply && (($m->unlimited_reply ?? false) || !($m->reply_used ?? false)))
                     <div class="reply-section" data-message-id="{{ $m->id }}">
                         <form class="reply-form" data-message-id="{{ $m->id }}">
@@ -144,6 +152,9 @@
             r18ChangeRejectFailed: '{{ \App\Services\LanguageService::trans('r18_change_reject_failed', $lang) }}',
             r18ChangeRejectButton: '{{ \App\Services\LanguageService::trans('r18_change_reject_button', $lang) }}',
             r18ChangeRejectSuccess: '{{ \App\Services\LanguageService::trans('r18_change_reject_success', $lang) }}',
+            reportAckButton: '{{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}',
+            reportAckFailed: '{{ \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang) }}',
+            reportAckSuccess: '{{ \App\Services\LanguageService::trans('report_restriction_ack_success', $lang) }}',
             notificationsLoading: '{{ \App\Services\LanguageService::trans('notifications_loading', $lang) }}',
             notificationsLoadFailed: '{{ \App\Services\LanguageService::trans('notifications_load_failed', $lang) }}'
         }

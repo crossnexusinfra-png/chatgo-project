@@ -115,4 +115,19 @@ class AdminMessagePolicy
         }
         return false;
     }
+
+    /**
+     * ユーザーが通報制限の了承（自認）を実行できるかどうか
+     */
+    public function acknowledgeReportRestriction(User $user, AdminMessage $message): bool
+    {
+        if ($message->title_key !== 'report_restriction_ack_title') {
+            return false;
+        }
+        // 個人宛て前提（recipients 等には現状使わない）
+        if ($message->user_id !== null) {
+            return $message->user_id === $user->user_id;
+        }
+        return false;
+    }
 }

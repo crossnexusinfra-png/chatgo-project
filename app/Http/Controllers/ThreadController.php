@@ -565,6 +565,25 @@ class ThreadController extends Controller
             return back()->withErrors(['title' => \App\Services\LanguageService::trans('duplicate_submission', $lang)])->withInput();
         }
         try {
+        // 通報による制限中の追加制限（ルーム作成/ファイル/URL）
+        $limits = new \App\Services\ReportRestrictionLimitsService();
+        $threadLimit = $limits->threadCreateLimitPerDay((int) $user->user_id);
+        $todayThreadCount = $limits->todayThreadCreateCount((int) $user->user_id);
+        if ($todayThreadCount >= $threadLimit) {
+            $key = $threadLimit <= 1 ? 'thread_creation_limit_restricted_exceeded' : 'thread_creation_limit_exceeded';
+            return back()->withErrors(['title' => \App\Services\LanguageService::trans($key, $lang)])
+                ->withInput();
+        }
+
+        if ($request->hasFile('image')) {
+            $fileLimit = $limits->fileUploadLimitPerDay((int) $user->user_id);
+            $todayFiles = $limits->todayFileUploadCount((int) $user->user_id);
+            if ($todayFiles >= $fileLimit) {
+                return back()->withErrors(['image' => \App\Services\LanguageService::trans('report_restriction_file_limit_exceeded', $lang)])
+                    ->withInput();
+            }
+        }
+
         // 画像アップロードの処理
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -639,21 +658,7 @@ class ThreadController extends Controller
             }
         }
 
-        // スレッド作成数の上限チェック（1日2つまで、標準時の0時リセット）
-        if (auth()->check()) {
-            $userId = auth()->user()->user_id;
-            $todayStart = now()->startOfDay();
-            $todayEnd = now()->endOfDay();
-            
-            $todayThreadCount = Thread::where('user_id', $userId)
-                ->whereBetween('created_at', [$todayStart, $todayEnd])
-                ->count();
-            
-            if ($todayThreadCount >= 2) {
-                return back()->withErrors(['title' => \App\Services\LanguageService::trans('thread_creation_limit_exceeded', $lang)])
-                    ->withInput();
-            }
-        }
+        // 既存のスレッド作成上限チェックは、上の制限チェックで包含
 
         // R18タグ（3種類）を定義（既に上で定義済み）
         // R18スレッドにするかどうかを判定（既に上で判定済み）
@@ -669,6 +674,13 @@ class ThreadController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            // 通報制限中: URL 1日5件まで
+            $urlLimit = $limits->urlPostLimitPerDay((int) $user->user_id);
+            $todayUrls = $limits->todayUrlPostCount((int) $user->user_id);
+            if ($todayUrls >= $urlLimit) {
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('report_restriction_url_limit_exceeded', $lang)]);
+            }
+
             \Log::info('ThreadController: URLs found in thread body (store)', [
                 'url_count' => count($urls),
                 'urls' => $urls
@@ -920,6 +932,13 @@ class ThreadController extends Controller
             ->values();
 
         $users = $this->buildUserMapByUserIds($userIds);
+
+        // プロフィール通報による制限中ユーザー（ユーザー名左にマーク表示用）
+        $profileRestrictedUserIds = \App\Models\ReportRestriction::where('type', 'profile')
+            ->where('status', 'active')
+            ->whereIn('user_id', $userIds->toArray())
+            ->pluck('user_id')
+            ->toArray();
         
         // レスポンスをthreadオブジェクトに設定（ビューで使用するため）
         $thread->responses = $initialResponses;
@@ -1189,7 +1208,8 @@ class ThreadController extends Controller
             'threadImageReportScore', 'isThreadImageBlurred', 'threadImageUrl', 'isR18Thread',
             'isResponseLimitReached', 'continuationRequestCount', 'hasUserContinuationRequest',
             'parentThread', 'continuationThread', 'isContinuationRequestLimitReached', 'continuationRequestThreshold',
-            'hasOwnerContinuationRequest', 'isCurrentUserThreadOwner', 'continuationNumber'
+            'hasOwnerContinuationRequest', 'isCurrentUserThreadOwner', 'continuationNumber',
+            'profileRestrictedUserIds'
         ));
     }
 

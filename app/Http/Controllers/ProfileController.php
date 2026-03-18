@@ -157,6 +157,15 @@ class ProfileController extends Controller
         Gate::authorize('update', $user);
         
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        // 通報による制限中はプロフィール変更不可
+        $restrictionService = new \App\Services\ReportRestrictionService();
+        if ($restrictionService->isUserRestrictedNow((int) $user->user_id)) {
+            return back()->withErrors(['email' => \App\Services\LanguageService::trans('profile_update_locked', $lang)])->withInput();
+        }
+        if ($user->profile_update_locked_until && $user->profile_update_locked_until->isFuture()) {
+            return back()->withErrors(['email' => \App\Services\LanguageService::trans('profile_update_locked', $lang)])->withInput();
+        }
         $messages = [
             'email.required' => \App\Services\LanguageService::trans('validation_email_required', $lang),
             'email.email' => \App\Services\LanguageService::trans('validation_email_email', $lang),

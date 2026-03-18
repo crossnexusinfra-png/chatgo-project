@@ -8,6 +8,7 @@ use App\Models\Thread;
 use App\Models\Response;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ReportRestrictionService
 {
@@ -93,6 +94,164 @@ class ReportRestrictionService
         return (int) ReportRestriction::where('user_id', $userId)->where('status', 'active')->count();
     }
 
+    public function acknowledgeFromMessage(AdminMessage $message): void
+    {
+        DB::transaction(function () use ($message) {
+            /** @var User|null $user */
+            $user = User::find($message->user_id);
+            if (!$user) {
+                throw new \RuntimeException('User not found');
+            }
+
+            $restriction = ReportRestriction::where('admin_message_id', $message->id)
+                ->where('user_id', $user->user_id)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$restriction) {
+                // 既に処理済み/存在しない場合は何もしない
+                return;
+            }
+
+            // 承認と同様に処理（ただし自認による軽減係数を適用）
+            $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
+            $profileMultiplier = (float) config('report_restrictions.profile_out_multiplier', 1.3);
+
+            $type = $restriction->type;
+
+            if ($type === 'thread' && $restriction->thread_id) {
+                $thread = Thread::withTrashed()->find($restriction->thread_id);
+                if ($thread) {
+                    $reports = \App\Models\Report::where('thread_id', $thread->thread_id)
+                        ->whereNull('approved_at')
+                        ->lockForUpdate()
+                        ->get();
+                    foreach ($reports as $rep) {
+                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
+                        $rep->out_count = $base * $selfAckMultiplier;
+                        $rep->is_approved = true;
+                        $rep->approved_at = now();
+                        $rep->save();
+                    }
+                    // ルーム削除（管理承認と同様にソフトデリート）
+                    if (!$thread->trashed()) {
+                        $thread->delete();
+                    }
+                    Cache::forget('thread_restriction_' . $thread->thread_id);
+                }
+            } elseif ($type === 'response' && $restriction->response_id) {
+                $response = Response::find($restriction->response_id);
+                if ($response) {
+                    $reports = \App\Models\Report::where('response_id', $response->response_id)
+                        ->whereNull('approved_at')
+                        ->lockForUpdate()
+                        ->get();
+                    foreach ($reports as $rep) {
+                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
+                        $rep->out_count = $base * $selfAckMultiplier;
+                        $rep->is_approved = true;
+                        $rep->approved_at = now();
+                        $rep->save();
+                    }
+                    // リプライ削除（現状ソフトデリート無しのため削除）
+                    $response->delete();
+                }
+            } elseif ($type === 'profile') {
+                $targetUserId = $restriction->reported_user_id ?: $user->user_id;
+                $target = User::find($targetUserId);
+                if ($target) {
+                    $reports = \App\Models\Report::where('reported_user_id', $target->user_id)
+                        ->whereNull('approved_at')
+                        ->lockForUpdate()
+                        ->get();
+                    foreach ($reports as $rep) {
+                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
+                        $rep->out_count = $base * $selfAckMultiplier * $profileMultiplier;
+                        $rep->is_approved = true;
+                        $rep->approved_at = now();
+                        $rep->save();
+                    }
+
+                    // 自己紹介文を無記載に戻し、1ヶ月変更不可
+                    $lockDays = (int) config('report_restrictions.profile_lock_days', 30);
+                    $target->bio = null;
+                    $target->profile_update_locked_until = now()->addDays($lockDays);
+                    $target->save();
+                }
+            }
+
+            // 制限を了承済みに
+            $restriction->status = 'acknowledged';
+            $restriction->acknowledged_at = now();
+            $restriction->save();
+
+            // メッセージを処理済みに
+            $message->reply_used = true;
+            $message->save();
+
+            // 凍結判定（アウト数に基づく既存ロジック）
+            $this->applyOutCountFreezeIfNeeded($user);
+
+            // 同時制限5件以上なら一時凍結
+            $this->applyRestrictionCountFreezeIfNeeded($user);
+        });
+    }
+
+    private function applyOutCountFreezeIfNeeded(User $user): void
+    {
+        // AdminController の private 実装を簡易的に踏襲（同条件）
+        \App\Models\Report::resetExpiredOutCounts();
+        $outCount = $user->calculateOutCount();
+
+        if ($user->shouldBePermanentlyBanned()) {
+            $user->is_permanently_banned = true;
+            $user->frozen_until = null;
+            $user->save();
+            return;
+        }
+
+        if ($user->shouldBeTemporarilyFrozen()) {
+            $freezeUntil = $user->calculateFreezeDuration();
+            if ($freezeUntil) {
+                $wasFrozen = $user->frozen_until && $user->frozen_until->isFuture();
+                $user->frozen_until = $freezeUntil;
+                $user->freeze_count++;
+                $user->save();
+                if (!$wasFrozen) {
+                    $user->logFreeze($freezeUntil, '通報アウト数が2以上に達したため一時凍結');
+                }
+            }
+        } else {
+            if ($outCount < 1.0 && $user->frozen_until) {
+                $user->freeze_count = 0;
+                $user->frozen_until = null;
+                $user->save();
+                $user->logFreeze(null, 'アウト数が0になったため凍結解除');
+            }
+        }
+    }
+
+    private function applyRestrictionCountFreezeIfNeeded(User $user): void
+    {
+        $threshold = (int) config('report_restrictions.freeze_threshold', 5);
+        $activeCount = $this->activeRestrictionCount((int) $user->user_id);
+        if ($activeCount < $threshold) {
+            return;
+        }
+        if ($user->is_permanently_banned) {
+            return;
+        }
+        $hours = (int) config('report_restrictions.freeze_duration_hours', 24);
+        $until = now()->addHours($hours);
+        if ($user->frozen_until && $user->frozen_until->isFuture() && $user->frozen_until->gte($until)) {
+            return;
+        }
+        $user->frozen_until = $until;
+        $user->save();
+        $user->logFreeze($until, '通報制限を同時に5件以上受けているため一時凍結');
+    }
+
     /**
      * @param array $attrs Restriction create attrs (must include type,user_id)
      * @param callable():AdminMessage $createMessage
@@ -121,7 +280,15 @@ class ReportRestrictionService
             $message = $createMessage();
             $attrs['admin_message_id'] = $message?->id;
 
-            return ReportRestriction::create($attrs);
+            $created = ReportRestriction::create($attrs);
+
+            // 同時制限5件以上なら一時凍結（制限が発生した瞬間にも適用）
+            $u = User::find($attrs['user_id']);
+            if ($u) {
+                $this->applyRestrictionCountFreezeIfNeeded($u);
+            }
+
+            return $created;
         });
     }
 

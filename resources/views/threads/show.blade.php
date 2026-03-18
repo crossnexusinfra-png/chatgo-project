@@ -85,6 +85,9 @@
                                 @else
                                     <div class="user-avatar-placeholder">👤</div>
                                 @endif
+                                @if(!empty($profileRestrictedUserIds) && in_array(($threadUser->user_id ?? null), $profileRestrictedUserIds))
+                                    <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
+                                @endif
                                 <span>{{ $threadDisplayUserName }}</span>
                             </span>
                         @else
@@ -102,6 +105,9 @@
                                     <img src="{{ $imageUrl }}" alt="{{ $threadUser->username }}" class="user-avatar">
                                 @else
                                     <div class="user-avatar-placeholder">👤</div>
+                                @endif
+                                @if(!empty($profileRestrictedUserIds) && in_array(($threadUser->user_id ?? null), $profileRestrictedUserIds))
+                                    <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
                                 @endif
                                 <span>{{ $threadDisplayUserName }}</span>
                             </a>

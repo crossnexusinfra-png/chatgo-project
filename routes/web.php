@@ -216,6 +216,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{message}/receive-coin', [NotificationsController::class, 'receiveCoin'])->name('notifications.receive-coin');
     Route::post('/notifications/{message}/r18-approve', [NotificationsController::class, 'approveR18Change'])->name('notifications.r18-approve');
     Route::post('/notifications/{message}/r18-reject', [NotificationsController::class, 'rejectR18Change'])->name('notifications.r18-reject');
+    Route::post('/notifications/{message}/report-acknowledge', [NotificationsController::class, 'acknowledgeReportRestriction'])->name('notifications.report-acknowledge');
 });
 // GETで直接アクセスされた場合はお知らせページまたはログインへ
 Route::get('/notifications/{message}/read', function() {

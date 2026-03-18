@@ -83,6 +83,17 @@ class ResponseController extends Controller
             return back()->withErrors(['restricted' => \App\Services\LanguageService::trans('thread_restricted_no_post', $lang)]);
         }
 
+        // 通報による制限中の追加制限（ファイル/URL）
+        $limits = new \App\Services\ReportRestrictionLimitsService();
+        $userIdForLimits = auth()->user()->user_id;
+        if ($request->hasFile('media_file')) {
+            $fileLimit = $limits->fileUploadLimitPerDay((int) $userIdForLimits);
+            $todayFiles = $limits->todayFileUploadCount((int) $userIdForLimits);
+            if ($todayFiles >= $fileLimit) {
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('report_restriction_file_limit_exceeded', $lang)]);
+            }
+        }
+
         // レスポンス数上限チェック
         $maxResponses = config('performance.thread.max_responses', 60);
         $currentResponseCount = $thread->responses()->count();
@@ -295,6 +306,12 @@ class ResponseController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            $urlLimit = $limits->urlPostLimitPerDay((int) $userIdForLimits);
+            $todayUrls = $limits->todayUrlPostCount((int) $userIdForLimits);
+            if ($todayUrls >= $urlLimit) {
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('report_restriction_url_limit_exceeded', $lang)]);
+            }
+
             \Log::info('ResponseController: URLs found in response (store)', [
                 'url_count' => count($urls),
                 'urls' => $urls
@@ -501,6 +518,17 @@ class ResponseController extends Controller
             return back()->withErrors(['restricted' => \App\Services\LanguageService::trans('thread_restricted_no_post', $lang)]);
         }
 
+        // 通報による制限中の追加制限（ファイル/URL）
+        $limits = new \App\Services\ReportRestrictionLimitsService();
+        $userIdForLimits = auth()->user()->user_id;
+        if ($request->hasFile('media_file')) {
+            $fileLimit = $limits->fileUploadLimitPerDay((int) $userIdForLimits);
+            $todayFiles = $limits->todayFileUploadCount((int) $userIdForLimits);
+            if ($todayFiles >= $fileLimit) {
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('report_restriction_file_limit_exceeded', $lang)]);
+            }
+        }
+
         // レスポンス数上限チェック
         $maxResponses = config('performance.thread.max_responses', 60);
         $currentResponseCount = $thread->responses()->count();
@@ -679,6 +707,12 @@ class ResponseController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            $urlLimit = $limits->urlPostLimitPerDay((int) $userIdForLimits);
+            $todayUrls = $limits->todayUrlPostCount((int) $userIdForLimits);
+            if ($todayUrls >= $urlLimit) {
+                return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('report_restriction_url_limit_exceeded', $lang)]);
+            }
+
             \Log::info('ResponseController: URLs found in response (reply)', [
                 'url_count' => count($urls),
                 'urls' => $urls

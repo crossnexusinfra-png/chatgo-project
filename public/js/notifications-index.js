@@ -479,6 +479,66 @@
         }
     };
 
+    // 通報制限の了承を実行する関数
+    window.acknowledgeReportRestriction = async function(event, messageId) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const userId = config.userId;
+        if (!userId) {
+            alert(translations.loginRequiredError);
+            return;
+        }
+
+        const button = event.target;
+        const section = button.closest('.report-restriction-ack-section');
+        const buttons = section ? section.querySelectorAll('button') : [];
+        buttons.forEach(btn => { btn.disabled = true; });
+        button.textContent = translations.processing;
+
+        try {
+            const response = await fetch(`/notifications/${messageId}/report-acknowledge`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('HTTP error:', response.status, errorText);
+                const result = await response.json().catch(() => ({ error: translations.reportAckFailed }));
+                alert(result.error || translations.reportAckFailed);
+                buttons.forEach(btn => { btn.disabled = false; });
+                button.textContent = (translations && translations.reportAckButton) ? translations.reportAckButton : '了承';
+                return;
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                if (section) {
+                    section.innerHTML = '<div class="report-restriction-ack-success-message">' + (translations.reportAckSuccess || '処理しました') + '</div>';
+                }
+                const message = messagesData.find(m => m.id === messageId);
+                if (message) message.reply_used = true;
+                alert(translations.reportAckSuccess);
+            } else {
+                alert(result.error || translations.reportAckFailed);
+                buttons.forEach(btn => { btn.disabled = false; });
+                button.textContent = (translations && translations.reportAckButton) ? translations.reportAckButton : '了承';
+            }
+        } catch (error) {
+            console.error('Failed to acknowledge report restriction:', error);
+            alert(translations.reportAckFailed);
+            buttons.forEach(btn => { btn.disabled = false; });
+            button.textContent = (translations && translations.reportAckButton) ? translations.reportAckButton : '了承';
+        }
+    };
+
     // 未読数のバッジを更新する関数（CSP対応: 表示はクラスで制御）
     function updateUnreadBadge() {
         const unreadItems = document.querySelectorAll('[data-is-read="false"]');
@@ -589,6 +649,14 @@
                 e.stopPropagation();
                 const mid = parseInt(rejectBtn.dataset.messageId, 10);
                 if (!isNaN(mid)) window.rejectR18Change(e, mid);
+                return;
+            }
+            const reportAckBtn = e.target.closest('.report-ack-btn');
+            if (reportAckBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = parseInt(reportAckBtn.dataset.messageId, 10);
+                if (!isNaN(mid)) window.acknowledgeReportRestriction(e, mid);
                 return;
             }
             const item = e.target.closest('.notification-item');

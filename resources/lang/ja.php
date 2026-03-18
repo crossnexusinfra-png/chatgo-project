@@ -350,6 +350,12 @@ return [
     'r18_change_reject_failed' => 'R18変更の拒否に失敗しました。',
     'r18_change_approve_success' => 'ルームをR18ルームに変更しました。',
     'r18_change_reject_success' => 'R18ルームへの変更を拒否しました。',
+
+    // 通報制限（了承）
+    'report_restriction_ack_title' => '通報による制限の確認（了承）',
+    'report_restriction_ack_button' => '了承',
+    'report_restriction_ack_success' => '了承を受け付けました。',
+    'report_restriction_ack_failed' => '了承処理に失敗しました。',
     
     // リプライ操作
     'thread_restricted_no_post' => 'このルームは通報により機能が制限されており、リプライの投稿はできません。閲覧のみ可能です。',
@@ -361,6 +367,7 @@ return [
     'login_failed' => 'ログイン情報が正しくありません。',
     'login_required_error' => 'ログインが必要です',
     'acknowledgment_success' => '注意事項を了承しました。',
+    'profile_update_locked' => '通報による制限のため、プロフィールは変更できません。',
     
     // 通報
     'report_login_required' => '通報するにはログインが必要です。',
@@ -703,6 +710,12 @@ return [
     
     // ルーム作成制限
     'thread_creation_limit_exceeded' => 'ルームは1日2つまでしか作成できません。',
+    'thread_creation_limit_restricted_exceeded' => '通報による制限のため、ルームは1日1つまでしか作成できません。',
+
+    'report_restriction_file_limit_exceeded' => '通報による制限のため、ファイルの投稿は1日5件までです。',
+    'report_restriction_url_limit_exceeded' => '通報による制限のため、URLを含む投稿は1日5件までです。',
+
+    'profile_restricted_mark_title' => 'プロフィールが通報により制限されています',
     
     // ルームリプライ上限
     'thread_response_limit_reached' => 'このルームはリプライ数の上限（500リプライ）に達しました。続きのルームを作成する要望を送信できます。',

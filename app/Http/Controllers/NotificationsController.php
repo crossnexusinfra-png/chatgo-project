@@ -444,6 +444,51 @@ class NotificationsController extends Controller
             $lock->release();
         }
     }
+
+    /**
+     * 通報制限の了承（自認）を実行する
+     */
+    public function acknowledgeReportRestriction(Request $request, AdminMessage $message)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $userId = auth()->id();
+
+        if (!$userId) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('login_required_error', $lang)], 401);
+        }
+
+        // IDOR防止: 対象メッセージに対する権限チェック
+        \Illuminate\Support\Facades\Gate::authorize('acknowledgeReportRestriction', $message);
+
+        // 重複実行防止
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.report-acknowledge', $userId, (string) $message->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+            if ($message->title_key !== 'report_restriction_ack_title') {
+                return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
+            }
+            if ($message->reply_used) {
+                return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_already_processed', $lang)], 400);
+            }
+
+            try {
+                $service = new \App\Services\ReportRestrictionService();
+                $service->acknowledgeFromMessage($message);
+                return response()->json(['success' => true]);
+            } catch (\Throwable $e) {
+                \Log::error('Report restriction acknowledge failed', [
+                    'user_id' => $userId,
+                    'admin_message_id' => $message->id,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json(['error' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang)], 500);
+            }
+        } finally {
+            $lock->release();
+        }
+    }
 }
 
 
