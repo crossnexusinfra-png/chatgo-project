@@ -53,10 +53,10 @@
                     </button>
                 </div>
             </div>
-        @elseif(isset($m->title_key) && $m->title_key === 'report_restriction_ack_title' && !($m->reply_used ?? false))
+        @elseif(isset($m->title_key) && in_array($m->title_key, ['report_restriction_review_title', 'report_restriction_ack_title']) && !($m->reply_used ?? false))
             <div class="report-restriction-ack-section" data-message-id="{{ $m->id }}">
                 <div class="report-restriction-ack-buttons">
-                    <button type="button" class="report-ack-btn" data-message-id="{{ $m->id }}">
+                    <button type="button" class="report-ack-btn coin-receive-btn" data-message-id="{{ $m->id }}">
                         {{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}
                     </button>
                 </div>

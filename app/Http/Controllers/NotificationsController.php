@@ -466,7 +466,8 @@ class NotificationsController extends Controller
             return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
         }
         try {
-            if ($message->title_key !== 'report_restriction_ack_title') {
+            $isReportRestrictionReview = in_array($message->title_key, ['report_restriction_review_title', 'report_restriction_ack_title'], true);
+            if (!$isReportRestrictionReview) {
                 return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
             }
             if ($message->reply_used) {

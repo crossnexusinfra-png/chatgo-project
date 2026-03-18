@@ -342,6 +342,13 @@ return [
     'r18_change_reject_failed' => 'Failed to reject R18 change.',
     'r18_change_approve_success' => 'Thread has been changed to an R18 thread.',
     'r18_change_reject_success' => 'R18 change request has been rejected.',
+
+    // Report restriction (review notice / acknowledge)
+    'report_restriction_review_title' => 'Regarding the review of reported content',
+    'report_restriction_ack_title' => 'Report restriction acknowledgment',
+    'report_restriction_ack_button' => 'Acknowledge and delete',
+    'report_restriction_ack_success' => 'Acknowledgment received.',
+    'report_restriction_ack_failed' => 'Failed to process acknowledgment.',
     
     // Reply Operations
     'thread_restricted_no_post' => 'This room has restricted functionality due to a report. Reply posting is not allowed. Viewing only.',

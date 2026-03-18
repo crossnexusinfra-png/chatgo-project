@@ -113,7 +113,8 @@
 .notification-item.is-open .message-body,
 .notification-item.is-open .reply-section,
 .notification-item.is-open .coin-reward-section,
-.notification-item.is-open .r18-change-section {
+.notification-item.is-open .r18-change-section,
+.notification-item.is-open .report-restriction-ack-section {
     display: block;
 }
 
@@ -435,6 +436,29 @@
 }
 
 .r18-change-success-message {
+    padding: 8px;
+    background: #d1fae5;
+    border-radius: 6px;
+    color: #065f46;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* 通報制限了承セクション（ボタンは .coin-receive-btn でコイン受け取りと同じデザイン） */
+.report-restriction-ack-section {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.report-restriction-ack-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.report-restriction-ack-success-message {
     padding: 8px;
     background: #d1fae5;
     border-radius: 6px;

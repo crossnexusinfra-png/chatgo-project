@@ -660,7 +660,7 @@
                 return;
             }
             const item = e.target.closest('.notification-item');
-            if (item && !e.target.closest('.reply-section') && !e.target.closest('.r18-change-section') && !e.target.closest('.coin-reward-section')) {
+            if (item && !e.target.closest('.reply-section') && !e.target.closest('.r18-change-section') && !e.target.closest('.coin-reward-section') && !e.target.closest('.report-restriction-ack-section')) {
                 const mid = parseInt(item.dataset.messageId, 10);
                 if (!isNaN(mid)) window.toggleMessage(mid, item, e);
             }

@@ -351,9 +351,10 @@ return [
     'r18_change_approve_success' => 'ルームをR18ルームに変更しました。',
     'r18_change_reject_success' => 'R18ルームへの変更を拒否しました。',
 
-    // 通報制限（了承）
-    'report_restriction_ack_title' => '通報による制限の確認（了承）',
-    'report_restriction_ack_button' => '了承',
+    // 通報制限（審査通知・了承）
+    'report_restriction_review_title' => '通報対象の審査について',
+    'report_restriction_ack_title' => '通報による制限の確認（了承）', // 旧通知用（了承可否判定で使用）
+    'report_restriction_ack_button' => '了承して削除する',
     'report_restriction_ack_success' => '了承を受け付けました。',
     'report_restriction_ack_failed' => '了承処理に失敗しました。',
     

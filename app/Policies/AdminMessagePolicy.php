@@ -121,7 +121,7 @@ class AdminMessagePolicy
      */
     public function acknowledgeReportRestriction(User $user, AdminMessage $message): bool
     {
-        if ($message->title_key !== 'report_restriction_ack_title') {
+        if (!in_array($message->title_key, ['report_restriction_review_title', 'report_restriction_ack_title'], true)) {
             return false;
         }
         // 個人宛て前提（recipients 等には現状使わない）

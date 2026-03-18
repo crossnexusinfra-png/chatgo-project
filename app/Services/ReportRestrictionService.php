@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AdminMessage;
+use App\Models\Report;
 use App\Models\ReportRestriction;
 use App\Models\Thread;
 use App\Models\Response;
@@ -26,12 +27,14 @@ class ReportRestrictionService
             'user_id' => (int) $thread->user_id,
             'thread_id' => (int) $thread->thread_id,
         ], function () use ($thread) {
+            $reasons = $this->getReportReasonsForThread($thread->thread_id);
+            $body = $this->buildRestrictionNoticeBody('thread', $thread->title, null, $reasons);
             return $this->sendRestrictionAckMessage([
                 'user_id' => (int) $thread->user_id,
                 'thread_id' => (int) $thread->thread_id,
-                'title_key' => 'report_restriction_ack_title',
+                'title_key' => 'report_restriction_review_title',
                 'body_key' => null,
-                'body' => "あなたが作成したルーム「{$thread->title}」は、複数の通報により制限対象となりました。\n\n【重要】了承ボタンを押すと、このルーム（および関連するリプライ）が削除される場合があります。\n\n内容を確認のうえ、了承してください。",
+                'body' => $body,
             ]);
         });
     }
@@ -52,13 +55,16 @@ class ReportRestrictionService
             'thread_id' => (int) $response->thread_id,
         ], function () use ($response) {
             $threadTitle = $response->thread?->title ?? '（タイトルなし）';
+            $replySnippet = $response->body ? mb_strimwidth(strip_tags($response->body), 0, 80, '…') : '';
+            $reasons = $this->getReportReasonsForResponse($response->response_id);
+            $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons);
             return $this->sendRestrictionAckMessage([
                 'user_id' => (int) $response->user_id,
                 'thread_id' => (int) $response->thread_id,
                 'response_id' => (int) $response->response_id,
-                'title_key' => 'report_restriction_ack_title',
+                'title_key' => 'report_restriction_review_title',
                 'body_key' => null,
-                'body' => "あなたのリプライ（ルーム「{$threadTitle}」内）が、複数の通報により制限対象となりました。\n\n【重要】了承ボタンを押すと、このリプライが削除されます。\n\n内容を確認のうえ、了承してください。",
+                'body' => $body,
             ]);
         });
     }
@@ -106,7 +112,8 @@ class ReportRestrictionService
                         ->lockForUpdate()
                         ->get();
                     foreach ($reports as $rep) {
-                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
+                        $reason = (string) ($rep->reason ?? '');
+                        $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
                         $rep->out_count = $base * $selfAckMultiplier;
                         $rep->is_approved = true;
                         $rep->approved_at = now();
@@ -126,7 +133,8 @@ class ReportRestrictionService
                         ->lockForUpdate()
                         ->get();
                     foreach ($reports as $rep) {
-                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
+                        $reason = (string) ($rep->reason ?? '');
+                        $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
                         $rep->out_count = $base * $selfAckMultiplier;
                         $rep->is_approved = true;
                         $rep->approved_at = now();
@@ -246,6 +254,62 @@ class ReportRestrictionService
 
             return $created;
         });
+    }
+
+    /**
+     * 通報制限通知の本文を組み立てる（仕様: 通報対象の審査について）
+     *
+     * @param string $type 'thread' | 'response'
+     * @param string $roomTitle ルーム名
+     * @param string|null $replySnippet リプライ本文の抜粋（response の場合のみ）
+     * @param array<int, string> $reasons 通報理由のリスト
+     */
+    private function buildRestrictionNoticeBody(string $type, string $roomTitle, ?string $replySnippet, array $reasons): string
+    {
+        $targetLabel = $type === 'thread' ? 'ルーム' : 'リプライ';
+        $intro = "現在、あなたの作成した以下の（{$targetLabel}）は通報を受け、違反の有無について審査中です。\n\n";
+
+        $contentLine = $roomTitle;
+        if ($replySnippet !== null && $replySnippet !== '') {
+            $contentLine .= "\n" . $replySnippet;
+        }
+        $intro .= $contentLine . "\n\n";
+
+        $reasonBlock = count($reasons) > 0
+            ? implode("\n", array_map(fn (string $r) => '・' . $r, $reasons)) . "\n\n"
+            : '';
+
+        $rest = "審査中は一部機能の利用が制限されます。\n\n";
+        $rest .= "なお、通報内容を受け入れる場合は、以下の操作が可能です：\n\n";
+        $rest .= "了承して削除する\n";
+        $rest .= "　該当投稿は削除され、審査を待たずに処理が完了します。\n\n";
+        $rest .= "※本操作を行わない場合、審査は継続されます。";
+
+        return $intro . $reasonBlock . $rest;
+    }
+
+    /** @return array<int, string> */
+    private function getReportReasonsForThread(int $threadId): array
+    {
+        return Report::where('thread_id', $threadId)
+            ->whereNotNull('reason')
+            ->where('reason', '!=', '')
+            ->pluck('reason')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, string> */
+    private function getReportReasonsForResponse(int $responseId): array
+    {
+        return Report::where('response_id', $responseId)
+            ->whereNotNull('reason')
+            ->where('reason', '!=', '')
+            ->pluck('reason')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function sendRestrictionAckMessage(array $data): AdminMessage
