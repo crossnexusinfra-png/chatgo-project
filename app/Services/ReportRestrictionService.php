@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class ReportRestrictionService
 {
@@ -56,7 +57,7 @@ class ReportRestrictionService
             'thread_id' => (int) $response->thread_id,
         ], function () use ($response) {
             $threadTitle = $response->thread?->title ?? '（タイトルなし）';
-            $replySnippet = $response->body ? mb_strimwidth(strip_tags($response->body), 0, 80, '…') : '';
+            $replySnippet = $response->body ? $this->safeTrim(strip_tags($response->body), 80, '…') : '';
             $reasons = $this->getReportReasonsForResponse($response->response_id);
             $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons);
             return $this->sendRestrictionAckMessage([
@@ -170,7 +171,7 @@ class ReportRestrictionService
                     $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
                     $responseBody = (string) ($response->body ?? '');
                     // 念のため長文で通知が落ちないように抑制
-                    $responseBodyForMsg = mb_strimwidth($responseBody, 0, 500, '…');
+                    $responseBodyForMsg = $this->safeTrim($responseBody, 500, '…');
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
 
                         foreach ($reports as $rep) {
@@ -272,9 +273,30 @@ class ReportRestrictionService
                 if ($e instanceof \RuntimeException && str_starts_with((string) $e->getMessage(), '[ACK_STEP]')) {
                     throw $e;
                 }
-                throw new \RuntimeException('[ACK_STEP]unhandled', 0, $e);
+                $cls = get_class($e);
+                throw new \RuntimeException('[ACK_STEP]unhandled ' . $cls, 0, $e);
             }
         });
+    }
+
+    /**
+     * mbstring の有無に依存しない安全な文字詰め
+     */
+    private function safeTrim(string $text, int $limit, string $suffix = '…'): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+        if (function_exists('mb_strimwidth')) {
+            return (string) mb_strimwidth($text, 0, $limit, $suffix);
+        }
+        if (function_exists('mb_substr')) {
+            $t = (string) mb_substr($text, 0, $limit);
+            return strlen($text) > strlen($t) ? ($t . $suffix) : $t;
+        }
+        $t = substr($text, 0, $limit);
+        return strlen($text) > strlen($t) ? ($t . $suffix) : $t;
     }
 
     private function applyOutCountFreezeIfNeeded(User $user): void
