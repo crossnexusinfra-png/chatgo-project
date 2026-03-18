@@ -205,7 +205,6 @@ class ReportRestrictionService
                         if (!$thread->trashed()) {
                             try {
                                 $thread->delete();
-                                $result['deleted_thread'] = true;
                             } catch (\Throwable $e) {
                                 throw new \RuntimeException('[ACK_STEP]thread_delete_failed', 0, $e);
                             }
@@ -266,11 +265,24 @@ class ReportRestrictionService
                         // リプライ削除（現状ソフトデリート無しのため削除）
                         try {
                             $response->delete();
-                            $result['deleted_response'] = true;
                         } catch (\Throwable $e) {
                             throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
                         }
                     }
+                }
+
+                // 実DBの状態で結果を確定（「成功表示だが実際は未反映」を防ぐ）
+                try {
+                    if ($type === 'thread' && $threadId) {
+                        $t = Thread::withTrashed()->find($threadId);
+                        $result['deleted_thread'] = (bool) ($t && $t->trashed());
+                        $result['approved_reports'] = (int) Report::where('thread_id', $threadId)->whereNotNull('approved_at')->count();
+                    } elseif ($type === 'response' && $responseId) {
+                        $result['deleted_response'] = !Response::where('response_id', $responseId)->exists();
+                        $result['approved_reports'] = (int) Report::where('response_id', $responseId)->whereNotNull('approved_at')->count();
+                    }
+                } catch (\Throwable $e) {
+                    throw new \RuntimeException('[ACK_STEP]post_verify_failed', 0, $e);
                 }
 
             // ここまでで何もできていないなら成功扱いにしない（「受け付けたが何も起きない」を防ぐ）
