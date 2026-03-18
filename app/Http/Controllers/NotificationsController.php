@@ -452,6 +452,7 @@ class NotificationsController extends Controller
     {
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $userId = auth()->id();
+        $errorId = (string) \Illuminate\Support\Str::uuid();
 
         if (!$userId) {
             return response()->json(['error' => \App\Services\LanguageService::trans('login_required_error', $lang)], 401);
@@ -480,11 +481,18 @@ class NotificationsController extends Controller
                 return response()->json(['success' => true]);
             } catch (\Throwable $e) {
                 \Log::error('Report restriction acknowledge failed', [
+                    'error_id' => $errorId,
                     'user_id' => $userId,
                     'admin_message_id' => $message->id,
                     'error' => $e->getMessage(),
+                    'exception' => $e,
+                    'title_key' => $message->title_key,
+                    'thread_id' => $message->thread_id,
+                    'response_id' => $message->response_id,
                 ]);
-                return response()->json(['error' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang)], 500);
+                return response()->json([
+                    'error' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang) . " (error_id: {$errorId})",
+                ], 500);
             }
         } finally {
             $lock->release();
