@@ -480,6 +480,11 @@ class NotificationsController extends Controller
                 $service->acknowledgeFromMessage($message);
                 return response()->json(['success' => true]);
             } catch (\Throwable $e) {
+                $step = null;
+                $msg = (string) $e->getMessage();
+                if (str_starts_with($msg, '[ACK_STEP]')) {
+                    $step = trim(substr($msg, strlen('[ACK_STEP]')));
+                }
                 \Log::error('Report restriction acknowledge failed', [
                     'error_id' => $errorId,
                     'user_id' => $userId,
@@ -491,7 +496,8 @@ class NotificationsController extends Controller
                     'response_id' => $message->response_id,
                 ]);
                 return response()->json([
-                    'error' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang) . " (error_id: {$errorId})",
+                    'error' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang)
+                        . " (error_id: {$errorId}" . ($step ? ", step: {$step}" : '') . ")",
                 ], 500);
             }
         } finally {

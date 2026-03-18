@@ -85,7 +85,7 @@ class ReportRestrictionService
             /** @var User|null $user */
             $user = User::find($message->user_id);
             if (!$user) {
-                throw new \RuntimeException('User not found');
+                throw new \RuntimeException('[ACK_STEP]user_not_found');
             }
 
             $restriction = ReportRestriction::where('admin_message_id', $message->id)
@@ -142,7 +142,11 @@ class ReportRestrictionService
 
                     // ルーム削除（管理承認と同様にソフトデリート）
                     if (!$thread->trashed()) {
-                        $thread->delete();
+                        try {
+                            $thread->delete();
+                        } catch (\Throwable $e) {
+                            throw new \RuntimeException('[ACK_STEP]thread_delete_failed', 0, $e);
+                        }
                     }
                     Cache::forget('thread_restriction_' . $thread->thread_id);
                 }
@@ -185,24 +189,44 @@ class ReportRestrictionService
                     }
 
                     // リプライ削除（現状ソフトデリート無しのため削除）
-                    $response->delete();
+                    try {
+                        $response->delete();
+                    } catch (\Throwable $e) {
+                        throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
+                    }
                 }
             }
 
             // 制限を了承済みに
             $restriction->status = 'acknowledged';
             $restriction->acknowledged_at = now();
-            $restriction->save();
+            try {
+                $restriction->save();
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('[ACK_STEP]restriction_save_failed', 0, $e);
+            }
 
             // メッセージを処理済みに
             $message->reply_used = true;
-            $message->save();
+            try {
+                $message->save();
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('[ACK_STEP]message_save_failed', 0, $e);
+            }
 
             // 凍結判定（アウト数に基づく既存ロジック）
-            $this->applyOutCountFreezeIfNeeded($user);
+            try {
+                $this->applyOutCountFreezeIfNeeded($user);
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('[ACK_STEP]apply_out_count_freeze_failed', 0, $e);
+            }
 
             // 同時制限5件以上なら一時凍結
-            $this->applyRestrictionCountFreezeIfNeeded($user);
+            try {
+                $this->applyRestrictionCountFreezeIfNeeded($user);
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('[ACK_STEP]apply_restriction_count_freeze_failed', 0, $e);
+            }
         });
     }
 
