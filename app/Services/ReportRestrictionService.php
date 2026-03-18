@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 
 class ReportRestrictionService
 {
@@ -93,12 +94,19 @@ class ReportRestrictionService
 
                 // report_restrictions テーブルが本番で未反映でも了承処理は完走させる
                 $restriction = null;
-                if (Schema::hasTable('report_restrictions')) {
+                $hasRestrictionsTable = false;
+                try {
+                    $hasRestrictionsTable = Schema::hasTable('report_restrictions');
+                } catch (\Throwable $e) {
+                    // 権限/接続差分などで information_schema 参照が落ちるケースもあるため握る
+                    $hasRestrictionsTable = false;
+                }
+
+                if ($hasRestrictionsTable) {
                     try {
                         $restriction = ReportRestriction::where('admin_message_id', $message->id)
                             ->where('user_id', $user->user_id)
                             ->where('status', 'active')
-                            ->lockForUpdate()
                             ->first();
                     } catch (\Throwable $e) {
                         // テーブル/カラム差分等で参照に失敗してもフォールバックする
@@ -136,7 +144,6 @@ class ReportRestrictionService
                             $reports = Report::where('thread_id', $thread->thread_id)
                                 ->whereNull('approved_at')
                                 ->orderBy('created_at', 'asc')
-                                ->lockForUpdate()
                                 ->get();
                         } catch (\Throwable $e) {
                             throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
@@ -195,7 +202,6 @@ class ReportRestrictionService
                             $reports = Report::where('response_id', $response->response_id)
                                 ->whereNull('approved_at')
                                 ->orderBy('created_at', 'asc')
-                                ->lockForUpdate()
                                 ->get();
                         } catch (\Throwable $e) {
                             throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
@@ -246,10 +252,25 @@ class ReportRestrictionService
 
             // 制限を了承済みに
             // 本番DBのスキーマ差分に対応（存在するカラムのみ更新）
-            if ($restriction && Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'status')) {
+            $hasRestrictionsStatus = false;
+            $hasRestrictionsAckAt = false;
+            if ($restriction && $hasRestrictionsTable) {
+                try {
+                    $hasRestrictionsStatus = Schema::hasColumn('report_restrictions', 'status');
+                } catch (\Throwable $e) {
+                    $hasRestrictionsStatus = false;
+                }
+                try {
+                    $hasRestrictionsAckAt = Schema::hasColumn('report_restrictions', 'acknowledged_at');
+                } catch (\Throwable $e) {
+                    $hasRestrictionsAckAt = false;
+                }
+            }
+
+            if ($restriction && $hasRestrictionsTable && $hasRestrictionsStatus) {
                 $restriction->status = 'acknowledged';
             }
-            if ($restriction && Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'acknowledged_at')) {
+            if ($restriction && $hasRestrictionsTable && $hasRestrictionsAckAt) {
                 $restriction->acknowledged_at = now();
             }
             try {
@@ -260,9 +281,9 @@ class ReportRestrictionService
                 // 本番DBでマイグレーション未反映/制約差分がある場合のフォールバック
                 // ここで処理全体を止めない（削除/通報承認を優先）
                 try {
-                    if (Schema::hasTable('report_restrictions')) {
+                    if ($hasRestrictionsTable) {
                         // まずは「非active化」さえできればよい（active判定から外す）
-                        if (Schema::hasColumn('report_restrictions', 'status')) {
+                        if ($hasRestrictionsStatus) {
                             DB::table('report_restrictions')
                                 ->where('id', $restriction->id)
                                 ->update([
@@ -308,8 +329,14 @@ class ReportRestrictionService
                 if ($e instanceof \RuntimeException && str_starts_with((string) $e->getMessage(), '[ACK_STEP]')) {
                     throw $e;
                 }
-                if ($e instanceof \Illuminate\Database\QueryException) {
-                    throw new \RuntimeException('[ACK_STEP]db_query_exception', 0, $e);
+                if ($e instanceof QueryException) {
+                    // SQLSTATE/ドライバメッセージを step に付けて原因特定を容易にする
+                    $sqlState = $e->errorInfo[0] ?? null;
+                    $code = $e->errorInfo[1] ?? null;
+                    $step = '[ACK_STEP]db_query_exception'
+                        . ($sqlState ? " sqlstate={$sqlState}" : '')
+                        . ($code !== null ? " code={$code}" : '');
+                    throw new \RuntimeException($step, 0, $e);
                 }
                 $cls = get_class($e);
                 throw new \RuntimeException('[ACK_STEP]unhandled ' . $cls, 0, $e);
