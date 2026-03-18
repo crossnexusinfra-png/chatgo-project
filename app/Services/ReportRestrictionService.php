@@ -63,27 +63,6 @@ class ReportRestrictionService
         });
     }
 
-    public function ensureRestrictionCreatedForProfile(User $user): ?ReportRestriction
-    {
-        if (!$user->shouldBeHidden()) {
-            return null;
-        }
-
-        return $this->firstOrCreateActive([
-            'type' => 'profile',
-            'user_id' => (int) $user->user_id,
-            'reported_user_id' => (int) $user->user_id,
-        ], function () use ($user) {
-            return $this->sendRestrictionAckMessage([
-                'user_id' => (int) $user->user_id,
-                'reported_user_id' => (int) $user->user_id,
-                'title_key' => 'report_restriction_ack_title',
-                'body_key' => null,
-                'body' => "あなたのプロフィールが、複数の通報により制限対象となりました。\n\n【重要】了承ボタンを押すと、自己紹介文は無記載に戻り、一定期間変更できなくなります。\n\n内容を確認のうえ、了承してください。",
-            ]);
-        });
-    }
-
     public function isUserRestrictedNow(int $userId): bool
     {
         return ReportRestriction::where('user_id', $userId)->where('status', 'active')->exists();
@@ -116,7 +95,6 @@ class ReportRestrictionService
 
             // 承認と同様に処理（ただし自認による軽減係数を適用）
             $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
-            $profileMultiplier = (float) config('report_restrictions.profile_out_multiplier', 1.3);
 
             $type = $restriction->type;
 
@@ -156,28 +134,6 @@ class ReportRestrictionService
                     }
                     // リプライ削除（現状ソフトデリート無しのため削除）
                     $response->delete();
-                }
-            } elseif ($type === 'profile') {
-                $targetUserId = $restriction->reported_user_id ?: $user->user_id;
-                $target = User::find($targetUserId);
-                if ($target) {
-                    $reports = \App\Models\Report::where('reported_user_id', $target->user_id)
-                        ->whereNull('approved_at')
-                        ->lockForUpdate()
-                        ->get();
-                    foreach ($reports as $rep) {
-                        $base = $rep->out_count ?: \App\Models\Report::getDefaultOutCount($rep->reason);
-                        $rep->out_count = $base * $selfAckMultiplier * $profileMultiplier;
-                        $rep->is_approved = true;
-                        $rep->approved_at = now();
-                        $rep->save();
-                    }
-
-                    // 自己紹介文を無記載に戻し、1ヶ月変更不可
-                    $lockDays = (int) config('report_restrictions.profile_lock_days', 30);
-                    $target->bio = null;
-                    $target->profile_update_locked_until = now()->addDays($lockDays);
-                    $target->save();
                 }
             }
 

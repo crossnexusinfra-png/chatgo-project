@@ -442,16 +442,6 @@ body {
     color: #333;
 }
 
-.report-profile-restricted-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 4px;
-    font-size: 12px;
-    line-height: 1;
-    vertical-align: middle;
-    opacity: 0.9;
-}
 
 /* 国旗表示のスタイル */
 .country-flags {

@@ -1269,6 +1269,9 @@ class AdminController extends Controller
             return back()->withErrors(['error' => 'ユーザーが見つかりません']);
         }
         
+        // プロフィール通報は凍結等の重みを調整できるよう係数化
+        $profileOutMultiplier = (float) config('report_restrictions.profile_out_multiplier', 1.3);
+        
         // 通報を承認（通報順位を取得するため、created_atでソート）
         $reports = Report::where('reported_user_id', $reportedUserId)
             ->whereNull('approved_at')
@@ -1280,7 +1283,7 @@ class AdminController extends Controller
         foreach ($reports as $report) {
             if (!$report->out_count) {
                 $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $updates[$report->report_id] = $defaultOutCount;
+                $updates[$report->report_id] = $defaultOutCount * $profileOutMultiplier;
             }
         }
         
@@ -1306,7 +1309,7 @@ class AdminController extends Controller
         foreach ($reports as $report) {
             if (!$report->out_count) {
                 $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $report->out_count = $defaultOutCount;
+                $report->out_count = $defaultOutCount * $profileOutMultiplier;
                 $report->save();
             }
         }

@@ -933,12 +933,7 @@ class ThreadController extends Controller
 
         $users = $this->buildUserMapByUserIds($userIds);
 
-        // プロフィール通報による制限中ユーザー（ユーザー名左にマーク表示用）
-        $profileRestrictedUserIds = \App\Models\ReportRestriction::where('type', 'profile')
-            ->where('status', 'active')
-            ->whereIn('user_id', $userIds->toArray())
-            ->pluck('user_id')
-            ->toArray();
+        $profileRestrictedUserIds = [];
         
         // レスポンスをthreadオブジェクトに設定（ビューで使用するため）
         $thread->responses = $initialResponses;

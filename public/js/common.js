@@ -247,7 +247,7 @@
             if (!btn || btn.classList.contains('reported-badge') || btn.tagName !== 'BUTTON') return;
             const threadId = btn.dataset.reportThreadId || null;
             const responseId = btn.dataset.reportResponseId || null;
-            const reportedUserId = btn.dataset.reportUserId || null;
+            const reportedUserId = null; // プロフィール通報は廃止
             // 通報変更ボタンはサーバーで既存内容を埋め込んでいるのでAPI不要
             const embeddedReason = (btn.dataset.reportReason !== undefined && btn.dataset.reportReason !== '') ? btn.dataset.reportReason : null;
             const embeddedDescription = (btn.dataset.reportDescription !== undefined) ? btn.dataset.reportDescription : null;
@@ -277,87 +277,7 @@
             const reportDescriptionInput = document.getElementById('report_description');
             if (!reportReasonSelect) return;
             
-            // プロフィール通報の場合
-            if (reportedUserId) {
-                // 既存オプションを削除してプロフィール用を追加
-                while (reportReasonSelect.options.length > 1) reportReasonSelect.remove(1);
-                [
-                    { value: 'スパム・迷惑行為', label: translations.reportReasonSpam || '' },
-                    { value: '攻撃的・不適切な内容', label: translations.reportReasonOffensive || '' },
-                    { value: '不適切なリンク・外部誘導', label: translations.reportReasonInappropriateLink || '' },
-                    { value: 'なりすまし・虚偽の人物情報', label: translations.reportReasonImpersonation || '' },
-                    { value: 'その他', label: translations.other || '' }
-                ].forEach(function(reason) {
-                    var opt = document.createElement('option');
-                    opt.value = reason.value;
-                    opt.textContent = reason.label;
-                    reportReasonSelect.appendChild(opt);
-                });
-                
-                // 通報内容修正ボタンの場合（Bladeから既存内容を埋め込み済み）
-                if (embeddedReason !== undefined && embeddedReason !== null && String(embeddedReason).trim() !== '') {
-                    reportReasonSelect.value = String(embeddedReason).trim();
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = (embeddedDescription != null) ? String(embeddedDescription) : '';
-                    }
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                    return;
-                }
-
-                // 新規通報または埋め込みデータが無い場合のみ、APIでDBから既存通報を取得して初期値として反映
-                var existingPath = (routes.existingReportRoute && routes.existingReportRoute.replace)
-                    ? routes.existingReportRoute.replace(/^https?:\/\/[^/]+/, '')
-                    : '';
-                if (!existingPath) existingPath = '/api/reports/existing';
-                var existingUrl = existingPath + '?' + new URLSearchParams({
-                    reported_user_id: reportedUserId || ''
-                });
-                var profileHeaders = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
-                if (typeof window.location !== 'undefined' && window.location.href) profileHeaders['Referer'] = window.location.href;
-                fetch(existingUrl, {
-                    credentials: 'same-origin',
-                    headers: profileHeaders
-                })
-                .then(function(response) {
-                    var ct = (response.headers.get('Content-Type') || '').toLowerCase();
-                    var isJson = ct.indexOf('application/json') !== -1;
-                    if (!isJson) return { exists: false };
-                    return response.text().then(function(text) {
-                        try {
-                            var d = JSON.parse(text);
-                            return response.ok ? d : { exists: false };
-                        } catch (e) { return { exists: false }; }
-                    });
-                })
-                .then(function(data) {
-                    var r = (data && data.exists && data.reason != null && data.reason !== undefined)
-                        ? String(data.reason).trim()
-                        : '';
-                    var d = (data && data.exists && data.description != null && data.description !== undefined)
-                        ? String(data.description)
-                        : '';
-                    if (r) {
-                        reportReasonSelect.value = r;
-                    } else {
-                        reportReasonSelect.value = reportReasonSelect.options[0] ? reportReasonSelect.options[0].value : '';
-                    }
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = d;
-                    }
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                })
-                .catch(function() {
-                    reportReasonSelect.value = reportReasonSelect.options[0] ? reportReasonSelect.options[0].value : '';
-                    if (reportDescriptionInput) {
-                        reportDescriptionInput.value = '';
-                    }
-                    reportModal.classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                });
-                return;
-            }
+            // プロフィール通報は廃止（reportedUserIdは常にnull）
             
             // ルーム・リプライ通報: 通報変更ボタンなら data 属性の既存内容を使う（API不要・Cloudflare通過）
             var data;

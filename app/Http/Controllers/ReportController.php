@@ -31,7 +31,7 @@ class ReportController extends Controller
 
         $threadId = $request->input('thread_id');
         $responseId = $request->input('response_id');
-        $reportedUserId = $request->input('reported_user_id');
+        $reportedUserId = null; // プロフィール通報は廃止
         $userId = Auth::id();
 
         $report = null;
@@ -49,10 +49,6 @@ class ReportController extends Controller
             }
             $report = Report::where('user_id', $userId)
                 ->where('response_id', $responseId)
-                ->first();
-        } elseif ($reportedUserId) {
-            $report = Report::where('user_id', $userId)
-                ->where('reported_user_id', $reportedUserId)
                 ->first();
         }
         
@@ -110,7 +106,7 @@ class ReportController extends Controller
 
         // 重複実行防止
         $userId = Auth::id();
-        $resourceId = $request->input('thread_id') ?: $request->input('response_id') ?: $request->input('reported_user_id');
+        $resourceId = $request->input('thread_id') ?: $request->input('response_id');
         $lock = \App\Services\DuplicateSubmissionLockService::acquire('report.store', $userId, $resourceId ? (string) $resourceId : null);
         if (!$lock) {
             return back()->withErrors(['report' => \App\Services\LanguageService::trans('duplicate_submission', $lang)]);
@@ -121,16 +117,14 @@ class ReportController extends Controller
         $validated = $request->validate([
             'thread_id' => 'nullable|exists:threads,thread_id',
             'response_id' => 'nullable|exists:responses,response_id',
-            'reported_user_id' => 'nullable|exists:users,user_id',
             'reason' => 'required|string|in:スパム・迷惑行為,攻撃的・不適切な内容,不適切なリンク・外部誘導,成人向けコンテンツが含まれる,成人向け以外のコンテンツ規制違反,異なる思想に関しての意見の押し付け、妨害,スレッド画像が第三者の著作権を侵害している可能性がある,スレッド画像に個人情報・他人の情報が含まれている,スレッド画像に不適切な内容が含まれている,なりすまし・虚偽の人物情報,その他',
             'description' => 'nullable|string|max:300',
         ]);
 
-        // スレッド、レスポンス、プロフィールのいずれか一方が必須
+        // スレッド、レスポンスのいずれか一方が必須（プロフィール通報は廃止）
         $targetCount = 0;
         if ($validated['thread_id']) $targetCount++;
         if ($validated['response_id']) $targetCount++;
-        if ($validated['reported_user_id']) $targetCount++;
         
         if ($targetCount === 0) {
             return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_thread_or_response_required', $lang)]);
@@ -149,19 +143,6 @@ class ReportController extends Controller
         ];
         if (in_array($validated['reason'], $threadImageReasons) && !$validated['thread_id']) {
             return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_thread_image_reason_thread_only', $lang)]);
-        }
-
-        // プロフィール通報の理由リスト
-        $profileReasons = [
-            'スパム・迷惑行為',
-            '攻撃的・不適切な内容',
-            '不適切なリンク・外部誘導',
-            'なりすまし・虚偽の人物情報',
-            'その他'
-        ];
-        // プロフィール通報の場合、プロフィール専用の理由のみ許可
-        if ($validated['reported_user_id'] && !in_array($validated['reason'], $profileReasons)) {
-            return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_profile_reason_only', $lang)]);
         }
 
         // 通報数上限チェック（未処理の通報数が10件以上の場合、通報を拒否）
@@ -183,30 +164,6 @@ class ReportController extends Controller
         $thread = null;
         $response = null;
         $reportedUser = null;
-
-        // プロフィールを通報する場合の処理
-        if ($validated['reported_user_id']) {
-            $reportedUser = User::findOrFail($validated['reported_user_id']);
-            
-            // 自分自身を通報できない
-            if ($reportedUser->user_id === $userId) {
-                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_self', $lang)]);
-            }
-            
-            // 警告状態（制限がかかっている）の場合、通報を拒否
-            if ($reportedUser->shouldBeHidden()) {
-                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_restricted_profile', $lang)]);
-            }
-            
-            // 承認または拒否済みのプロフィールを通報できない
-            $hasProcessedReport = Report::where('reported_user_id', $validated['reported_user_id'])
-                ->whereNotNull('approved_at')
-                ->exists();
-            
-            if ($hasProcessedReport) {
-                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_already_processed', $lang)]);
-            }
-        }
 
         // スレッドを通報する場合の処理
         if ($validated['thread_id']) {
@@ -291,10 +248,6 @@ class ReportController extends Controller
             $existingReport = Report::where('user_id', $userId)
                 ->where('response_id', $validated['response_id'])
                 ->first();
-        } elseif ($validated['reported_user_id']) {
-            $existingReport = Report::where('user_id', $userId)
-                ->where('reported_user_id', $validated['reported_user_id'])
-                ->first();
         }
 
         // 自由入力の通報理由（description）: HTMLタグを除去して保存（XSS等の防御）
@@ -320,7 +273,6 @@ class ReportController extends Controller
                 'user_id' => $userId,
                 'thread_id' => $validated['thread_id'] ?? null,
                 'response_id' => $validated['response_id'] ?? null,
-                'reported_user_id' => $validated['reported_user_id'] ?? null,
                 'reason' => $validated['reason'],
                 'description' => $description,
             ]);
@@ -339,11 +291,6 @@ class ReportController extends Controller
                 $r = Response::find($validated['response_id']);
                 if ($r) {
                     $restrictionService->ensureRestrictionCreatedForResponse($r);
-                }
-            } elseif (!empty($validated['reported_user_id'])) {
-                $u = User::find($validated['reported_user_id']);
-                if ($u) {
-                    $restrictionService->ensureRestrictionCreatedForProfile($u);
                 }
             }
         } catch (\Throwable $e) {

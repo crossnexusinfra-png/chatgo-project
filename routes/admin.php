@@ -26,8 +26,7 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         Route::post('/reports/response/{responseId}/reject', [AdminController::class, 'rejectResponseReports'])->name('reports.response.reject');
         Route::post('/reports/response/{responseId}/toggle-flag', [AdminController::class, 'toggleResponseFlag'])->name('reports.response.toggle-flag');
 
-        Route::post('/reports/profile/{reportedUserId}/approve', [AdminController::class, 'approveProfileReports'])->name('reports.profile.approve');
-        Route::post('/reports/profile/{reportedUserId}/reject', [AdminController::class, 'rejectProfileReports'])->name('reports.profile.reject');
+        // プロフィール通報は廃止
         
         Route::post('/reports/{reportId}/set-out-count', [AdminController::class, 'setReportOutCount'])->name('reports.set-out-count');
         Route::get('/suggestions', [AdminController::class, 'suggestions'])->name('suggestions');

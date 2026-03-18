@@ -145,9 +145,6 @@
                     @else
                         <div class="user-avatar-placeholder">👤</div>
                     @endif
-                    @if(!empty($profileRestrictedUserIds) && in_array(($responseUser->user_id ?? null), $profileRestrictedUserIds))
-                        <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
-                    @endif
                     <span class="response-user my-username">{{ $displayUserName }}</span>
                     @if($nationalityCode || $residenceCode)
                         <span class="country-flags">
@@ -179,9 +176,6 @@
                         @else
                             <div class="user-avatar-placeholder">👤</div>
                         @endif
-                        @if(!empty($profileRestrictedUserIds) && in_array(($responseUser->user_id ?? null), $profileRestrictedUserIds))
-                            <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
-                        @endif
                         <span class="response-user">{{ $displayUserName }}</span>
                         @if($nationalityCode || $residenceCode)
                             <span class="country-flags">
@@ -209,9 +203,6 @@
                         @else
                             <div class="user-avatar-placeholder">👤</div>
                         @endif
-                        @if(!empty($profileRestrictedUserIds) && in_array(($responseUser->user_id ?? null), $profileRestrictedUserIds))
-                            <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
-                        @endif
                         <span class="response-user">{{ $displayUserName }}</span>
                         @if($nationalityCode || $residenceCode)
                             <span class="country-flags">
@@ -230,9 +221,6 @@
                 @endif
             @endif
         @else
-            @if(!empty($profileRestrictedUserIds) && in_array(($response->user_id ?? null), $profileRestrictedUserIds))
-                <span class="report-profile-restricted-mark" title="{{ \App\Services\LanguageService::trans('profile_restricted_mark_title', $lang) }}">⚠️</span>
-            @endif
             <span class="response-user {{ $isMyResponse ? 'my-username' : '' }}">{{ $displayUserName }}</span>
             @if($nationalityCode || $residenceCode)
                 <span class="country-flags">

@@ -367,7 +367,7 @@ return [
     'login_failed' => 'ログイン情報が正しくありません。',
     'login_required_error' => 'ログインが必要です',
     'acknowledgment_success' => '注意事項を了承しました。',
-    'profile_update_locked' => '通報による制限のため、プロフィールは変更できません。',
+    // 'profile_update_locked' => '通報による制限のため、プロフィールは変更できません。', // 仕様変更で不使用
     
     // 通報
     'report_login_required' => '通報するにはログインが必要です。',
@@ -663,11 +663,12 @@ return [
     'report_reason_thread_image_inappropriate' => 'ルーム画像に不適切な内容が含まれている',
     'report_reason_impersonation' => 'なりすまし・虚偽の人物情報',
     'report_thread_image_reason_thread_only' => 'ルーム画像関連の通報理由はルーム通報時のみ使用できます。',
-    'report_profile_reason_only' => 'プロフィール通報では、プロフィール専用の通報理由のみ使用できます。',
-    'report_cannot_report_self' => '自分自身のプロフィールを通報することはできません。',
+    // プロフィール通報は廃止
+    // 'report_profile_reason_only' => 'プロフィール通報では、プロフィール専用の通報理由のみ使用できます。',
+    // 'report_cannot_report_self' => '自分自身のプロフィールを通報することはできません。',
     'report_cannot_report_own_thread' => '自分のルームを通報することはできません。',
     'report_cannot_report_own_response' => '自分のリプライを通報することはできません。',
-    'report_restricted_profile' => 'このプロフィールは制限されているため、通報できません。',
+    // 'report_restricted_profile' => 'このプロフィールは制限されているため、通報できません。',
     'thread_image_reported' => 'この画像は通報により表示できません',
     'thread_image_deleted' => '画像は削除されました',
     'report_description_label' => '詳細（任意）',

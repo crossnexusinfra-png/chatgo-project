@@ -80,32 +80,7 @@
                 <div class="profile-info-name-row">
                     <h2>{{ $displayUserName }}</h2>
                 </div>
-                @if(\Illuminate\Support\Facades\Auth::check() && !$isMyProfile)
-                    @php
-                        $existingProfileReport = \App\Models\Report::where('user_id', $currentUser->user_id)
-                            ->where('reported_user_id', $user->user_id)
-                            ->first();
-                        $isProfileRestricted = $user->shouldBeHidden();
-                    @endphp
-                    <div class="profile-info-report-row">
-                        {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
-                        @if(!$isProfileRestricted)
-                            @if($existingProfileReport && !$existingProfileReport->approved_at)
-                                <button
-                                    type="button"
-                                    class="report-btn"
-                                    data-report-user-id="{{ $user->user_id }}"
-                                    data-report-reason="{{ e($existingProfileReport->reason ?? '') }}"
-                                    data-report-description="{{ e($existingProfileReport->description ?? '') }}"
-                                >
-                                    {{ \App\Services\LanguageService::trans('report_change', $lang) }}
-                                </button>
-                            @elseif(!$existingProfileReport || !$existingProfileReport->approved_at)
-                                <button type="button" class="report-btn" data-report-user-id="{{ $user->user_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
-                            @endif
-                        @endif
-                    </div>
-                @endif
+                {{-- プロフィール通報は廃止 --}}
 
                 <div class="profile-details">
                     <div class="detail-item">
