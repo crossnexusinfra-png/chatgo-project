@@ -122,8 +122,8 @@ class ReportRestrictionService
                     $responseId = $restriction->response_id ? (int) $restriction->response_id : null;
                 }
 
-                // 承認と同様に処理（ただし自認による軽減係数を適用）
-                $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
+                // 承認と同様に処理（仕様変更: 自認によるアウト数軽減は行わない）
+                $selfAckMultiplier = 1.0;
 
                 if ($type === 'thread' && $threadId) {
                     try {
@@ -149,8 +149,7 @@ class ReportRestrictionService
                         foreach ($reports as $rep) {
                             $reason = (string) ($rep->reason ?? '');
                             $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
-                            // out_count は DB 的に 0.5〜 を前提としている箇所があるため、軽減しても 0.5 未満にしない
-                            $newOutCount = max(0.5, round($base * $selfAckMultiplier, 1));
+                            $newOutCount = round($base * $selfAckMultiplier, 1);
                             $rep->out_count = $newOutCount;
                             $rep->is_approved = true;
                             $rep->approved_at = now();
@@ -211,7 +210,7 @@ class ReportRestrictionService
                         foreach ($reports as $rep) {
                             $reason = (string) ($rep->reason ?? '');
                             $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
-                            $newOutCount = max(0.5, round($base * $selfAckMultiplier, 1));
+                            $newOutCount = round($base * $selfAckMultiplier, 1);
                             $rep->out_count = $newOutCount;
                             $rep->is_approved = true;
                             $rep->approved_at = now();
@@ -308,6 +307,9 @@ class ReportRestrictionService
             } catch (\Throwable $e) {
                 if ($e instanceof \RuntimeException && str_starts_with((string) $e->getMessage(), '[ACK_STEP]')) {
                     throw $e;
+                }
+                if ($e instanceof \Illuminate\Database\QueryException) {
+                    throw new \RuntimeException('[ACK_STEP]db_query_exception', 0, $e);
                 }
                 $cls = get_class($e);
                 throw new \RuntimeException('[ACK_STEP]unhandled ' . $cls, 0, $e);
