@@ -126,13 +126,21 @@ class ReportRestrictionService
                 $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
 
                 if ($type === 'thread' && $threadId) {
-                    $thread = Thread::withTrashed()->find($threadId);
+                    try {
+                        $thread = Thread::withTrashed()->find($threadId);
+                    } catch (\Throwable $e) {
+                        throw new \RuntimeException('[ACK_STEP]thread_find_failed', 0, $e);
+                    }
                     if ($thread) {
-                        $reports = Report::where('thread_id', $thread->thread_id)
-                            ->whereNull('approved_at')
-                            ->orderBy('created_at', 'asc')
-                            ->lockForUpdate()
-                            ->get();
+                        try {
+                            $reports = Report::where('thread_id', $thread->thread_id)
+                                ->whereNull('approved_at')
+                                ->orderBy('created_at', 'asc')
+                                ->lockForUpdate()
+                                ->get();
+                        } catch (\Throwable $e) {
+                            throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
+                        }
 
                     // 通報理由（重複除外）
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
@@ -178,13 +186,21 @@ class ReportRestrictionService
                         Cache::forget('thread_restriction_' . $thread->thread_id);
                     }
                 } elseif ($type === 'response' && $responseId) {
-                    $response = Response::find($responseId);
+                    try {
+                        $response = Response::find($responseId);
+                    } catch (\Throwable $e) {
+                        throw new \RuntimeException('[ACK_STEP]response_find_failed', 0, $e);
+                    }
                     if ($response) {
-                        $reports = Report::where('response_id', $response->response_id)
-                            ->whereNull('approved_at')
-                            ->orderBy('created_at', 'asc')
-                            ->lockForUpdate()
-                            ->get();
+                        try {
+                            $reports = Report::where('response_id', $response->response_id)
+                                ->whereNull('approved_at')
+                                ->orderBy('created_at', 'asc')
+                                ->lockForUpdate()
+                                ->get();
+                        } catch (\Throwable $e) {
+                            throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
+                        }
 
                     $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
                     $responseBody = (string) ($response->body ?? '');
@@ -400,17 +416,18 @@ class ReportRestrictionService
      */
     private function sendSelfAcknowledgeApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1): void
     {
-        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-        $content = $type === 'thread'
-            ? $threadTitle
-            : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
-
-        $bodyJa = "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
-
-        $userScore = Report::calculateUserReportScore($userId);
-        $coinAmount = $this->calculateCoinAmount($rank, $userScore);
-
         try {
+            $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
+            $content = $type === 'thread'
+                ? $threadTitle
+                : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
+
+            $bodyJa = "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
+
+            // ここもDBアクセスがあるため例外は握る（本処理を止めない）
+            $userScore = (float) Report::calculateUserReportScore($userId);
+            $coinAmount = $this->calculateCoinAmount($rank, $userScore);
+
             AdminMessage::create([
                 'title' => '通報内容対応完了のお知らせ',
                 'body' => $bodyJa,
@@ -435,15 +452,15 @@ class ReportRestrictionService
      */
     private function sendSelfAcknowledgeDeletionNotice(int $userId, string $type, string $threadTitle, ?string $responseBody, string $reasons): void
     {
-        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-        $content = $type === 'thread'
-            ? $threadTitle
-            : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
-
-        $reasonsBlock = $reasons !== '' ? "【通報理由】\n{$reasons}\n\n" : '';
-        $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
-
         try {
+            $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
+            $content = $type === 'thread'
+                ? $threadTitle
+                : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
+
+            $reasonsBlock = $reasons !== '' ? "【通報理由】\n{$reasons}\n\n" : '';
+            $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+
             AdminMessage::create([
                 'title' => '削除処理完了のお知らせ',
                 'body' => $bodyJa,
