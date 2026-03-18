@@ -91,24 +91,42 @@ class ReportRestrictionService
                     throw new \RuntimeException('[ACK_STEP]user_not_found');
                 }
 
-                $restriction = ReportRestriction::where('admin_message_id', $message->id)
-                    ->where('user_id', $user->user_id)
-                    ->where('status', 'active')
-                    ->lockForUpdate()
-                    ->first();
+                // report_restrictions テーブルが本番で未反映でも了承処理は完走させる
+                $restriction = null;
+                if (Schema::hasTable('report_restrictions')) {
+                    try {
+                        $restriction = ReportRestriction::where('admin_message_id', $message->id)
+                            ->where('user_id', $user->user_id)
+                            ->where('status', 'active')
+                            ->lockForUpdate()
+                            ->first();
+                    } catch (\Throwable $e) {
+                        // テーブル/カラム差分等で参照に失敗してもフォールバックする
+                        $restriction = null;
+                    }
+                }
 
                 if (!$restriction) {
-                    // 既に処理済み/存在しない場合は何もしない
-                    return;
+                    // 既に処理済み/存在しない or テーブル未反映の場合はメッセージの参照先で処理する
+                    $fallbackType = $message->response_id ? 'response' : ($message->thread_id ? 'thread' : null);
+                    if ($fallbackType === null) {
+                        // 対象不明
+                        return;
+                    }
+                    $type = $fallbackType;
+                    $threadId = $message->thread_id ? (int) $message->thread_id : null;
+                    $responseId = $message->response_id ? (int) $message->response_id : null;
+                } else {
+                    $type = $restriction->type;
+                    $threadId = $restriction->thread_id ? (int) $restriction->thread_id : null;
+                    $responseId = $restriction->response_id ? (int) $restriction->response_id : null;
                 }
 
                 // 承認と同様に処理（ただし自認による軽減係数を適用）
                 $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
 
-                $type = $restriction->type;
-
-                if ($type === 'thread' && $restriction->thread_id) {
-                    $thread = Thread::withTrashed()->find($restriction->thread_id);
+                if ($type === 'thread' && $threadId) {
+                    $thread = Thread::withTrashed()->find($threadId);
                     if ($thread) {
                         $reports = Report::where('thread_id', $thread->thread_id)
                             ->whereNull('approved_at')
@@ -159,8 +177,8 @@ class ReportRestrictionService
                         }
                         Cache::forget('thread_restriction_' . $thread->thread_id);
                     }
-                } elseif ($type === 'response' && $restriction->response_id) {
-                    $response = Response::find($restriction->response_id);
+                } elseif ($type === 'response' && $responseId) {
+                    $response = Response::find($responseId);
                     if ($response) {
                         $reports = Report::where('response_id', $response->response_id)
                             ->whereNull('approved_at')
@@ -213,14 +231,16 @@ class ReportRestrictionService
 
             // 制限を了承済みに
             // 本番DBのスキーマ差分に対応（存在するカラムのみ更新）
-            if (Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'status')) {
+            if ($restriction && Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'status')) {
                 $restriction->status = 'acknowledged';
             }
-            if (Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'acknowledged_at')) {
+            if ($restriction && Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'acknowledged_at')) {
                 $restriction->acknowledged_at = now();
             }
             try {
-                $restriction->save();
+                if ($restriction) {
+                    $restriction->save();
+                }
             } catch (\Throwable $e) {
                 // 本番DBでマイグレーション未反映/制約差分がある場合のフォールバック
                 // ここで処理全体を止めない（削除/通報承認を優先）
