@@ -10,6 +10,7 @@ use App\Models\Response;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class ReportRestrictionService
 {
@@ -198,28 +199,39 @@ class ReportRestrictionService
             }
 
             // 制限を了承済みに
-            $restriction->status = 'acknowledged';
-            $restriction->acknowledged_at = now();
+            // 本番DBのスキーマ差分に対応（存在するカラムのみ更新）
+            if (Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'status')) {
+                $restriction->status = 'acknowledged';
+            }
+            if (Schema::hasTable('report_restrictions') && Schema::hasColumn('report_restrictions', 'acknowledged_at')) {
+                $restriction->acknowledged_at = now();
+            }
             try {
                 $restriction->save();
             } catch (\Throwable $e) {
                 // 本番DBでマイグレーション未反映/制約差分がある場合のフォールバック
+                // ここで処理全体を止めない（削除/通報承認を優先）
                 try {
-                    // まずは「非active化」さえできればよい（active判定から外す）
-                    // status が enum 等で 'acknowledged' を許容しない可能性もあるため 'cleared' を試す
-                    DB::table('report_restrictions')
-                        ->where('id', $restriction->id)
-                        ->update([
-                            'status' => 'cleared',
-                            'updated_at' => now(),
-                        ]);
-                } catch (\Throwable $e2) {
-                    try {
-                        // 最後の手段: レコード削除（active判定から外す）
-                        DB::table('report_restrictions')->where('id', $restriction->id)->delete();
-                    } catch (\Throwable $e3) {
-                        throw new \RuntimeException('[ACK_STEP]restriction_save_failed', 0, $e);
+                    if (Schema::hasTable('report_restrictions')) {
+                        // まずは「非active化」さえできればよい（active判定から外す）
+                        if (Schema::hasColumn('report_restrictions', 'status')) {
+                            DB::table('report_restrictions')
+                                ->where('id', $restriction->id)
+                                ->update([
+                                    'status' => 'cleared',
+                                    'updated_at' => now(),
+                                ]);
+                        } else {
+                            // status が無い場合は削除で対応
+                            DB::table('report_restrictions')->where('id', $restriction->id)->delete();
+                        }
                     }
+                } catch (\Throwable $ignored) {
+                    \Log::warning('ReportRestriction save failed (ignored)', [
+                        'restriction_id' => $restriction->id ?? null,
+                        'error' => $e->getMessage(),
+                        'fallback_error' => $ignored->getMessage(),
+                    ]);
                 }
             }
 
