@@ -190,7 +190,12 @@ class Response extends Model
 
         // レスポンスが削除された時にスレッドのレスポンス数を更新
         static::deleted(function ($response) {
-            $response->thread->updateResponsesCountDown();
+            // 通報等でスレッドが先にソフトデリートされている場合、
+            // 通常のリレーションだと thread が null になるため withTrashed で取得する
+            $thread = $response->thread ?? Thread::withTrashed()->find($response->thread_id);
+            if ($thread) {
+                $thread->updateResponsesCountDown();
+            }
             // 削除ログを記録
             ResponseChangeLog::logDelete($response, 'レスポンスが削除されました');
         });
