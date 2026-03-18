@@ -262,12 +262,7 @@ class ReportRestrictionService
                         $this->sendSelfAcknowledgeDeletionNotice((int) $response->user_id, 'response', $threadTitle, $responseBodyForMsg, $reasonsText);
                     }
 
-                        // リプライ削除（現状ソフトデリート無しのため削除）
-                        try {
-                            $response->delete();
-                        } catch (\Throwable $e) {
-                            throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
-                        }
+                        // 仕様: 管理者画面の承認と同じ（レスポンスは削除しない）
                     }
                 }
 
@@ -567,7 +562,12 @@ class ReportRestrictionService
                 : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
 
             $reasonsBlock = $reasons !== '' ? "【通報理由】\n{$reasons}\n\n" : '';
-            $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+            if ($type === 'thread') {
+                $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+            } else {
+                // 仕様: 管理者画面の承認と同じ（レスポンスは削除しない）
+                $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+            }
 
             AdminMessage::create([
                 'title' => '削除処理完了のお知らせ',
