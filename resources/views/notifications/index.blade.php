@@ -11,7 +11,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/notifications.css') }}">
+<link rel="stylesheet" href="{{ asset('css/notifications.css') }}?v={{ @filemtime(public_path('css/notifications.css')) ?: time() }}">
 @endpush
 
 @section('content')

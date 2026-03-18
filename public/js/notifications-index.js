@@ -509,10 +509,20 @@
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('HTTP error:', response.status, errorText);
-                const result = await response.json().catch(() => ({ error: translations.reportAckFailed }));
-                alert(result.error || translations.reportAckFailed);
+                const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                let errorMessage = translations.reportAckFailed;
+                try {
+                    if (contentType.includes('application/json')) {
+                        const result = await response.json();
+                        errorMessage = result?.error || errorMessage;
+                    } else {
+                        const text = await response.text();
+                        console.error('HTTP error (non-JSON):', response.status, text);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                alert(errorMessage || translations.reportAckFailed);
                 buttons.forEach(btn => { btn.disabled = false; });
                 button.textContent = (translations && translations.reportAckButton) ? translations.reportAckButton : '了承';
                 return;
