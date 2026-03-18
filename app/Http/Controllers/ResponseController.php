@@ -428,12 +428,32 @@ class ResponseController extends Controller
         $userId = auth()->user()->user_id;
         $sendTimeLang = \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN');
 
+        $parentResponseId = $request->parent_response_id ? (int) $request->parent_response_id : null;
+        $parentSnapshotUsername = null;
+        $parentSnapshotBody = null;
+        if ($parentResponseId) {
+            $parent = Response::where('thread_id', $thread->thread_id)
+                ->where('response_id', $parentResponseId)
+                ->first();
+            if ($parent) {
+                $parentUser = $parent->user_id ? \App\Models\User::find($parent->user_id) : null;
+                $parentSnapshotUsername = $parentUser?->username ?? '削除されたユーザー';
+                $parentSnapshotBody = $parent->body ? mb_strimwidth(strip_tags((string) $parent->body), 0, 200, '…') : null;
+            } else {
+                // 不正な親IDは無視
+                $parentResponseId = null;
+            }
+        }
+
         $createdResponse = $thread->responses()->create([
             'user_id' => $userId,
             'body' => $request->body ?? '',
             'source_lang' => $sendTimeLang,
             'responses_num' => $responsesNum,
-            'parent_response_id' => $request->parent_response_id ?? null,
+            'parent_response_id' => $parentResponseId,
+            'parent_original_response_id' => $parentResponseId,
+            'parent_snapshot_username' => $parentSnapshotUsername,
+            'parent_snapshot_body' => $parentSnapshotBody,
             'media_file' => $mediaFile,
             'media_type' => $mediaType,
         ]);
@@ -825,12 +845,30 @@ class ResponseController extends Controller
             ? \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN')
             : 'EN';
 
+        $parentSnapshotUsername = null;
+        $parentSnapshotBody = null;
+        try {
+            $parentUser = $response->user_id ? \App\Models\User::find($response->user_id) : null;
+            $parentSnapshotUsername = $parentUser?->username ?? '削除されたユーザー';
+            $parentSnapshotBody = $response->body ? mb_strimwidth(strip_tags((string) $response->body), 0, 200, '…') : null;
+        } catch (\Throwable $e) {
+            // スナップショットは補助情報なので失敗しても返信投稿自体は継続
+            \Log::warning('Failed to build parent snapshot for reply', [
+                'thread_id' => $thread->thread_id ?? null,
+                'parent_response_id' => $response->response_id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $createdResponse = $thread->responses()->create([
             'user_id' => $userId,
             'body' => $request->body ?? '',
             'source_lang' => $sendTimeLang,
             'responses_num' => $responsesNum,
             'parent_response_id' => $response->response_id,
+            'parent_original_response_id' => $response->response_id,
+            'parent_snapshot_username' => $parentSnapshotUsername,
+            'parent_snapshot_body' => $parentSnapshotBody,
             'media_file' => $mediaFile,
             'media_type' => $mediaType,
         ]);

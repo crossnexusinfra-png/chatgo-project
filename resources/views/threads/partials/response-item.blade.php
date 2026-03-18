@@ -120,6 +120,16 @@
             <span class="reply-source-user">{{ $parentDisplayUserName }}</span>
             <span class="reply-source-body">{!! linkify_urls($response->parentResponse->display_body ?? $response->parentResponse->body) !!}</span>
         </div>
+    @elseif(!empty($response->parent_original_response_id) || !empty($response->parent_snapshot_username) || !empty($response->parent_snapshot_body))
+        @php
+            $deletedParentUsername = $response->parent_snapshot_username ?? '削除されたユーザー';
+            $deletedParentBody = $response->parent_snapshot_body ?? '（削除されたレスポンス）';
+        @endphp
+        <div class="reply-source reply-source-deleted" aria-disabled="true">
+            <span class="reply-source-user">{{ $deletedParentUsername }}</span>
+            <span class="reply-source-body">{{ $deletedParentBody }}</span>
+            <span class="reply-source-deleted-label">（削除済み）</span>
+        </div>
     @endif
 
     @if($shouldBeHidden)
@@ -237,7 +247,7 @@
             @endif
         @endif
         
-        @if($response->parentResponse)
+        @if($response->parentResponse || !empty($response->parent_original_response_id))
             <span class="reply-indicator">{{ \App\Services\LanguageService::trans('reply_indicator', $lang) }}</span>
         @endif
     </div>

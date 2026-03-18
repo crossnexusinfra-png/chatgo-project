@@ -23,6 +23,9 @@ class Response extends Model
     protected $fillable = [
         'thread_id',
         'parent_response_id',
+        'parent_original_response_id',
+        'parent_snapshot_username',
+        'parent_snapshot_body',
         'body',
         'source_lang',
         'user_id',
