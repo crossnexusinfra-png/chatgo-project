@@ -332,14 +332,20 @@ class ReportRestrictionService
             try {
                 $this->applyOutCountFreezeIfNeeded($user);
             } catch (\Throwable $e) {
-                throw new \RuntimeException('[ACK_STEP]apply_out_count_freeze_failed', 0, $e);
+                \Log::warning('applyOutCountFreezeIfNeeded failed (ignored)', [
+                    'user_id' => $user->user_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             // 同時制限5件以上なら一時凍結
             try {
                 $this->applyRestrictionCountFreezeIfNeeded($user);
             } catch (\Throwable $e) {
-                throw new \RuntimeException('[ACK_STEP]apply_restriction_count_freeze_failed', 0, $e);
+                \Log::warning('applyRestrictionCountFreezeIfNeeded failed (ignored)', [
+                    'user_id' => $user->user_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
             }
             } catch (\Throwable $e) {
                 if ($e instanceof \RuntimeException && str_starts_with((string) $e->getMessage(), '[ACK_STEP]')) {
