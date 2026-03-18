@@ -83,49 +83,56 @@ class ReportRestrictionService
     public function acknowledgeFromMessage(AdminMessage $message): void
     {
         DB::transaction(function () use ($message) {
-            /** @var User|null $user */
-            $user = User::find($message->user_id);
-            if (!$user) {
-                throw new \RuntimeException('[ACK_STEP]user_not_found');
-            }
+            try {
+                /** @var User|null $user */
+                $user = User::find($message->user_id);
+                if (!$user) {
+                    throw new \RuntimeException('[ACK_STEP]user_not_found');
+                }
 
-            $restriction = ReportRestriction::where('admin_message_id', $message->id)
-                ->where('user_id', $user->user_id)
-                ->where('status', 'active')
-                ->lockForUpdate()
-                ->first();
+                $restriction = ReportRestriction::where('admin_message_id', $message->id)
+                    ->where('user_id', $user->user_id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$restriction) {
-                // 既に処理済み/存在しない場合は何もしない
-                return;
-            }
+                if (!$restriction) {
+                    // 既に処理済み/存在しない場合は何もしない
+                    return;
+                }
 
-            // 承認と同様に処理（ただし自認による軽減係数を適用）
-            $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
+                // 承認と同様に処理（ただし自認による軽減係数を適用）
+                $selfAckMultiplier = (float) config('report_restrictions.self_ack_out_multiplier', 0.7);
 
-            $type = $restriction->type;
+                $type = $restriction->type;
 
-            if ($type === 'thread' && $restriction->thread_id) {
-                $thread = Thread::withTrashed()->find($restriction->thread_id);
-                if ($thread) {
-                    $reports = Report::where('thread_id', $thread->thread_id)
-                        ->whereNull('approved_at')
-                        ->orderBy('created_at', 'asc')
-                        ->lockForUpdate()
-                        ->get();
+                if ($type === 'thread' && $restriction->thread_id) {
+                    $thread = Thread::withTrashed()->find($restriction->thread_id);
+                    if ($thread) {
+                        $reports = Report::where('thread_id', $thread->thread_id)
+                            ->whereNull('approved_at')
+                            ->orderBy('created_at', 'asc')
+                            ->lockForUpdate()
+                            ->get();
 
                     // 通報理由（重複除外）
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
 
-                    // 管理者承認と同様に承認処理（アウト数のみ軽減）
-                    foreach ($reports as $rep) {
-                        $reason = (string) ($rep->reason ?? '');
-                        $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
-                        $rep->out_count = $base * $selfAckMultiplier;
-                        $rep->is_approved = true;
-                        $rep->approved_at = now();
-                        $rep->save();
-                    }
+                        // 管理者承認と同様に承認処理（アウト数のみ軽減）
+                        foreach ($reports as $rep) {
+                            $reason = (string) ($rep->reason ?? '');
+                            $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
+                            // out_count は DB 的に 0.5〜 を前提としている箇所があるため、軽減しても 0.5 未満にしない
+                            $newOutCount = max(0.5, round($base * $selfAckMultiplier, 1));
+                            $rep->out_count = $newOutCount;
+                            $rep->is_approved = true;
+                            $rep->approved_at = now();
+                            try {
+                                $rep->save();
+                            } catch (\Throwable $e) {
+                                throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
+                            }
+                        }
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
                     $rank = 1;
@@ -141,24 +148,24 @@ class ReportRestrictionService
                         $this->sendSelfAcknowledgeDeletionNotice((int) $thread->user_id, 'thread', (string) $thread->title, null, $reasonsText);
                     }
 
-                    // ルーム削除（管理承認と同様にソフトデリート）
-                    if (!$thread->trashed()) {
-                        try {
-                            $thread->delete();
-                        } catch (\Throwable $e) {
-                            throw new \RuntimeException('[ACK_STEP]thread_delete_failed', 0, $e);
+                        // ルーム削除（管理承認と同様にソフトデリート）
+                        if (!$thread->trashed()) {
+                            try {
+                                $thread->delete();
+                            } catch (\Throwable $e) {
+                                throw new \RuntimeException('[ACK_STEP]thread_delete_failed', 0, $e);
+                            }
                         }
+                        Cache::forget('thread_restriction_' . $thread->thread_id);
                     }
-                    Cache::forget('thread_restriction_' . $thread->thread_id);
-                }
-            } elseif ($type === 'response' && $restriction->response_id) {
-                $response = Response::find($restriction->response_id);
-                if ($response) {
-                    $reports = Report::where('response_id', $response->response_id)
-                        ->whereNull('approved_at')
-                        ->orderBy('created_at', 'asc')
-                        ->lockForUpdate()
-                        ->get();
+                } elseif ($type === 'response' && $restriction->response_id) {
+                    $response = Response::find($restriction->response_id);
+                    if ($response) {
+                        $reports = Report::where('response_id', $response->response_id)
+                            ->whereNull('approved_at')
+                            ->orderBy('created_at', 'asc')
+                            ->lockForUpdate()
+                            ->get();
 
                     $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
                     $responseBody = (string) ($response->body ?? '');
@@ -166,14 +173,19 @@ class ReportRestrictionService
                     $responseBodyForMsg = mb_strimwidth($responseBody, 0, 500, '…');
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
 
-                    foreach ($reports as $rep) {
-                        $reason = (string) ($rep->reason ?? '');
-                        $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
-                        $rep->out_count = $base * $selfAckMultiplier;
-                        $rep->is_approved = true;
-                        $rep->approved_at = now();
-                        $rep->save();
-                    }
+                        foreach ($reports as $rep) {
+                            $reason = (string) ($rep->reason ?? '');
+                            $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
+                            $newOutCount = max(0.5, round($base * $selfAckMultiplier, 1));
+                            $rep->out_count = $newOutCount;
+                            $rep->is_approved = true;
+                            $rep->approved_at = now();
+                            try {
+                                $rep->save();
+                            } catch (\Throwable $e) {
+                                throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
+                            }
+                        }
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
                     $rank = 1;
@@ -189,14 +201,14 @@ class ReportRestrictionService
                         $this->sendSelfAcknowledgeDeletionNotice((int) $response->user_id, 'response', $threadTitle, $responseBodyForMsg, $reasonsText);
                     }
 
-                    // リプライ削除（現状ソフトデリート無しのため削除）
-                    try {
-                        $response->delete();
-                    } catch (\Throwable $e) {
-                        throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
+                        // リプライ削除（現状ソフトデリート無しのため削除）
+                        try {
+                            $response->delete();
+                        } catch (\Throwable $e) {
+                            throw new \RuntimeException('[ACK_STEP]response_delete_failed', 0, $e);
+                        }
                     }
                 }
-            }
 
             // 制限を了承済みに
             // 本番DBのスキーマ差分に対応（存在するカラムのみ更新）
@@ -255,6 +267,12 @@ class ReportRestrictionService
                 $this->applyRestrictionCountFreezeIfNeeded($user);
             } catch (\Throwable $e) {
                 throw new \RuntimeException('[ACK_STEP]apply_restriction_count_freeze_failed', 0, $e);
+            }
+            } catch (\Throwable $e) {
+                if ($e instanceof \RuntimeException && str_starts_with((string) $e->getMessage(), '[ACK_STEP]')) {
+                    throw $e;
+                }
+                throw new \RuntimeException('[ACK_STEP]unhandled', 0, $e);
             }
         });
     }
