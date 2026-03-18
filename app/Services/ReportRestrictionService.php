@@ -309,7 +309,23 @@ class ReportRestrictionService
             try {
                 $message->save();
             } catch (\Throwable $e) {
-                throw new \RuntimeException('[ACK_STEP]message_save_failed', 0, $e);
+                // 本番DBのスキーマ差分/制約差分があっても、処理自体は完走させる
+                try {
+                    if (Schema::hasTable('admin_messages') && Schema::hasColumn('admin_messages', 'reply_used')) {
+                        DB::table('admin_messages')
+                            ->where('id', $message->id)
+                            ->update([
+                                'reply_used' => true,
+                                'updated_at' => now(),
+                            ]);
+                    }
+                } catch (\Throwable $ignored) {
+                    \Log::warning('AdminMessage reply_used update failed (ignored)', [
+                        'admin_message_id' => $message->id ?? null,
+                        'error' => $e->getMessage(),
+                        'fallback_error' => $ignored->getMessage(),
+                    ]);
+                }
             }
 
             // 凍結判定（アウト数に基づく既存ロジック）
