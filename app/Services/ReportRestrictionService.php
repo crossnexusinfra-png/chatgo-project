@@ -107,10 +107,16 @@ class ReportRestrictionService
             if ($type === 'thread' && $restriction->thread_id) {
                 $thread = Thread::withTrashed()->find($restriction->thread_id);
                 if ($thread) {
-                    $reports = \App\Models\Report::where('thread_id', $thread->thread_id)
+                    $reports = Report::where('thread_id', $thread->thread_id)
                         ->whereNull('approved_at')
+                        ->orderBy('created_at', 'asc')
                         ->lockForUpdate()
                         ->get();
+
+                    // 通報理由（重複除外）
+                    $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
+
+                    // 管理者承認と同様に承認処理（アウト数のみ軽減）
                     foreach ($reports as $rep) {
                         $reason = (string) ($rep->reason ?? '');
                         $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
@@ -119,6 +125,21 @@ class ReportRestrictionService
                         $rep->approved_at = now();
                         $rep->save();
                     }
+
+                    // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
+                    $rank = 1;
+                    foreach ($reports as $rep) {
+                        if ($rep->user_id) {
+                            $this->sendSelfAcknowledgeApprovalMessage((int) $rep->user_id, 'thread', (string) $thread->title, null, $rank);
+                            $rank++;
+                        }
+                    }
+
+                    // 被通報者（作成者）へ通知（文言のみ「作成者が了承」に差し替え）
+                    if ($thread->user_id) {
+                        $this->sendSelfAcknowledgeDeletionNotice((int) $thread->user_id, 'thread', (string) $thread->title, null, $reasonsText);
+                    }
+
                     // ルーム削除（管理承認と同様にソフトデリート）
                     if (!$thread->trashed()) {
                         $thread->delete();
@@ -128,10 +149,18 @@ class ReportRestrictionService
             } elseif ($type === 'response' && $restriction->response_id) {
                 $response = Response::find($restriction->response_id);
                 if ($response) {
-                    $reports = \App\Models\Report::where('response_id', $response->response_id)
+                    $reports = Report::where('response_id', $response->response_id)
                         ->whereNull('approved_at')
+                        ->orderBy('created_at', 'asc')
                         ->lockForUpdate()
                         ->get();
+
+                    $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
+                    $responseBody = (string) ($response->body ?? '');
+                    // 念のため長文で通知が落ちないように抑制
+                    $responseBodyForMsg = mb_strimwidth($responseBody, 0, 500, '…');
+                    $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
+
                     foreach ($reports as $rep) {
                         $reason = (string) ($rep->reason ?? '');
                         $base = $rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他');
@@ -140,6 +169,21 @@ class ReportRestrictionService
                         $rep->approved_at = now();
                         $rep->save();
                     }
+
+                    // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
+                    $rank = 1;
+                    foreach ($reports as $rep) {
+                        if ($rep->user_id) {
+                            $this->sendSelfAcknowledgeApprovalMessage((int) $rep->user_id, 'response', $threadTitle, $responseBodyForMsg, $rank);
+                            $rank++;
+                        }
+                    }
+
+                    // 被通報者（作成者）へ通知（文言のみ「作成者が了承」に差し替え）
+                    if ($response->user_id) {
+                        $this->sendSelfAcknowledgeDeletionNotice((int) $response->user_id, 'response', $threadTitle, $responseBodyForMsg, $reasonsText);
+                    }
+
                     // リプライ削除（現状ソフトデリート無しのため削除）
                     $response->delete();
                 }
@@ -183,7 +227,14 @@ class ReportRestrictionService
                 $user->freeze_count++;
                 $user->save();
                 if (!$wasFrozen) {
-                    $user->logFreeze($freezeUntil, '通報アウト数が2以上に達したため一時凍結');
+                    try {
+                        $user->logFreeze($freezeUntil, '通報アウト数が2以上に達したため一時凍結');
+                    } catch (\Throwable $e) {
+                        \Log::warning('UserChangeLog::logFreeze failed (temp freeze)', [
+                            'user_id' => $user->user_id ?? null,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
         } else {
@@ -191,7 +242,14 @@ class ReportRestrictionService
                 $user->freeze_count = 0;
                 $user->frozen_until = null;
                 $user->save();
-                $user->logFreeze(null, 'アウト数が0になったため凍結解除');
+                try {
+                    $user->logFreeze(null, 'アウト数が0になったため凍結解除');
+                } catch (\Throwable $e) {
+                    \Log::warning('UserChangeLog::logFreeze failed (unfreeze)', [
+                        'user_id' => $user->user_id ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
     }
@@ -213,7 +271,111 @@ class ReportRestrictionService
         }
         $user->frozen_until = $until;
         $user->save();
-        $user->logFreeze($until, '通報制限を同時に5件以上受けているため一時凍結');
+        try {
+            $user->logFreeze($until, '通報制限を同時に5件以上受けているため一時凍結');
+        } catch (\Throwable $e) {
+            \Log::warning('UserChangeLog::logFreeze failed (restriction count freeze)', [
+                'user_id' => $user->user_id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 作成者が了承して削除した場合の「通報者」向け通知
+     * 管理者承認と同様に順位に応じたコイン付与ロジックを踏襲する（文言のみ差し替え）
+     */
+    private function sendSelfAcknowledgeApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1): void
+    {
+        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
+        $content = $type === 'thread'
+            ? $threadTitle
+            : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
+
+        $bodyJa = "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
+
+        $userScore = Report::calculateUserReportScore($userId);
+        $coinAmount = $this->calculateCoinAmount($rank, $userScore);
+
+        try {
+            AdminMessage::create([
+                'title' => '通報内容対応完了のお知らせ',
+                'body' => $bodyJa,
+                'audience' => 'members',
+                'user_id' => $userId,
+                'published_at' => now(),
+                'allows_reply' => false,
+                'reply_used' => false,
+                'coin_amount' => $coinAmount,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('sendSelfAcknowledgeApprovalMessage failed', [
+                'user_id' => $userId,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 作成者が了承して削除した場合の「被通報者（作成者）」向け通知
+     */
+    private function sendSelfAcknowledgeDeletionNotice(int $userId, string $type, string $threadTitle, ?string $responseBody, string $reasons): void
+    {
+        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
+        $content = $type === 'thread'
+            ? $threadTitle
+            : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
+
+        $reasonsBlock = $reasons !== '' ? "【通報理由】\n{$reasons}\n\n" : '';
+        $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+
+        try {
+            AdminMessage::create([
+                'title' => '削除処理完了のお知らせ',
+                'body' => $bodyJa,
+                'audience' => 'members',
+                'user_id' => $userId,
+                'published_at' => now(),
+                'allows_reply' => false,
+                'reply_used' => false,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('sendSelfAcknowledgeDeletionNotice failed', [
+                'user_id' => $userId,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 通報順位とスコアに基づいてコイン数を計算（AdminController の実装を踏襲）
+     */
+    private function calculateCoinAmount(int $rank, float $userScore): int
+    {
+        if ($rank > 5) {
+            return 0;
+        }
+        if ($rank <= 3) {
+            if ($userScore >= 0.7 && $userScore <= 0.8) {
+                return 5;
+            } elseif ($userScore >= 0.5 && $userScore < 0.7) {
+                return 4;
+            } elseif ($userScore >= 0.3 && $userScore < 0.5) {
+                return 3;
+            }
+        }
+        if ($rank >= 4 && $rank <= 5) {
+            if ($userScore >= 0.7 && $userScore <= 0.8) {
+                return 3;
+            } elseif ($userScore >= 0.5 && $userScore < 0.7) {
+                return 2;
+            } elseif ($userScore >= 0.3 && $userScore < 0.5) {
+                return 1;
+            }
+        }
+        return 0;
     }
 
     /**
