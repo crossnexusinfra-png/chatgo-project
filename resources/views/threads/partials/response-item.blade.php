@@ -106,6 +106,12 @@
     <!-- 返信元のリプライ簡略表示 -->
     @if($response->parentResponse)
         @php
+            $parentRestrictionData = $responseRestrictionData[$response->parentResponse->response_id] ?? [
+                'shouldBeHidden' => false,
+            ];
+            $parentShouldBeHidden = (bool) ($parentRestrictionData['shouldBeHidden'] ?? false);
+            $parentIsAcknowledged = session('acknowledged_response_' . $response->parentResponse->response_id);
+            $canShowParentPreview = !$parentShouldBeHidden || $parentIsAcknowledged;
             $parentResponseUser = $users->get($response->parentResponse->user_id);
             $parentUsername = $parentResponseUser ? $parentResponseUser->username : '削除されたユーザー';
             $parentBaseName = mb_strlen($parentUsername) > 10
@@ -117,17 +123,35 @@
             }
         @endphp
         <div class="reply-source" data-action="scroll-to-response" data-response-id="{{ $response->parentResponse->response_id }}" role="button" tabindex="0">
-            <span class="reply-source-user">{{ $parentDisplayUserName }}</span>
-            <span class="reply-source-body">{!! linkify_urls($response->parentResponse->display_body ?? $response->parentResponse->body) !!}</span>
+            @if($canShowParentPreview)
+                <span class="reply-source-user">{{ $parentDisplayUserName }}</span>
+                <span class="reply-source-body">{!! linkify_urls($response->parentResponse->display_body ?? $response->parentResponse->body) !!}</span>
+            @else
+                <span class="reply-source-user">…</span>
+                <span class="reply-source-body">…</span>
+            @endif
         </div>
     @elseif(!empty($response->parent_original_response_id) || !empty($response->parent_snapshot_username) || !empty($response->parent_snapshot_body))
         @php
+            $parentSnapshotRestrictionData = !empty($response->parent_original_response_id)
+                ? ($responseRestrictionData[$response->parent_original_response_id] ?? ['shouldBeHidden' => false])
+                : ['shouldBeHidden' => false];
+            $parentSnapshotShouldBeHidden = (bool) ($parentSnapshotRestrictionData['shouldBeHidden'] ?? false);
+            $parentSnapshotIsAcknowledged = !empty($response->parent_original_response_id)
+                ? session('acknowledged_response_' . $response->parent_original_response_id)
+                : false;
+            $canShowSnapshotPreview = !$parentSnapshotShouldBeHidden || $parentSnapshotIsAcknowledged;
             $deletedParentUsername = $response->parent_snapshot_username ?? '削除されたユーザー';
             $deletedParentBody = $response->parent_snapshot_body ?? '（削除されたレスポンス）';
         @endphp
         <div class="reply-source reply-source-deleted" aria-disabled="true">
-            <span class="reply-source-user">{{ $deletedParentUsername }}</span>
-            <span class="reply-source-body">{{ $deletedParentBody }}</span>
+            @if($canShowSnapshotPreview)
+                <span class="reply-source-user">{{ $deletedParentUsername }}</span>
+                <span class="reply-source-body">{{ $deletedParentBody }}</span>
+            @else
+                <span class="reply-source-user">…</span>
+                <span class="reply-source-body">…</span>
+            @endif
             <span class="reply-source-deleted-label">（削除済み）</span>
         </div>
     @endif

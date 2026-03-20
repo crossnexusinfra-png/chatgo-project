@@ -117,7 +117,7 @@ class ReportController extends Controller
         $validated = $request->validate([
             'thread_id' => 'nullable|exists:threads,thread_id',
             'response_id' => 'nullable|exists:responses,response_id',
-            'reason' => 'required|string|in:スパム・迷惑行為,攻撃的・不適切な内容,不適切なリンク・外部誘導,成人向けコンテンツが含まれる,成人向け以外のコンテンツ規制違反,異なる思想に関しての意見の押し付け、妨害,スレッド画像が第三者の著作権を侵害している可能性がある,スレッド画像に個人情報・他人の情報が含まれている,スレッド画像に不適切な内容が含まれている,なりすまし・虚偽の人物情報,その他',
+            'reason' => 'required|string|in:スパム・迷惑行為,攻撃的・不適切な内容,不適切なリンク・外部誘導,成人向けコンテンツが含まれる,成人向け以外のコンテンツ規制違反,異なる思想に関しての意見の押し付け、妨害,スレッド画像が第三者の著作権を侵害している可能性がある,スレッド画像に個人情報・他人の情報が含まれている,スレッド画像に不適切な内容が含まれている,ルーム画像が第三者の著作権を侵害している可能性がある,ルーム画像に個人情報・他人の情報が含まれている,ルーム画像に不適切な内容が含まれている,なりすまし・虚偽の人物情報,その他',
             'description' => 'nullable|string|max:300',
         ]);
 
@@ -139,7 +139,10 @@ class ReportController extends Controller
         $threadImageReasons = [
             'スレッド画像が第三者の著作権を侵害している可能性がある',
             'スレッド画像に個人情報・他人の情報が含まれている',
-            'スレッド画像に不適切な内容が含まれている'
+            'スレッド画像に不適切な内容が含まれている',
+            'ルーム画像が第三者の著作権を侵害している可能性がある',
+            'ルーム画像に個人情報・他人の情報が含まれている',
+            'ルーム画像に不適切な内容が含まれている',
         ];
         if (in_array($validated['reason'], $threadImageReasons) && !$validated['thread_id']) {
             return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_thread_image_reason_thread_only', $lang)]);
@@ -172,6 +175,11 @@ class ReportController extends Controller
             // 自分のルームは通報できない
             if ((int) $thread->user_id === (int) $userId) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_own_thread', $lang)]);
+            }
+
+            // ルーム画像関連の通報理由は、サンプル画像（image_path 未設定）では選択不可
+            if (in_array($validated['reason'], $threadImageReasons, true) && empty($thread->image_path)) {
+                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_thread_image_reason_thread_only', $lang)]);
             }
             
             // 警告状態（制限がかかっている）の場合、通報を拒否

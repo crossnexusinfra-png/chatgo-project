@@ -538,7 +538,6 @@
                 if (result.result) {
                     console.log('report acknowledge result:', result.result);
                 }
-                alert(translations.reportAckSuccess);
             } else {
                 alert(result.error || translations.reportAckFailed);
                 buttons.forEach(btn => { btn.disabled = false; });

@@ -247,17 +247,18 @@
             if (!btn || btn.classList.contains('reported-badge') || btn.tagName !== 'BUTTON') return;
             const threadId = btn.dataset.reportThreadId || null;
             const responseId = btn.dataset.reportResponseId || null;
+            const threadHasCustomImage = btn.dataset.reportThreadHasCustomImage === '1';
             const reportedUserId = null; // プロフィール通報は廃止
             // 通報変更ボタンはサーバーで既存内容を埋め込んでいるのでAPI不要
             const embeddedReason = (btn.dataset.reportReason !== undefined && btn.dataset.reportReason !== '') ? btn.dataset.reportReason : null;
             const embeddedDescription = (btn.dataset.reportDescription !== undefined) ? btn.dataset.reportDescription : null;
             if (window.openReportModal) {
                 e.preventDefault();
-                window.openReportModal(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription);
+                window.openReportModal(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription, threadHasCustomImage);
             }
         });
 
-        window.openReportModal = function(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription) {
+        window.openReportModal = function(threadId, responseId, reportedUserId, embeddedReason, embeddedDescription, threadHasCustomImage) {
             if (!reportModal) return;
             
             const reportThreadIdInput = document.getElementById('report_thread_id');
@@ -288,7 +289,7 @@
                     description: (embeddedDescription != null) ? String(embeddedDescription) : '',
                     is_r18_thread: false
                 };
-                runReportModalWithData(data, threadId, responseId);
+                runReportModalWithData(data, threadId, responseId, threadHasCustomImage);
                 return;
             }
             
@@ -327,14 +328,14 @@
                 });
             })
             .then(function(data) {
-                runReportModalWithData(data, threadId, responseId);
+                runReportModalWithData(data, threadId, responseId, threadHasCustomImage);
             })
             .catch(function() {
-                runReportModalWithData({ exists: false, is_r18_thread: false }, threadId, responseId);
+                runReportModalWithData({ exists: false, is_r18_thread: false }, threadId, responseId, threadHasCustomImage);
             });
         }
         
-        function runReportModalWithData(data, threadId, responseId) {
+        function runReportModalWithData(data, threadId, responseId, threadHasCustomImage) {
             var reportReasonSelect = document.getElementById('report_reason');
             var reportDescriptionInput = document.getElementById('report_description');
             var reportModal = document.getElementById('reportModal');
@@ -361,7 +362,7 @@
                 ac.textContent = translations.reportReasonAdultContent || '';
                 reportReasonSelect.insertBefore(ac, otherOpt || reportReasonSelect.options[reportReasonSelect.options.length - 1]);
             }
-            if (threadId && !responseId) {
+            if (threadId && !responseId && threadHasCustomImage) {
                 [
                     { value: 'ルーム画像が第三者の著作権を侵害している可能性がある', label: translations.reportReasonThreadImageCopyright || '' },
                     { value: 'ルーム画像に個人情報・他人の情報が含まれている', label: translations.reportReasonThreadImagePersonalInfo || '' },

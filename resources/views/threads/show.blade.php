@@ -127,10 +127,10 @@
                     @if(!(isset($isThreadRestricted) && $isThreadRestricted) && empty($isThreadDeletedByReport))
                         @if(isset($userReportedThread) && $userReportedThread)
                             @if(!(isset($userReportedThreadRejected) && $userReportedThreadRejected))
-                                <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-reason="{{ e($existingThreadReport['reason'] ?? '') }}" data-report-description="{{ e($existingThreadReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
+                                <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-thread-has-custom-image="{{ !empty($thread->image_path) ? '1' : '0' }}" data-report-reason="{{ e($existingThreadReport['reason'] ?? '') }}" data-report-description="{{ e($existingThreadReport['description'] ?? '') }}">{{ \App\Services\LanguageService::trans('report_change', $lang) }}</button>
                             @endif
                         @else
-                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
+                            <button type="button" class="report-btn" data-report-thread-id="{{ $thread->thread_id }}" data-report-thread-has-custom-image="{{ !empty($thread->image_path) ? '1' : '0' }}">{{ \App\Services\LanguageService::trans('report', $lang) }}</button>
                         @endif
                     @endif
                 </div>
