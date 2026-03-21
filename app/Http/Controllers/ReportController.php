@@ -289,7 +289,7 @@ class ReportController extends Controller
 
         // 通報により制限が発生した場合、対象ユーザーに了承ボタン付き通知を送る（初回のみ）
         try {
-            $restrictionService = new \App\Services\ReportRestrictionService();
+            $restrictionService = app(\App\Services\ReportRestrictionService::class);
             if (!empty($validated['thread_id'])) {
                 $t = Thread::find($validated['thread_id']);
                 if ($t) {

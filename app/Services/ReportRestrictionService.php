@@ -16,6 +16,11 @@ use Illuminate\Database\QueryException;
 
 class ReportRestrictionService
 {
+    public function __construct(
+        private UserOutCountFreezeService $userOutCountFreezeService
+    ) {
+    }
+
     public function ensureRestrictionCreatedForThread(Thread $thread): ?ReportRestriction
     {
         if (!$thread->user_id) {
@@ -380,9 +385,9 @@ class ReportRestrictionService
 
             // 凍結判定（アウト数に基づく既存ロジック）
             try {
-                $this->applyOutCountFreezeIfNeeded($user);
+                $this->userOutCountFreezeService->processOutCountAndFreeze($user);
             } catch (\Throwable $e) {
-                \Log::warning('applyOutCountFreezeIfNeeded failed (ignored)', [
+                \Log::warning('processOutCountAndFreeze failed (ignored)', [
                     'user_id' => $user->user_id ?? null,
                     'error' => $e->getMessage(),
                 ]);
@@ -436,54 +441,6 @@ class ReportRestrictionService
         }
         $t = substr($text, 0, $limit);
         return strlen($text) > strlen($t) ? ($t . $suffix) : $t;
-    }
-
-    private function applyOutCountFreezeIfNeeded(User $user): void
-    {
-        // AdminController の private 実装を簡易的に踏襲（同条件）
-        \App\Models\Report::resetExpiredOutCounts();
-        $outCount = $user->calculateOutCount();
-
-        if ($user->shouldBePermanentlyBanned()) {
-            $user->is_permanently_banned = true;
-            $user->frozen_until = null;
-            $user->save();
-            return;
-        }
-
-        if ($user->shouldBeTemporarilyFrozen()) {
-            $freezeUntil = $user->calculateFreezeDuration();
-            if ($freezeUntil) {
-                $wasFrozen = $user->frozen_until && $user->frozen_until->isFuture();
-                $user->frozen_until = $freezeUntil;
-                $user->freeze_count++;
-                $user->save();
-                if (!$wasFrozen) {
-                    try {
-                        $user->logFreeze($freezeUntil, '通報アウト数が2以上に達したため一時凍結');
-                    } catch (\Throwable $e) {
-                        \Log::warning('UserChangeLog::logFreeze failed (temp freeze)', [
-                            'user_id' => $user->user_id ?? null,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            }
-        } else {
-            if ($outCount < 1.0 && $user->frozen_until) {
-                $user->freeze_count = 0;
-                $user->frozen_until = null;
-                $user->save();
-                try {
-                    $user->logFreeze(null, 'アウト数が0になったため凍結解除');
-                } catch (\Throwable $e) {
-                    \Log::warning('UserChangeLog::logFreeze failed (unfreeze)', [
-                        'user_id' => $user->user_id ?? null,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-        }
     }
 
     private function applyRestrictionCountFreezeIfNeeded(User $user): void

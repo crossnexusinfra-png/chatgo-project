@@ -192,19 +192,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', function() {
         return redirect()->route('threads.index');
     });
-    
-    // レスポンス制限了承機能（認証が必要）
-    Route::post('/threads/{thread}/responses/{response}/acknowledge', [AcknowledgmentController::class, 'acknowledgeResponse'])->middleware('throttle:notice_reply')->name('responses.acknowledge');
-    // GETリクエストの場合はスレッド詳細ページにリダイレクト
-    Route::get('/threads/{thread}/responses/{response}/acknowledge', function($thread) {
-        return redirect()->route('threads.show', $thread);
-    });
 });
 
 // スレッド制限了承機能（非ログイン時でも可能）
 Route::post('/threads/{thread}/acknowledge', [AcknowledgmentController::class, 'acknowledgeThread'])->middleware('throttle:notice_reply')->name('threads.acknowledge');
+
+// レスポンス制限了承機能（非ログイン時でも可能）
+Route::post('/threads/{thread}/responses/{response}/acknowledge', [AcknowledgmentController::class, 'acknowledgeResponse'])->middleware('throttle:notice_reply')->name('responses.acknowledge');
 // GETリクエストの場合はスレッド詳細ページにリダイレクト
 Route::get('/threads/{thread}/acknowledge', function($thread) {
+    return redirect()->route('threads.show', $thread);
+});
+
+// GETリクエストの場合はスレッド詳細ページにリダイレクト
+Route::get('/threads/{thread}/responses/{response}/acknowledge', function($thread) {
     return redirect()->route('threads.show', $thread);
 });
 

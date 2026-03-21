@@ -12,7 +12,7 @@ class ReportRestrictionLimitsService
         if (!$userId) {
             return false;
         }
-        $restrictionService = new ReportRestrictionService();
+        $restrictionService = app(ReportRestrictionService::class);
         return $restrictionService->isUserRestrictedNow($userId);
     }
 

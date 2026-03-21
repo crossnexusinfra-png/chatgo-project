@@ -56,17 +56,11 @@ class AcknowledgmentController extends Controller
         }
         
         $response = Response::findOrFail($responseId);
-        
-        if (!Auth::check()) {
-            // 非ログイン時は、ログイン後に元のページに戻るようにURLを保存
-            session(['intended_url' => route('threads.show', $thread) . '#response-' . $responseId]);
-            // レスポンスIDをセッションに保存（ログイン後に承認フラグを設定するため）
-            session(['pending_acknowledge_response_' . $responseId => true]);
-            return redirect()->route('login')->with('message', \App\Services\LanguageService::trans('login_required', $lang));
-        }
-        
+
         // セッションに了承フラグを保存
         session(['acknowledged_response_' . $responseId => true]);
+        // 以前の互換用フラグが残っている場合は消しておく（承認表示のたびに安全に冪等化）
+        session()->forget('pending_acknowledge_response_' . $responseId);
 
         return redirect()->route('threads.show', $thread)
             ->with('success', \App\Services\LanguageService::trans('acknowledgment_success', $lang));

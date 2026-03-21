@@ -15,9 +15,15 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use App\Policies\AdminPolicy;
 use Illuminate\Support\Facades\Auth;
+use App\Services\UserOutCountFreezeService;
 
 class AdminController extends Controller
 {
+    public function __construct(
+        private UserOutCountFreezeService $userOutCountFreezeService
+    ) {
+    }
+
     /**
      * 通報の集計一覧（同一スレッド/レスポンスをまとめ、通報数の多い順）
      */
@@ -551,7 +557,7 @@ class AdminController extends Controller
         
         // スレッド作成者のアウト数と凍結処理
         if ($threadOwner) {
-            $this->processUserOutCountAndFreeze($threadOwner);
+            $this->userOutCountFreezeService->processOutCountAndFreeze($threadOwner);
         }
         
         // 各通報者にメッセージを送信（通報順位を渡す）
@@ -668,7 +674,7 @@ class AdminController extends Controller
         // レスポンス作成者のアウト数と凍結処理
         $responseOwner = $response->user;
         if ($responseOwner) {
-            $this->processUserOutCountAndFreeze($responseOwner);
+            $this->userOutCountFreezeService->processOutCountAndFreeze($responseOwner);
         }
         
         // 各通報者にメッセージを送信（通報順位を渡す）
@@ -1118,145 +1124,6 @@ class AdminController extends Controller
     }
 
     /**
-     * ユーザーのアウト数と凍結処理を実行
-     * 
-     * @param User $user
-     * @return void
-     */
-    private function processUserOutCountAndFreeze($user)
-    {
-        // 1年経過した通報のアウト数をリセット
-        Report::resetExpiredOutCounts();
-        
-        // 現在のアウト数を計算
-        $outCount = $user->calculateOutCount();
-        $previousOutCount = $user->getAttribute('previous_out_count') ?? 0;
-        
-        // 4アウト以上の場合、永久凍結
-        if ($user->shouldBePermanentlyBanned()) {
-            $wasBanned = $user->is_permanently_banned;
-            $user->is_permanently_banned = true;
-            $user->frozen_until = null;
-            $user->save();
-            
-            // 永久凍結ログを記録（初回のみ）
-            if (!$wasBanned) {
-                $user->logPermanentBan('アウト数が4以上に達したため永久凍結');
-                $this->sendPermanentBanNotice($user);
-            }
-            return;
-        }
-        
-        // 2アウト以上の場合、一時凍結
-        if ($user->shouldBeTemporarilyFrozen()) {
-            $wasFrozen = $user->frozen_until && $user->frozen_until->isFuture();
-            $freezeDuration = $user->calculateFreezeDuration();
-            if ($freezeDuration) {
-                $oldFrozenUntil = $user->frozen_until;
-                $user->frozen_until = $freezeDuration;
-                $user->freeze_count++;
-                $user->save();
-                
-                // 凍結ログを記録（新規凍結の場合のみ）
-                if (!$wasFrozen) {
-                    $user->logFreeze($freezeDuration, 'アウト数が2以上に達したため一時凍結');
-                    $this->sendFreezeNotice($user, $freezeDuration);
-                }
-            }
-        } else {
-            // 1アウトの場合は警告のみ（凍結なし）
-            if ($outCount >= 1.0 && $outCount < 2.0) {
-                // 1アウト警告のお知らせ送信（最近送信されていない場合のみ）
-                $recentWarning = AdminMessage::where('user_id', $user->user_id)
-                    ->where('title', 'アウト警告のお知らせ')
-                    ->where('created_at', '>=', now()->subWeek())
-                    ->exists();
-                
-                if (!$recentWarning) {
-                    $this->sendWarningNotice($user);
-                }
-            }
-            
-            // アウト数が0になった場合は凍結回数もリセット
-            if ($outCount < 1.0 && $user->frozen_until) {
-                $user->freeze_count = 0;
-                $user->frozen_until = null;
-                $user->save();
-                // 凍結解除ログを記録
-                $user->logFreeze(null, 'アウト数が0になったため凍結解除');
-            }
-        }
-    }
-    
-    /**
-     * 1アウト警告のお知らせを送信
-     * 
-     * @param User $user
-     * @return void
-     */
-    private function sendWarningNotice($user)
-    {
-        $bodyJa = "お客様の投稿について、通報が承認されました。現在、アウト数が1に達しています。\n\n今後、同様の行為を続けると、アカウントが一時凍結または永久凍結される可能性があります。利用規約を遵守した投稿をお願いいたします。";
-        $bodyEn = "A report regarding your post has been approved. Your out count has reached 1.\n\nIf you continue similar behavior, your account may be temporarily or permanently frozen. Please ensure your posts comply with our terms of service.";
-        
-        AdminMessage::create([
-            'title' => 'アウト警告のお知らせ',
-            'body' => $bodyJa,
-            'audience' => 'members',
-            'user_id' => $user->user_id,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-        ]);
-    }
-    
-    /**
-     * 凍結時のお知らせを送信
-     * 
-     * @param User $user
-     * @param \Carbon\Carbon $freezeUntil
-     * @return void
-     */
-    private function sendFreezeNotice($user, $freezeUntil)
-    {
-        $freezeUntilFormatted = $freezeUntil->format('Y年m月d日 H:i');
-        $bodyJa = "お客様のアカウントが一時凍結されました。\n\n凍結解除予定日時: {$freezeUntilFormatted}\n\n凍結期間中は、閲覧以外の操作（スレッド・レスポンスの投稿、プロフィール編集、コイン獲得送信など）ができません。\n\n今後は利用規約を遵守した投稿をお願いいたします。";
-        $bodyEn = "Your account has been temporarily frozen.\n\nFreeze release scheduled: {$freezeUntil->format('Y-m-d H:i')}\n\nDuring the freeze period, you cannot perform any operations except viewing (posting threads/responses, editing profile, sending coins, etc.).\n\nPlease ensure your future posts comply with our terms of service.";
-        
-        AdminMessage::create([
-            'title' => 'アカウント一時凍結のお知らせ',
-            'body' => $bodyJa,
-            'audience' => 'members',
-            'user_id' => $user->user_id,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-        ]);
-    }
-    
-    /**
-     * 永久凍結時のお知らせを送信
-     * 
-     * @param User $user
-     * @return void
-     */
-    private function sendPermanentBanNotice($user)
-    {
-        $bodyJa = "お客様のアカウントが永久凍結されました。\n\n今後、このアカウントでログインすることはできますが、ログアウト以外の操作は一切できません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
-        $bodyEn = "Your account has been permanently banned.\n\nYou can still log in to this account, but you cannot perform any operations except logging out. Also, you cannot register a new account with the same email address or phone number.";
-        
-        AdminMessage::create([
-            'title' => 'アカウント永久凍結のお知らせ',
-            'body' => $bodyJa,
-            'audience' => 'members',
-            'user_id' => $user->user_id,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-        ]);
-    }
-
-    /**
      * プロフィール通報の承認処理
      * 
      * @param int $reportedUserId
@@ -1315,7 +1182,7 @@ class AdminController extends Controller
         }
         
         // プロフィール所有者のアウト数と凍結処理
-        $this->processUserOutCountAndFreeze($reportedUser);
+        $this->userOutCountFreezeService->processOutCountAndFreeze($reportedUser);
         
         // 各通報者にメッセージを送信（通報順位を渡す）
         $rank = 1;
@@ -1400,7 +1267,7 @@ class AdminController extends Controller
             }
             
             if ($targetUser) {
-                $this->processUserOutCountAndFreeze($targetUser);
+                $this->userOutCountFreezeService->processOutCountAndFreeze($targetUser);
             }
         }
         
