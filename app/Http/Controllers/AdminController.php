@@ -554,7 +554,10 @@ class AdminController extends Controller
                 $report->save();
             }
         }
-        
+
+        // 凍結・警告より先に作成者を解決（以前は代入順のバグで processOutCountAndFreeze が常にスキップされていた）
+        $threadOwner = $thread->user;
+
         // スレッド作成者のアウト数と凍結処理
         if ($threadOwner) {
             $this->userOutCountFreezeService->processOutCountAndFreeze($threadOwner);
@@ -570,7 +573,6 @@ class AdminController extends Controller
         }
         
         // スレッド主にお知らせを送信
-        $threadOwner = $thread->user;
         if ($threadOwner) {
             $this->sendThreadDeletionNotice($threadOwner->user_id, $thread->title, $reasonsText);
         }

@@ -1222,8 +1222,57 @@
 
     // DOMContentLoaded時の初期化（スクリプトが遅延読み込みの場合は即実行）
     function runWhenReady() {
-        setTimeout(scrollToBottom, 100);
-        setTimeout(scrollToBottom, 500);
+        // 通報送信後のリダイレクトではスクロール位置を復元（通常表示は従来どおり最下部へ）
+        const scrollRestoreKey = threadId ? ('chatgo_report_scroll_' + threadId) : null;
+        let pendingRestore = false;
+        if (scrollRestoreKey) {
+            try {
+                pendingRestore = sessionStorage.getItem(scrollRestoreKey) !== null;
+            } catch (e) {
+                pendingRestore = false;
+            }
+        }
+        if (pendingRestore && scrollRestoreKey) {
+            [100, 300, 600].forEach(function(delay, idx, arr) {
+                setTimeout(function() {
+                    const rc = document.getElementById('responsesContainer');
+                    if (!rc) return;
+                    var raw = null;
+                    try {
+                        raw = sessionStorage.getItem(scrollRestoreKey);
+                    } catch (e) {
+                        return;
+                    }
+                    if (raw === null || raw === '') return;
+                    var y = parseInt(raw, 10);
+                    if (Number.isNaN(y)) {
+                        try { sessionStorage.removeItem(scrollRestoreKey); } catch (e2) {}
+                        return;
+                    }
+                    var maxScroll = Math.max(0, rc.scrollHeight - rc.clientHeight);
+                    rc.scrollTop = Math.min(y, maxScroll);
+                    if (idx === arr.length - 1) {
+                        try { sessionStorage.removeItem(scrollRestoreKey); } catch (e3) {}
+                    }
+                }, delay);
+            });
+        } else {
+            setTimeout(scrollToBottom, 100);
+            setTimeout(scrollToBottom, 500);
+        }
+
+        // チャットから通報モーダル経由で送信する直前にスクロール位置を保存（capture で preventDefault より先に実行）
+        const reportFormForScroll = document.getElementById('reportForm');
+        if (reportFormForScroll && threadId && !reportFormForScroll._chatgoScrollSaveBound) {
+            reportFormForScroll._chatgoScrollSaveBound = true;
+            reportFormForScroll.addEventListener('submit', function() {
+                const rc = document.getElementById('responsesContainer');
+                if (!rc) return;
+                try {
+                    sessionStorage.setItem('chatgo_report_scroll_' + threadId, String(Math.round(rc.scrollTop)));
+                } catch (err) {}
+            }, true);
+        }
 
         // 返信取り消しボタンに直接クリックをバインド（DOM準備後に確実に紐づける）
         var replyCancelBtn = document.getElementById('reply-target-cancel-btn');

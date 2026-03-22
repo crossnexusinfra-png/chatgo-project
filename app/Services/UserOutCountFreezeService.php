@@ -47,9 +47,10 @@ class UserOutCountFreezeService
             }
         } else {
             if ($outCount >= 1.0 && $outCount < 2.0) {
+                $suppressMonths = max(1, (int) config('report_restrictions.out_warning_suppress_months', 1));
                 $recentWarning = AdminMessage::where('user_id', $user->user_id)
                     ->where('title', 'アウト警告のお知らせ')
-                    ->where('created_at', '>=', now()->subWeek())
+                    ->where('created_at', '>=', now()->subMonths($suppressMonths))
                     ->exists();
 
                 if (!$recentWarning) {
