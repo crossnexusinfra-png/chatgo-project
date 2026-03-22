@@ -340,6 +340,24 @@ class User extends Authenticatable
     }
 
     /**
+     * 凍結中に投稿等が拒否されたときのユーザー向けメッセージ
+     */
+    public function frozenPostDeniedMessage(?string $lang = null): string
+    {
+        $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+        if ($this->is_permanently_banned) {
+            return \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
+        }
+        if ($this->frozen_until && $this->frozen_until->isFuture()) {
+            return \App\Services\LanguageService::trans('user_temporarily_frozen_message', $lang, [
+                'until' => $this->frozen_until->format('Y-m-d H:i'),
+            ]);
+        }
+
+        return \App\Services\LanguageService::trans('user_frozen_message', $lang);
+    }
+
+    /**
      * ユーザーが警告状態かどうかを判定（1アウト以上）
      * 
      * @return bool

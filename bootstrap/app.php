@@ -165,9 +165,12 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // パフォーマンス監視ミドルウェアを追加
         $middleware->append(\App\Http\Middleware\PerformanceMonitor::class);
-        
-        // 凍結チェックミドルウェアを追加
-        $middleware->append(\App\Http\Middleware\CheckUserFrozen::class);
+
+        // 凍結チェックは web グループ内（StartSession 後）で実行する。
+        // グローバルに置くとセッション前に走り Auth::check() が常に false になり、凍結が無効化される。
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckUserFrozen::class,
+        ]);
         
         // 管理者用Basic認証ミドルウェアのエイリアス
         $middleware->alias([

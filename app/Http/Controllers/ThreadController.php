@@ -539,6 +539,12 @@ class ThreadController extends Controller
         if (!auth()->check()) {
             return redirect()->route('auth.choice');
         }
+
+        if (auth()->user()->isFrozen()) {
+            return back()->withInput()->withErrors([
+                'title' => auth()->user()->frozenPostDeniedMessage($lang),
+            ]);
+        }
         
         // R18スレッドかどうかを判定（Policyでチェックするため）
         $isR18 = $request->has('is_r18') && $request->is_r18 == '1';

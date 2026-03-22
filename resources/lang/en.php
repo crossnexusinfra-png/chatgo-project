@@ -704,6 +704,7 @@ return [
     'user_frozen_message' => 'Your account is frozen and this operation cannot be performed.',
     'user_temporarily_frozen_message' => 'Your account is temporarily frozen. Freeze release scheduled: {until}',
     'user_permanently_banned_message' => 'Your account is permanently banned. You can only log out.',
+    'account_frozen_no_create_thread' => 'Cannot create rooms while your account is frozen',
     'banned_email_not_usable' => 'This email address was used by a permanently banned account and cannot be used for new registration.',
     'banned_phone_not_usable' => 'This phone number was used by a permanently banned account and cannot be used for new registration.',
     

@@ -155,6 +155,9 @@
 
         if (openCreateThreadModal && createThreadModal) {
             openCreateThreadModal.addEventListener('click', function() {
+                if (openCreateThreadModal.disabled) {
+                    return;
+                }
                 createThreadModal.classList.add('show');
                 document.body.style.overflow = 'hidden';
                 updateThreadCreateCoinDisplay();

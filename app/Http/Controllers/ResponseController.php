@@ -31,6 +31,12 @@ class ResponseController extends Controller
         }
         Gate::authorize('create', Response::class);
 
+        if (auth()->user()->isFrozen()) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return back()->withErrors(['body' => auth()->user()->frozenPostDeniedMessage($lang)])->withInput();
+        }
+
         // 重複実行防止
         $lock = \App\Services\DuplicateSubmissionLockService::acquire('response.store', auth()->user()->user_id, (string) $thread->thread_id);
         if (!$lock) {
@@ -496,6 +502,12 @@ class ResponseController extends Controller
             return redirect()->route('auth.choice');
         }
         Gate::authorize('create', Response::class);
+
+        if (auth()->user()->isFrozen()) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return back()->withErrors(['body' => auth()->user()->frozenPostDeniedMessage($lang)])->withInput();
+        }
 
         // 重複実行防止
         $resourceId = $thread->thread_id . ':' . $response->response_id;

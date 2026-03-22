@@ -69,7 +69,9 @@
                     <a href="{{ route('profile.index') }}" class="header-button profile-btn" title="{{ \App\Services\LanguageService::trans('profile', $lang) }}">
                         👤
                     </a>
-                    <button class="header-button create-btn" id="openCreateThreadModal" title="{{ \App\Services\LanguageService::trans('create_thread', $lang) }}">
+                    <button type="button" class="header-button create-btn @if(!empty($viewerAccountFrozen)) create-btn-disabled @endif" id="openCreateThreadModal"
+                        @if(!empty($viewerAccountFrozen)) disabled aria-disabled="true" @endif
+                        title="{{ !empty($viewerAccountFrozen) ? (\App\Services\LanguageService::trans('account_frozen_no_create_thread', $lang)) : \App\Services\LanguageService::trans('create_thread', $lang) }}">
                         ✏️
                     </button>
                 @else

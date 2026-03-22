@@ -56,11 +56,18 @@
             </div>
             
             <div class="modal-body">
+                @error('frozen')
+                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                @enderror
                 <!-- 新規ルームフォーム -->
                 <section class="post-form">
                     <form id="createThreadForm" action="{{ route('threads.store') }}" method="POST" enctype="multipart/form-data">
                         <!-- CSRF保護 -->
                         @csrf
+                        @if(!empty($viewerAccountFrozen))
+                        <p class="account-frozen-modal-notice thread-restriction-info">{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
+                        @endif
+                        <fieldset class="create-thread-fieldset @if(!empty($viewerAccountFrozen)) is-disabled-frozen @endif" @if(!empty($viewerAccountFrozen)) disabled aria-disabled="true" @endif>
                         <div class="js-create-thread-fields">
                         <div class="form-group">
                             <label for="title">{{ \App\Services\LanguageService::trans('thread_title', $lang) }}:</label>
@@ -227,6 +234,7 @@
                             <button type="submit" class="btn btn-primary">{{ \App\Services\LanguageService::trans('create_thread', $lang) }}</button>
                             <button type="button" class="btn btn-secondary" id="cancelCreateThread">{{ \App\Services\LanguageService::trans('cancel', $lang) }}</button>
                         </div>
+                        </fieldset>
                     </form>
                 </section>
             </div>

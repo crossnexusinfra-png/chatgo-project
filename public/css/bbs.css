@@ -2762,6 +2762,25 @@ form.form-submitting input[readonly] {
     margin: 0;
 }
 
+/* アカウント凍結: ルーム作成ボタン・モーダル */
+.header-button.create-btn-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.account-frozen-modal-notice {
+    margin: 0 0 14px;
+    border-radius: 6px;
+}
+
+.create-thread-fieldset.is-disabled-frozen,
+.create-thread-fieldset:disabled {
+    opacity: 0.7;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
 /* レスポンス制限警告スタイル */
 .response-item.restriction-warning {
     background-color: #fff3cd;

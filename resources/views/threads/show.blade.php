@@ -251,6 +251,9 @@
 
         <!-- リプライ送信フォーム（固定） -->
         <section class="chat-input">
+            @error('frozen')
+                <div class="alert alert-danger alert-margin">{{ $message }}</div>
+            @enderror
             @if(isset($isThreadRestricted) && $isThreadRestricted)
                 @if(!session('acknowledged_thread_' . $thread->thread_id))
                     <div class="thread-restriction-info">
@@ -263,6 +266,11 @@
                 @endif
             @else
             @auth
+                @if(!empty($viewerAccountFrozen))
+                    <div class="thread-restriction-info account-frozen-reply-notice">
+                        <p>{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
+                    </div>
+                @else
                 @if(isset($isResponseLimitReached) && $isResponseLimitReached && !isset($continuationThread))
                 <!-- 続きルーム要望アンケート -->
                 <div id="continuation-request-panel" class="continuation-request-panel">
@@ -383,6 +391,7 @@
                     </div>
                 </form>
 
+                @endif
                 @endif
             @else
                 <div class="login-required-message">
