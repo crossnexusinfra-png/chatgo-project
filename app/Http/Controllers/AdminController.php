@@ -519,41 +519,8 @@ class AdminController extends Controller
         $reasons = $reports->pluck('reason')->unique()->toArray();
         $reasonsText = implode('、', $reasons);
         
-        // 各通報にアウト数を設定（デフォルト値を使用）
-        $updates = [];
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $updates[$report->report_id] = $defaultOutCount;
-            }
-        }
-        
-        // アウト数を一括更新
-        foreach ($updates as $reportId => $outCount) {
-            Report::where('report_id', $reportId)->update(['out_count' => $outCount]);
-        }
-        
-        Report::where('thread_id', $threadId)
-            ->whereNull('approved_at')
-            ->update([
-                'is_approved' => true,
-                'approved_at' => now(),
-            ]);
-        
-        // アウト数を再取得（更新後の値）
-        $reports = Report::where('thread_id', $threadId)
-            ->where('is_approved', true)
-            ->whereNotNull('approved_at')
-            ->get();
-        
-        // アウト数が設定されていない通報にデフォルト値を設定
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $report->out_count = $defaultOutCount;
-                $report->save();
-            }
-        }
+        // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
+        $this->approveReportsWithHighestOutCountOnly($reports);
 
         // 凍結・警告より先に作成者を解決（以前は代入順のバグで processOutCountAndFreeze が常にスキップされていた）
         $threadOwner = $thread->user;
@@ -637,41 +604,8 @@ class AdminController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
         
-        // 各通報にアウト数を設定（デフォルト値を使用）
-        $updates = [];
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $updates[$report->report_id] = $defaultOutCount;
-            }
-        }
-        
-        // アウト数を一括更新
-        foreach ($updates as $reportId => $outCount) {
-            Report::where('report_id', $reportId)->update(['out_count' => $outCount]);
-        }
-        
-        Report::where('response_id', $responseId)
-            ->whereNull('approved_at')
-            ->update([
-                'is_approved' => true,
-                'approved_at' => now(),
-            ]);
-        
-        // アウト数を再取得（更新後の値）
-        $reports = Report::where('response_id', $responseId)
-            ->where('is_approved', true)
-            ->whereNotNull('approved_at')
-            ->get();
-        
-        // アウト数が設定されていない通報にデフォルト値を設定
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $report->out_count = $defaultOutCount;
-                $report->save();
-            }
-        }
+        // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
+        $this->approveReportsWithHighestOutCountOnly($reports);
         
         // レスポンス作成者のアウト数と凍結処理
         $responseOwner = $response->user;
@@ -825,6 +759,37 @@ class AdminController extends Controller
         
         // デフォルト（スコアが範囲外の場合）
         return 0;
+    }
+
+    /**
+     * 同一対象の承認通報は、最大アウト値の1件のみ加算し、他は0として承認する。
+     *
+     * @param \Illuminate\Support\Collection<int, \App\Models\Report> $reports
+     */
+    private function approveReportsWithHighestOutCountOnly(\Illuminate\Support\Collection $reports, float $multiplier = 1.0): void
+    {
+        if ($reports->isEmpty()) {
+            return;
+        }
+
+        $maxOutCount = 0.0;
+        $maxReportId = null;
+        foreach ($reports as $report) {
+            $base = (float) ($report->out_count ?: Report::getDefaultOutCount((string) $report->reason));
+            $candidate = round($base * $multiplier, 1);
+            if ($candidate > $maxOutCount) {
+                $maxOutCount = $candidate;
+                $maxReportId = $report->report_id;
+            }
+        }
+
+        $approvedAt = now();
+        foreach ($reports as $report) {
+            $report->is_approved = true;
+            $report->approved_at = $approvedAt;
+            $report->out_count = ($maxReportId !== null && $report->report_id === $maxReportId) ? $maxOutCount : 0.0;
+            $report->save();
+        }
     }
 
     /**
@@ -1147,41 +1112,8 @@ class AdminController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
         
-        // 各通報にアウト数を設定（デフォルト値を使用）
-        $updates = [];
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $updates[$report->report_id] = $defaultOutCount * $profileOutMultiplier;
-            }
-        }
-        
-        // アウト数を一括更新
-        foreach ($updates as $reportId => $outCount) {
-            Report::where('report_id', $reportId)->update(['out_count' => $outCount]);
-        }
-        
-        Report::where('reported_user_id', $reportedUserId)
-            ->whereNull('approved_at')
-            ->update([
-                'is_approved' => true,
-                'approved_at' => now(),
-            ]);
-        
-        // アウト数を再取得（更新後の値）
-        $reports = Report::where('reported_user_id', $reportedUserId)
-            ->where('is_approved', true)
-            ->whereNotNull('approved_at')
-            ->get();
-        
-        // アウト数が設定されていない通報にデフォルト値を設定
-        foreach ($reports as $report) {
-            if (!$report->out_count) {
-                $defaultOutCount = Report::getDefaultOutCount($report->reason);
-                $report->out_count = $defaultOutCount * $profileOutMultiplier;
-                $report->save();
-            }
-        }
+        // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
+        $this->approveReportsWithHighestOutCountOnly($reports, $profileOutMultiplier);
         
         // プロフィール所有者のアウト数と凍結処理
         $this->userOutCountFreezeService->processOutCountAndFreeze($reportedUser);

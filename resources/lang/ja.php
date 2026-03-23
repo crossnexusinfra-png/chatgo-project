@@ -706,7 +706,7 @@ return [
     // ユーザー凍結
     'user_frozen_message' => 'アカウントが凍結されているため、この操作は実行できません。',
     'user_temporarily_frozen_message' => 'アカウントが一時凍結されています。凍結解除予定日時: {until}',
-    'user_permanently_banned_message' => 'アカウントが永久凍結されています。ログアウト以外の操作はできません。',
+    'user_permanently_banned_message' => 'アカウントが永久凍結されています。閲覧以外の操作はできません。',
     'account_frozen_no_create_thread' => '凍結中のためルームを作成できません',
     'banned_email_not_usable' => 'このメールアドレスは永久凍結されたアカウントで使用されているため、新規登録に使用できません。',
     'banned_phone_not_usable' => 'この電話番号は永久凍結されたアカウントで使用されているため、新規登録に使用できません。',

@@ -63,9 +63,11 @@ class CheckUserFrozen
 
         // 凍結状態をチェック（refresh 後の属性で再判定）
         if ($user->isFrozen()) {
-            // 永久凍結の場合、ログアウト以外すべて禁止
+            // 永久凍結の場合、閲覧は許可しつつ、ログアウト以外の非GET操作を禁止
             if ($user->is_permanently_banned) {
-                if (!$request->isMethod('GET')) {
+                $routeName = $request->route()?->getName();
+                $isLogoutRequest = $routeName === 'logout' || $request->is('logout');
+                if (!$request->isMethod('GET') && !$isLogoutRequest) {
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
                     $message = \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
 

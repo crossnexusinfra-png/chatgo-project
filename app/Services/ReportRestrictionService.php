@@ -176,21 +176,8 @@ class ReportRestrictionService
                     // 通報理由（重複除外）
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
 
-                        // 管理者承認と同様に承認処理（アウト数のみ軽減）
-                        foreach ($reports as $rep) {
-                            $reason = (string) ($rep->reason ?? '');
-                            $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
-                            $newOutCount = round($base * $selfAckMultiplier, 1);
-                            $rep->out_count = $newOutCount;
-                            $rep->is_approved = true;
-                            $rep->approved_at = now();
-                            try {
-                                $rep->save();
-                            } catch (\Throwable $e) {
-                                throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
-                            }
-                            $result['approved_reports']++;
-                        }
+                        // 管理者承認と同様に、同一対象の複数理由は合算せず最大アウト値1件のみ加算。
+                        $result['approved_reports'] += $this->approveReportsWithHighestOutCountOnly($reports, $selfAckMultiplier);
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
                     $rank = 1;
@@ -238,20 +225,7 @@ class ReportRestrictionService
                     $responseBodyForMsg = $this->safeTrim($responseBody, 500, '…');
                     $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
 
-                        foreach ($reports as $rep) {
-                            $reason = (string) ($rep->reason ?? '');
-                            $base = (float) ($rep->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
-                            $newOutCount = round($base * $selfAckMultiplier, 1);
-                            $rep->out_count = $newOutCount;
-                            $rep->is_approved = true;
-                            $rep->approved_at = now();
-                            try {
-                                $rep->save();
-                            } catch (\Throwable $e) {
-                                throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
-                            }
-                            $result['approved_reports']++;
-                        }
+                        $result['approved_reports'] += $this->approveReportsWithHighestOutCountOnly($reports, $selfAckMultiplier);
 
                     // 通報者へ通知（文言のみ「作成者が了承」に差し替え）
                     $rank = 1;
@@ -468,6 +442,47 @@ class ReportRestrictionService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 同一対象の承認通報は、最大アウト値の1件のみ加算し、他は0として承認する。
+     *
+     * @param \Illuminate\Support\Collection<int, \App\Models\Report> $reports
+     * @return int 承認した通報件数
+     */
+    private function approveReportsWithHighestOutCountOnly(\Illuminate\Support\Collection $reports, float $multiplier = 1.0): int
+    {
+        if ($reports->isEmpty()) {
+            return 0;
+        }
+
+        $maxOutCount = 0.0;
+        $maxReportId = null;
+        foreach ($reports as $report) {
+            $reason = (string) ($report->reason ?? '');
+            $base = (float) ($report->out_count ?: Report::getDefaultOutCount($reason !== '' ? $reason : 'その他'));
+            $candidate = round($base * $multiplier, 1);
+            if ($candidate > $maxOutCount) {
+                $maxOutCount = $candidate;
+                $maxReportId = $report->report_id;
+            }
+        }
+
+        $approvedAt = now();
+        $approvedCount = 0;
+        foreach ($reports as $report) {
+            $report->out_count = ($maxReportId !== null && $report->report_id === $maxReportId) ? $maxOutCount : 0.0;
+            $report->is_approved = true;
+            $report->approved_at = $approvedAt;
+            try {
+                $report->save();
+                $approvedCount++;
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('[ACK_STEP]report_save_failed', 0, $e);
+            }
+        }
+
+        return $approvedCount;
     }
 
     /**

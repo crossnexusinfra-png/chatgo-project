@@ -100,7 +100,7 @@ class UserOutCountFreezeService
 
     private function sendPermanentBanNotice(User $user): void
     {
-        $bodyJa = "お客様のアカウントが永久凍結されました。\n\n今後、このアカウントでログインすることはできますが、ログアウト以外の操作は一切できません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
+        $bodyJa = "お客様のアカウントが永久凍結されました。\n\n今後、このアカウントでログインすることはできますが、閲覧以外の操作は一切できません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
 
         AdminMessage::create([
             'title' => 'アカウント永久凍結のお知らせ',
