@@ -26,10 +26,14 @@ class LanguageService
         
         $translated = $translations[$langCode][$key] ?? $translations['ja'][$key] ?? $key;
         
-        // 置換パラメータがある場合は置換
+        // 置換パラメータがある場合は置換（:name と {name} の両方に対応）
         if (!empty($replace)) {
             foreach ($replace as $search => $value) {
-                $translated = str_replace(":{$search}", $value, $translated);
+                $valueStr = $value instanceof \Stringable || is_scalar($value)
+                    ? (string) $value
+                    : '';
+                $translated = str_replace(":{$search}", $valueStr, $translated);
+                $translated = str_replace('{' . $search . '}', $valueStr, $translated);
             }
         }
         
