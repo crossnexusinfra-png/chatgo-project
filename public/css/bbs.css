@@ -2773,6 +2773,13 @@ form.form-submitting input[readonly] {
     border-radius: 6px;
 }
 
+.create-thread-fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
 .create-thread-fieldset.is-disabled-frozen,
 .create-thread-fieldset:disabled {
     opacity: 0.7;

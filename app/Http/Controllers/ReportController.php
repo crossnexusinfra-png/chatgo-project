@@ -294,11 +294,15 @@ class ReportController extends Controller
                 $t = Thread::find($validated['thread_id']);
                 if ($t) {
                     $restrictionService->ensureRestrictionCreatedForThread($t);
+                    $this->sendR18ChangeNotificationIfNeeded($t);
                 }
             } elseif (!empty($validated['response_id'])) {
                 $r = Response::find($validated['response_id']);
                 if ($r) {
                     $restrictionService->ensureRestrictionCreatedForResponse($r);
+                    if ($r->thread) {
+                        $this->sendR18ChangeNotificationIfNeeded($r->thread, $r);
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -311,6 +315,53 @@ class ReportController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * 「成人向けコンテンツが含まれる」で制限がかかった場合、R18変更のお知らせを送信
+     */
+    private function sendR18ChangeNotificationIfNeeded(Thread $thread, ?Response $response = null): void
+    {
+        $hasAdultContentRestriction = in_array('成人向けコンテンツが含まれる', $thread->getRestrictionReasons(), true);
+
+        if (!$hasAdultContentRestriction && $response) {
+            $hasAdultContentRestriction = in_array('成人向けコンテンツが含まれる', $response->getRestrictionReasons(), true);
+        }
+
+        if (!$hasAdultContentRestriction) {
+            return;
+        }
+
+        $threadCreator = $thread->user;
+        if (!$threadCreator || !$threadCreator->isAdult()) {
+            return;
+        }
+
+        $alreadySent = \App\Models\AdminMessage::where('thread_id', $thread->thread_id)
+            ->where('title_key', 'r18_change_request_title')
+            ->exists();
+
+        if ($alreadySent) {
+            return;
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $body = \App\Services\LanguageService::trans('r18_change_request_body', $lang, [
+            'thread_title' => $thread->title,
+        ]);
+        $body = str_replace('\\n', "\n", $body);
+
+        \App\Models\AdminMessage::create([
+            'title_key' => 'r18_change_request_title',
+            'body' => $body,
+            'audience' => 'members',
+            'user_id' => $threadCreator->user_id,
+            'thread_id' => $thread->thread_id,
+            'published_at' => now(),
+            'allows_reply' => false,
+            'reply_used' => false,
+            'unlimited_reply' => false,
+        ]);
     }
 }
 
