@@ -385,8 +385,6 @@
                 if (message) {
                     message.reply_used = true;
                 }
-                
-                alert(translations.r18ChangeApproveSuccess);
             } else {
                 alert(result.error || translations.r18ChangeApproveFailed);
                 buttons.forEach(btn => {
@@ -460,8 +458,6 @@
                 if (message) {
                     message.reply_used = true;
                 }
-                
-                alert(translations.r18ChangeRejectSuccess);
             } else {
                 alert(result.error || translations.r18ChangeRejectFailed);
                 buttons.forEach(btn => {

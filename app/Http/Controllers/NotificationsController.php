@@ -351,6 +351,23 @@ class NotificationsController extends Controller
             // スレッドをR18に変更
             $thread = \App\Models\Thread::find($message->thread_id);
             if ($thread && !$thread->is_r18) {
+                // 取り消し通知のため、削除対象となる通報者を事前に収集
+                $responseIds = \App\Models\Response::where('thread_id', $thread->thread_id)
+                    ->pluck('response_id')
+                    ->toArray();
+                $cancelledReporterIds = \App\Models\Report::where(function ($q) use ($thread, $responseIds) {
+                        $q->where('thread_id', $thread->thread_id);
+                        if (!empty($responseIds)) {
+                            $q->orWhereIn('response_id', $responseIds);
+                        }
+                    })
+                    ->where('reason', '成人向けコンテンツが含まれる')
+                    ->whereNotNull('user_id')
+                    ->pluck('user_id')
+                    ->unique()
+                    ->values()
+                    ->toArray();
+
                 $thread->is_r18 = true;
                 $thread->save();
                 
@@ -360,14 +377,15 @@ class NotificationsController extends Controller
                     ->delete();
                 
                 // レスポンスの通報を削除
-                $responseIds = \App\Models\Response::where('thread_id', $thread->thread_id)
-                    ->pluck('response_id')
-                    ->toArray();
-                
                 if (!empty($responseIds)) {
                     \App\Models\Report::whereIn('response_id', $responseIds)
                         ->where('reason', '成人向けコンテンツが含まれる')
                         ->delete();
+                }
+
+                // 通報が取り消された旨を通報者へ通知
+                if (!empty($cancelledReporterIds)) {
+                    $this->notifyAdultContentReportCancellation($thread, $cancelledReporterIds);
                 }
                 
                 // キャッシュをクリア
@@ -390,6 +408,30 @@ class NotificationsController extends Controller
         }
         } finally {
             $lock->release();
+        }
+    }
+
+    /**
+     * R18変更により取り消された通報について、通報者へ通知する
+     *
+     * @param \App\Models\Thread $thread
+     * @param array<int> $reporterIds
+     * @return void
+     */
+    private function notifyAdultContentReportCancellation(\App\Models\Thread $thread, array $reporterIds): void
+    {
+        foreach ($reporterIds as $reporterId) {
+            AdminMessage::create([
+                'title' => '通報取り消しのお知らせ',
+                'body' => "あなたが「成人向けコンテンツが含まれる」で通報した内容は、ルーム「{$thread->title}」がR18ルームへ変更されたため取り消されました。",
+                'audience' => 'members',
+                'user_id' => $reporterId,
+                'thread_id' => $thread->thread_id,
+                'published_at' => now(),
+                'allows_reply' => false,
+                'reply_used' => false,
+                'unlimited_reply' => false,
+            ]);
         }
     }
 
