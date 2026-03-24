@@ -37,13 +37,15 @@ class ReportRestrictionService
         ], function () use ($thread) {
             $reasons = $this->getReportReasonsForThread($thread->thread_id);
             $body = $this->buildRestrictionNoticeBody('thread', $thread->title, null, $reasons);
-            return $this->sendRestrictionAckMessage([
+            $message = $this->sendRestrictionAckMessage([
                 'user_id' => (int) $thread->user_id,
                 'thread_id' => (int) $thread->thread_id,
                 'title_key' => 'report_restriction_review_title',
                 'body_key' => null,
                 'body' => $body,
             ]);
+            $this->sendR18ChangeRequestIfNeeded($thread);
+            return $message;
         });
     }
 
@@ -66,7 +68,7 @@ class ReportRestrictionService
             $replySnippet = $response->body ? $this->safeTrim(strip_tags($response->body), 80, '…') : '';
             $reasons = $this->getReportReasonsForResponse($response->response_id);
             $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons);
-            return $this->sendRestrictionAckMessage([
+            $message = $this->sendRestrictionAckMessage([
                 'user_id' => (int) $response->user_id,
                 'thread_id' => (int) $response->thread_id,
                 'response_id' => (int) $response->response_id,
@@ -74,6 +76,10 @@ class ReportRestrictionService
                 'body_key' => null,
                 'body' => $body,
             ]);
+            if ($response->thread) {
+                $this->sendR18ChangeRequestIfNeeded($response->thread);
+            }
+            return $message;
         });
     }
 
@@ -700,6 +706,62 @@ class ReportRestrictionService
             'allows_reply' => false,
             'unlimited_reply' => false,
             'reply_used' => false,
+        ]);
+    }
+
+    /**
+     * 「成人向けコンテンツが含まれる」通報がある場合に、スレッド作成者へR18変更リクエストを送信
+     */
+    private function sendR18ChangeRequestIfNeeded(Thread $thread): void
+    {
+        $threadCreator = $thread->user;
+        if (!$threadCreator || !$threadCreator->isAdult()) {
+            return;
+        }
+
+        $hasAdultContentReport = Report::where(function ($q) use ($thread) {
+                $q->where('thread_id', $thread->thread_id)
+                    ->orWhereIn('response_id', function ($sub) use ($thread) {
+                        $sub->select('response_id')
+                            ->from('responses')
+                            ->where('thread_id', $thread->thread_id);
+                    });
+            })
+            ->where('reason', '成人向けコンテンツが含まれる')
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                    ->orWhereNull('approved_at');
+            })
+            ->exists();
+
+        if (!$hasAdultContentReport) {
+            return;
+        }
+
+        $alreadySent = AdminMessage::where('thread_id', $thread->thread_id)
+            ->where('title_key', 'r18_change_request_title')
+            ->exists();
+
+        if ($alreadySent) {
+            return;
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $body = \App\Services\LanguageService::trans('r18_change_request_body', $lang, [
+            'thread_title' => $thread->title,
+        ]);
+        $body = str_replace('\\n', "\n", $body);
+
+        AdminMessage::create([
+            'title_key' => 'r18_change_request_title',
+            'body' => $body,
+            'audience' => 'members',
+            'user_id' => $threadCreator->user_id,
+            'thread_id' => $thread->thread_id,
+            'published_at' => now(),
+            'allows_reply' => false,
+            'reply_used' => false,
+            'unlimited_reply' => false,
         ]);
     }
 }
