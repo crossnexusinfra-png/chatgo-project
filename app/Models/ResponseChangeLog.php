@@ -75,6 +75,20 @@ class ResponseChangeLog extends Model
      */
     public static function logDelete(Response $response, ?string $reason = null): self
     {
+        // FK制約エラーで外側のトランザクションを壊さないため、
+        // 対象レスポンスが既に存在しない場合はDB書き込みをスキップする。
+        if (!Response::where('response_id', $response->response_id)->exists()) {
+            return self::make([
+                'response_id' => $response->response_id,
+                'action_type' => 'delete',
+                'changed_by_user_id' => auth()->id(),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'reason' => $reason ?? 'レスポンスが削除されました',
+                'changed_at' => now(),
+            ]);
+        }
+
         return self::create([
             'response_id' => $response->response_id,
             'action_type' => 'delete',

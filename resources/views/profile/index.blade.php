@@ -94,6 +94,10 @@
                         <span>{{ $user->phone }}</span>
                     </div>
                     <div class="detail-item">
+                        <label>{{ \App\Services\LanguageService::trans('birthdate', $lang) }}</label>
+                        <span>{{ $user->birthdate ? $user->birthdate->format('Y-m-d') : '-' }}</span>
+                    </div>
+                    <div class="detail-item">
                         <label>{{ \App\Services\LanguageService::trans('nationality_label', $lang) }}</label>
                         <span class="country-display">
                             @if($nationalityCode)
