@@ -353,8 +353,17 @@ class NotificationsController extends Controller
         }
         
         try {
+            // スキーマ差分（deleted_at未反映）でも落ちないように取得方法を切り替える
+            $canUseSoftDeletes = false;
+            try {
+                $canUseSoftDeletes = \Illuminate\Support\Facades\Schema::hasColumn('threads', 'deleted_at');
+            } catch (\Throwable $e) {
+                $canUseSoftDeletes = false;
+            }
             // スレッドをR18に変更
-            $thread = \App\Models\Thread::withTrashed()->find($threadId);
+            $thread = $canUseSoftDeletes
+                ? \App\Models\Thread::withTrashed()->find($threadId)
+                : \App\Models\Thread::find($threadId);
             if ($thread && !$thread->is_r18) {
                 // 取り消し通知のため、削除対象となる通報者を事前に収集
                 $responseIds = \App\Models\Response::where('thread_id', $threadId)
@@ -447,7 +456,7 @@ class NotificationsController extends Controller
                     ->values()
                     ->toArray();
 
-                if ($thread->trashed()) {
+                if ($canUseSoftDeletes && method_exists($thread, 'trashed') && $thread->trashed()) {
                     $thread->restore();
                 }
 
@@ -484,12 +493,13 @@ class NotificationsController extends Controller
                 'reportMessagesToEnable' => $reportMessagesToEnable,
                 'reportMessagesToDisable' => $reportMessagesToDisable,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('R18変更承認に失敗', [
                 'user_id' => $userId,
                 'admin_message_id' => $message->id,
                 'thread_id' => $message->thread_id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'exception' => $e,
             ]);
             return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_approve_failed', $lang)], 500);
         }
