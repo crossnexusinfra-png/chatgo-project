@@ -445,7 +445,7 @@ class NotificationsController extends Controller
                     ]);
                 }
 
-                $cancelledReporterIds = \App\Models\Report::where(function ($q) use ($thread, $responseIds) {
+                $cancelledReporterIds = \App\Models\Report::where(function ($q) use ($threadId, $responseIds) {
                         $q->where('thread_id', $threadId);
                         if (!empty($responseIds)) {
                             $q->orWhereIn('response_id', $responseIds);
