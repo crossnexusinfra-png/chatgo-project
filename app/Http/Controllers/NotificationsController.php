@@ -477,7 +477,17 @@ class NotificationsController extends Controller
 
                 // 通報が取り消された旨を通報者へ通知
                 if (!empty($cancelledReporterIds)) {
-                    $this->notifyAdultContentReportCancellation($thread, $cancelledReporterIds);
+                    try {
+                        $this->notifyAdultContentReportCancellation($thread, $cancelledReporterIds);
+                    } catch (\Throwable $e) {
+                        // 取り消し通知の失敗でR18変更本体を失敗させない
+                        \Log::warning('R18 approve: cancellation notice failed (ignored)', [
+                            'user_id' => $userId,
+                            'admin_message_id' => $message->id,
+                            'thread_id' => $threadId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
                 
                 // キャッシュをクリア
@@ -494,14 +504,18 @@ class NotificationsController extends Controller
                 'reportMessagesToDisable' => $reportMessagesToDisable,
             ]);
         } catch (\Throwable $e) {
+            $errorId = (string) \Illuminate\Support\Str::uuid();
             \Log::error('R18変更承認に失敗', [
+                'error_id' => $errorId,
                 'user_id' => $userId,
                 'admin_message_id' => $message->id,
                 'thread_id' => $message->thread_id,
                 'error' => $e->getMessage(),
                 'exception' => $e,
             ]);
-            return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_approve_failed', $lang)], 500);
+            return response()->json([
+                'error' => \App\Services\LanguageService::trans('r18_change_approve_failed', $lang) . " (error_id: {$errorId})",
+            ], 500);
         }
         } finally {
             $lock->release();
@@ -629,7 +643,7 @@ class NotificationsController extends Controller
                 // R18ルームに変更済みでも、「通報取り消し」に該当するメッセージだけ了承を許可する
                 // （= 成人向けコンテンツが含まれる の通報由来の了承）
                 $adultPhrase = '成人向けコンテンツが含まれる';
-                $bodyText = (string) ($message->attributes['body'] ?? $message->body ?? '');
+                $bodyText = (string) ($message->getRawOriginal('body') ?? $message->body ?? '');
 
                 if (mb_strpos($bodyText, $adultPhrase) === false) {
                     return response()->json([
