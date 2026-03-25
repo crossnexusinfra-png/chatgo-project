@@ -7,7 +7,9 @@ use App\Models\AdminMessageRead;
 use App\Models\AdminMessageCoinReward;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationsController extends Controller
 {
@@ -387,7 +389,7 @@ class NotificationsController extends Controller
                         : collect();
 
                     $affectedReportMessages = $threadReportMessages
-                        ->concat($responseReportMessages)
+                        ->merge($responseReportMessages)
                         ->unique('id')
                         ->values();
 
@@ -456,23 +458,60 @@ class NotificationsController extends Controller
                     ->values()
                     ->toArray();
 
-                if ($canUseSoftDeletes && method_exists($thread, 'trashed') && $thread->trashed()) {
-                    $thread->restore();
+                // ソフトデリートの restore + is_r18 更新を Eloquent に依存せず一発で反映（イベント差分でも落ちにくくする）
+                try {
+                    $threadPatch = [
+                        'is_r18' => true,
+                        'updated_at' => now(),
+                    ];
+                    if ($canUseSoftDeletes) {
+                        $threadPatch['deleted_at'] = null;
+                    }
+                    DB::table('threads')->where('thread_id', $threadId)->update($threadPatch);
+                } catch (\Throwable $e) {
+                    \Log::warning('R18 approve: thread DB::update failed, trying Eloquent withoutEvents', [
+                        'user_id' => $userId,
+                        'admin_message_id' => $message->id,
+                        'thread_id' => $threadId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    \App\Models\Thread::withoutEvents(function () use ($thread, $canUseSoftDeletes) {
+                        if ($canUseSoftDeletes && method_exists($thread, 'trashed') && $thread->trashed()) {
+                            $thread->restore();
+                        }
+                        $thread->is_r18 = true;
+                        $thread->save();
+                    });
                 }
-
-                $thread->is_r18 = true;
-                $thread->save();
                 
                 // 「成人向けコンテンツが含まれる」の通報を削除
-                \App\Models\Report::where('thread_id', $thread->thread_id)
-                    ->where('reason', '成人向けコンテンツが含まれる')
-                    ->delete();
+                try {
+                    \App\Models\Report::where('thread_id', $thread->thread_id)
+                        ->where('reason', '成人向けコンテンツが含まれる')
+                        ->delete();
+                } catch (\Throwable $e) {
+                    \Log::warning('R18 approve: deleting thread adult reports failed (ignored)', [
+                        'user_id' => $userId,
+                        'admin_message_id' => $message->id,
+                        'thread_id' => $threadId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
                 
                 // レスポンスの通報を削除
                 if (!empty($responseIds)) {
-                    \App\Models\Report::whereIn('response_id', $responseIds)
-                        ->where('reason', '成人向けコンテンツが含まれる')
-                        ->delete();
+                    try {
+                        \App\Models\Report::whereIn('response_id', $responseIds)
+                            ->where('reason', '成人向けコンテンツが含まれる')
+                            ->delete();
+                    } catch (\Throwable $e) {
+                        \Log::warning('R18 approve: deleting response adult reports failed (ignored)', [
+                            'user_id' => $userId,
+                            'admin_message_id' => $message->id,
+                            'thread_id' => $threadId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 // 通報が取り消された旨を通報者へ通知
@@ -491,12 +530,37 @@ class NotificationsController extends Controller
                 }
                 
                 // キャッシュをクリア
-                Cache::forget('thread_restriction_' . $thread->thread_id);
+                try {
+                    Cache::forget('thread_restriction_' . $thread->thread_id);
+                } catch (\Throwable $e) {
+                    \Log::warning('R18 approve: cache forget failed (ignored)', [
+                        'user_id' => $userId,
+                        'admin_message_id' => $message->id,
+                        'thread_id' => $threadId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
             
             // メッセージを処理済みにマーク
-            $message->reply_used = true;
-            $message->save();
+            try {
+                $message->reply_used = true;
+                $message->save();
+            } catch (\Throwable $e) {
+                \Log::warning('R18 approve: admin_message Eloquent save failed, DB fallback', [
+                    'user_id' => $userId,
+                    'admin_message_id' => $message->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $fallback = ['reply_used' => true];
+                try {
+                    if (Schema::hasColumn('admin_messages', 'updated_at')) {
+                        $fallback['updated_at'] = now();
+                    }
+                } catch (\Throwable $ignored) {
+                }
+                DB::table('admin_messages')->where('id', $message->id)->update($fallback);
+            }
             
             return response()->json([
                 'success' => true,
