@@ -349,6 +349,7 @@ return [
     'report_restriction_ack_button' => 'Acknowledge and delete',
     'report_restriction_ack_success' => 'Acknowledgment received.',
     'report_restriction_ack_failed' => 'Failed to process acknowledgment.',
+    'report_ack_disabled_after_r18_change' => 'Since the content is now treated as R18, report acknowledgment (delete) is not available.',
     
     // Reply Operations
     'thread_restricted_no_post' => 'This room has restricted functionality due to a report. Reply posting is not allowed. Viewing only.',

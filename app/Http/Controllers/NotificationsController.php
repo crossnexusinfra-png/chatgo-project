@@ -341,6 +341,11 @@ class NotificationsController extends Controller
         if ($message->title_key !== 'r18_change_request_title' || !$message->thread_id) {
             return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
         }
+
+        $threadId = (int) $message->thread_id;
+        $reportRestrictionTitleKeys = ['report_restriction_review_title', 'report_restriction_ack_title'];
+        $reportMessagesToEnable = [];
+        $reportMessagesToDisable = [];
         
         // 既に処理済みかチェック（reply_usedがtrueの場合は既に処理済み）
         if ($message->reply_used) {
@@ -349,14 +354,54 @@ class NotificationsController extends Controller
         
         try {
             // スレッドをR18に変更
-            $thread = \App\Models\Thread::find($message->thread_id);
+            $thread = \App\Models\Thread::withTrashed()->find($threadId);
             if ($thread && !$thread->is_r18) {
                 // 取り消し通知のため、削除対象となる通報者を事前に収集
-                $responseIds = \App\Models\Response::where('thread_id', $thread->thread_id)
+                $responseIds = \App\Models\Response::where('thread_id', $threadId)
                     ->pluck('response_id')
                     ->toArray();
+
+                // R18切替後の通報「了承（削除）」ボタン制御
+                // - 取り消し対象（=既に了承済み＝reply_used=true）のものだけボタンを有効（表示）に戻す
+                // - それ以外（審査中など）はボタンを無効（reply_used=true）にする
+                $threadReportMessages = AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
+                    ->where('thread_id', $threadId)
+                    ->where('body', 'like', '%成人向けコンテンツが含まれる%')
+                    ->get(['id', 'reply_used']);
+
+                $responseReportMessages = !empty($responseIds)
+                    ? AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
+                        ->whereIn('response_id', $responseIds)
+                        ->where('body', 'like', '%成人向けコンテンツが含まれる%')
+                        ->get(['id', 'reply_used'])
+                    : collect();
+
+                $affectedReportMessages = $threadReportMessages
+                    ->concat($responseReportMessages)
+                    ->unique('id')
+                    ->values();
+
+                $reportMessagesToEnable = $affectedReportMessages
+                    ->where('reply_used', true)
+                    ->pluck('id')
+                    ->values()
+                    ->all();
+
+                $reportMessagesToDisable = $affectedReportMessages
+                    ->where('reply_used', false)
+                    ->pluck('id')
+                    ->values()
+                    ->all();
+
+                if (!empty($reportMessagesToDisable)) {
+                    AdminMessage::whereIn('id', $reportMessagesToDisable)->update(['reply_used' => true]);
+                }
+                if (!empty($reportMessagesToEnable)) {
+                    AdminMessage::whereIn('id', $reportMessagesToEnable)->update(['reply_used' => false]);
+                }
+
                 $cancelledReporterIds = \App\Models\Report::where(function ($q) use ($thread, $responseIds) {
-                        $q->where('thread_id', $thread->thread_id);
+                        $q->where('thread_id', $threadId);
                         if (!empty($responseIds)) {
                             $q->orWhereIn('response_id', $responseIds);
                         }
@@ -367,6 +412,10 @@ class NotificationsController extends Controller
                     ->unique()
                     ->values()
                     ->toArray();
+
+                if ($thread->trashed()) {
+                    $thread->restore();
+                }
 
                 $thread->is_r18 = true;
                 $thread->save();
@@ -396,7 +445,11 @@ class NotificationsController extends Controller
             $message->reply_used = true;
             $message->save();
             
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'reportMessagesToEnable' => $reportMessagesToEnable,
+                'reportMessagesToDisable' => $reportMessagesToDisable,
+            ]);
         } catch (\Exception $e) {
             \Log::error('R18変更承認に失敗', [
                 'user_id' => $userId,
@@ -515,6 +568,23 @@ class NotificationsController extends Controller
             }
             if ($message->reply_used) {
                 return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_already_processed', $lang)], 400);
+            }
+
+            // R18ルームに変更済みの場合、通報了承（削除）は不可
+            $targetThread = null;
+            if ($message->thread_id) {
+                $targetThread = \App\Models\Thread::withTrashed()->find((int) $message->thread_id);
+            } elseif ($message->response_id) {
+                $response = \App\Models\Response::find((int) $message->response_id);
+                if ($response && $response->thread_id) {
+                    $targetThread = \App\Models\Thread::withTrashed()->find((int) $response->thread_id);
+                }
+            }
+
+            if ($targetThread && $targetThread->is_r18) {
+                return response()->json([
+                    'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
+                ], 403);
             }
 
             try {

@@ -385,6 +385,48 @@
                 if (message) {
                     message.reply_used = true;
                 }
+
+                const reportMessagesToEnable = Array.isArray(result.reportMessagesToEnable) ? result.reportMessagesToEnable : [];
+                const reportMessagesToDisable = Array.isArray(result.reportMessagesToDisable) ? result.reportMessagesToDisable : [];
+
+                // R18切替に連動して通報了承（削除）ボタンの表示を切り替える
+                reportMessagesToDisable.forEach(function (rid) {
+                    const mid = Number(rid);
+                    const msg = messagesData.find(m => m.id === mid);
+                    if (msg) msg.reply_used = true;
+                    const article = document.querySelector('article.notification-item[data-message-id="' + mid + '"]');
+                    if (!article) return;
+                    const section = article.querySelector('.report-restriction-ack-section');
+                    if (section) section.remove();
+                });
+
+                reportMessagesToEnable.forEach(function (rid) {
+                    const mid = Number(rid);
+                    const msg = messagesData.find(m => m.id === mid);
+                    if (msg) msg.reply_used = false;
+                    const article = document.querySelector('article.notification-item[data-message-id="' + mid + '"]');
+                    if (!article) return;
+
+                    if (article.querySelector('.report-restriction-ack-section[data-message-id="' + mid + '"]')) {
+                        return;
+                    }
+
+                    const messageBody = article.querySelector('.message-body');
+                    const section = document.createElement('div');
+                    section.className = 'report-restriction-ack-section';
+                    section.setAttribute('data-message-id', mid);
+                    section.innerHTML = '<div class="report-restriction-ack-buttons">' +
+                        '<button type="button" class="report-ack-btn" data-message-id="' + mid + '">' +
+                        (translations.reportAckButton || '了承して削除する') +
+                        '</button>' +
+                        '</div>';
+
+                    if (messageBody) {
+                        messageBody.insertAdjacentElement('afterend', section);
+                    } else {
+                        article.appendChild(section);
+                    }
+                });
             } else {
                 alert(result.error || translations.r18ChangeApproveFailed);
                 buttons.forEach(btn => {
