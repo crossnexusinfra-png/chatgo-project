@@ -900,8 +900,7 @@ class ThreadController extends Controller
         $currentUser = auth()->user();
         if (!\Illuminate\Support\Facades\Gate::forUser($currentUser)->allows('view', $thread)) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
-            return redirect()->route('threads.index')
-                ->withErrors(['r18' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang)]);
+            return response()->view('errors.thread-r18-unavailable', compact('lang'), 403);
         }
         
         if ($isR18Thread && !$isAcknowledged) {
