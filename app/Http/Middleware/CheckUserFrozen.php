@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -42,7 +43,14 @@ class CheckUserFrozen
         $user->refresh();
 
         // アウト数の時効（表示・凍結判定の整合用）
-        \App\Models\Report::resetExpiredOutCounts();
+        // 毎リクエスト更新は重いため、一定間隔で1回のみ実行する
+        try {
+            if (Cache::add('reports_reset_expired_out_counts_running', 1, now()->addMinutes(10))) {
+                \App\Models\Report::resetExpiredOutCounts();
+            }
+        } catch (\Throwable $e) {
+            // ここで失敗しても閲覧継続を優先
+        }
 
         if ($user->isFrozen()) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
