@@ -140,7 +140,13 @@
                 </div>
 
                 <div class="profile-actions">
-                    <a href="{{ route('profile.edit') }}" class="btn btn-primary">{{ \App\Services\LanguageService::trans('profile_edit', $lang) }}</a>
+                    @if(($viewerAccountFrozen ?? false) === true)
+                        <button type="button" class="btn btn-primary" disabled aria-disabled="true" title="{{ $viewerFrozenUiMessage ?? '' }}">
+                            {{ \App\Services\LanguageService::trans('profile_edit', $lang) }}
+                        </button>
+                    @else
+                        <a href="{{ route('profile.edit') }}" class="btn btn-primary">{{ \App\Services\LanguageService::trans('profile_edit', $lang) }}</a>
+                    @endif
                     <form action="{{ route('logout') }}" method="POST" class="logout-form">
                         @csrf
                         <button type="submit" class="btn btn-danger" onclick="return confirm('{{ \App\Services\LanguageService::trans('logout_confirm', $lang) }}')">
