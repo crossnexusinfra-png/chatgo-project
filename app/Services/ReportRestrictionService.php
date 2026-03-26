@@ -163,6 +163,29 @@ class ReportRestrictionService
                 $result['thread_id'] = $threadId;
                 $result['response_id'] = $responseId;
 
+                // R18ルーム変更後は作成者了承（削除）を受け付けない（ルーム通報・リプライ通報の両方）
+                $r18CheckThreadId = $threadId;
+                if ($r18CheckThreadId === null && $responseId) {
+                    try {
+                        $r18ProbeResponse = Response::find($responseId);
+                        if ($r18ProbeResponse && $r18ProbeResponse->thread_id) {
+                            $r18CheckThreadId = (int) $r18ProbeResponse->thread_id;
+                        }
+                    } catch (\Throwable $e) {
+                        $r18CheckThreadId = null;
+                    }
+                }
+                if ($r18CheckThreadId !== null) {
+                    try {
+                        $r18ProbeThread = Thread::withTrashed()->find($r18CheckThreadId);
+                    } catch (\Throwable $e) {
+                        $r18ProbeThread = null;
+                    }
+                    if ($r18ProbeThread && $r18ProbeThread->is_r18) {
+                        throw new \RuntimeException('[ACK_STEP]r18_ack_not_allowed');
+                    }
+                }
+
                 if ($type === 'thread' && $threadId) {
                     try {
                         $thread = Thread::withTrashed()->find($threadId);

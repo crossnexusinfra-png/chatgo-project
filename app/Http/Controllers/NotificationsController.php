@@ -372,41 +372,24 @@ class NotificationsController extends Controller
                     ->pluck('response_id')
                     ->toArray();
 
-                // R18切替後の通報「了承（削除）」ボタン制御
-                // - 取り消し対象（=既に了承済み＝reply_used=true）のものだけボタンを有効（表示）に戻す
-                // - それ以外（審査中など）はボタンを無効（reply_used=true）にする
+                // R18切替後は通報了承（削除）を一切できない仕様のため、
+                // 当該ルーム・当該ルーム内リプライ向けの審査/了承お知らせはすべて処理済み（ボタン非表示）にする
                 try {
-                    $threadReportMessages = AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
+                    $threadReportIds = AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
                         ->where('thread_id', $threadId)
-                        ->where('body', 'like', '%成人向けコンテンツが含まれる%')
-                        ->get(['id', 'reply_used']);
+                        ->pluck('id')
+                        ->all();
 
-                    $responseReportMessages = !empty($responseIds)
+                    $responseReportIds = !empty($responseIds)
                         ? AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
                             ->whereIn('response_id', $responseIds)
-                            ->where('body', 'like', '%成人向けコンテンツが含まれる%')
-                            ->get(['id', 'reply_used'])
-                        : collect();
+                            ->pluck('id')
+                            ->all()
+                        : [];
 
-                    $affectedReportMessages = $threadReportMessages
-                        ->merge($responseReportMessages)
-                        ->unique('id')
-                        ->values();
-
-                    $reportMessagesToEnable = $affectedReportMessages
-                        ->where('reply_used', true)
-                        ->pluck('id')
-                        ->values()
-                        ->all();
-
-                    $reportMessagesToDisable = $affectedReportMessages
-                        ->where('reply_used', false)
-                        ->pluck('id')
-                        ->values()
-                        ->all();
+                    $reportMessagesToEnable = [];
+                    $reportMessagesToDisable = array_values(array_unique(array_merge($threadReportIds, $responseReportIds)));
                 } catch (\Throwable $e) {
-                    // ボタン制御（reply_used切替）でDB例外が起きても、
-                    // R18ルーム変更自体は完走させるため握りつぶす
                     \Log::warning('R18 approve: report button control failed (ignored)', [
                         'user_id' => $userId,
                         'admin_message_id' => $message->id,
@@ -417,27 +400,13 @@ class NotificationsController extends Controller
                     $reportMessagesToDisable = [];
                 }
 
-                // reply_used の切り替えを反映（ページ再読込時にも整合を取る）
                 try {
                     if (!empty($reportMessagesToDisable)) {
                         AdminMessage::whereIn('id', $reportMessagesToDisable)
                             ->update(['reply_used' => true]);
                     }
                 } catch (\Throwable $e) {
-                    \Log::warning('R18 approve: failed to disable report buttons (ignored)', [
-                        'user_id' => $userId,
-                        'admin_message_id' => $message->id,
-                        'thread_id' => $threadId,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-                try {
-                    if (!empty($reportMessagesToEnable)) {
-                        AdminMessage::whereIn('id', $reportMessagesToEnable)
-                            ->update(['reply_used' => false]);
-                    }
-                } catch (\Throwable $e) {
-                    \Log::warning('R18 approve: failed to enable report buttons (ignored)', [
+                    \Log::warning('R18 approve: failed to close report ack buttons (ignored)', [
                         'user_id' => $userId,
                         'admin_message_id' => $message->id,
                         'thread_id' => $threadId,
@@ -704,16 +673,9 @@ class NotificationsController extends Controller
             }
 
             if ($targetThread && $targetThread->is_r18) {
-                // R18ルームに変更済みでも、「通報取り消し」に該当するメッセージだけ了承を許可する
-                // （= 成人向けコンテンツが含まれる の通報由来の了承）
-                $adultPhrase = '成人向けコンテンツが含まれる';
-                $bodyText = (string) ($message->getRawOriginal('body') ?? $message->body ?? '');
-
-                if (mb_strpos($bodyText, $adultPhrase) === false) {
-                    return response()->json([
-                        'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
-                    ], 403);
-                }
+                return response()->json([
+                    'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
+                ], 403);
             }
 
             try {
@@ -725,6 +687,11 @@ class NotificationsController extends Controller
                 $msg = (string) $e->getMessage();
                 if (str_starts_with($msg, '[ACK_STEP]')) {
                     $step = trim(substr($msg, strlen('[ACK_STEP]')));
+                }
+                if ($step === 'r18_ack_not_allowed') {
+                    return response()->json([
+                        'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
+                    ], 403);
                 }
                 \Log::error('Report restriction acknowledge failed', [
                     'error_id' => $errorId,
