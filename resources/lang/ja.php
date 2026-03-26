@@ -216,7 +216,7 @@ return [
     'thread_deleted_title' => 'ルームが削除されました',
     'thread_deleted_message' => 'このルームは通報の承認により削除されました。利用規約に違反する内容が含まれていたため、閲覧できなくなっています。',
     'thread_unavailable_title' => 'このルームは表示できません',
-    'thread_unavailable_message' => 'このルームは年齢制限により表示できなくなりました。お気に入りからも自動的に非表示になります。',
+    'thread_unavailable_message' => 'このルームは年齢制限により表示できません。',
     'thread_restricted_warning' => '⚠️ このルームは機能が制限されています',
     'thread_restricted_description' => 'このルームは以下の理由により通報されており、リプライの投稿が制限されています。閲覧のみ可能です：',
     'restricted_by_report' => '通報により制限されています',

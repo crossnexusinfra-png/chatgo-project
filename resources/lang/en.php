@@ -216,7 +216,7 @@ return [
     'thread_deleted_title' => 'Room Deleted',
     'thread_deleted_message' => 'This room has been deleted following the approval of reports. It contained content that violated our terms of service and is no longer available for viewing.',
     'thread_unavailable_title' => 'This room is unavailable',
-    'thread_unavailable_message' => 'This room is no longer viewable due to age restrictions. It will also be hidden from your favorites.',
+    'thread_unavailable_message' => 'This room cannot be viewed due to age restrictions.',
     'thread_restricted_warning' => '⚠️ This room has restricted functionality',
     'thread_restricted_description' => 'This room has been reported for the following reasons and reply posting is restricted. Viewing only:',
     'restricted_by_report' => 'Restricted due to report',
