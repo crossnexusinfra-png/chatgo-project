@@ -63,11 +63,17 @@ class CheckUserFrozen
 
         // 凍結状態をチェック（refresh 後の属性で再判定）
         if ($user->isFrozen()) {
+            $routeName = $request->route()?->getName();
             // 永久凍結の場合、閲覧は許可しつつ、ログアウト以外の非GET操作を禁止
             if ($user->is_permanently_banned) {
-                $routeName = $request->route()?->getName();
-                $isLogoutRequest = $routeName === 'logout' || $request->is('logout');
-                if (!$request->isMethod('GET') && !$isLogoutRequest) {
+                $allowedNonGetRoutes = [
+                    'logout',
+                    // 閲覧専用の継続のため、警告/R18確認の了承は許可
+                    'threads.acknowledge',
+                    'responses.acknowledge',
+                ];
+                $isAllowedNonGet = in_array($routeName, $allowedNonGetRoutes, true) || $request->is('logout');
+                if (!$request->isMethod('GET') && !$isAllowedNonGet) {
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
                     $message = \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
 
@@ -85,20 +91,17 @@ class CheckUserFrozen
                     ]);
                 } else {
                     // 凍結中の場合、閲覧以外の操作を禁止
-                    $allowedRoutes = [
-                        'threads.index',
-                        'threads.show',
-                        'threads.search',
-                        'threads.tag',
-                        'threads.category',
-                        'profile.show',
+                    $allowedNonGetRoutes = [
                         'logout',
+                        // 閲覧専用の継続のため、警告/R18確認の了承は許可
+                        'threads.acknowledge',
+                        'responses.acknowledge',
+                        // 一時凍結中は通知からのコイン受け取りを許可
+                        'notifications.receive-coin',
                     ];
 
-                    $routeName = $request->route()?->getName();
-
                     // 許可されたルート以外は拒否
-                    if (!in_array($routeName, $allowedRoutes) && !$request->isMethod('GET')) {
+                    if (!$request->isMethod('GET') && !in_array($routeName, $allowedNonGetRoutes, true)) {
                         $lang = \App\Services\LanguageService::getCurrentLanguage();
                         $message = \App\Services\LanguageService::trans('user_temporarily_frozen_message', $lang, [
                             'until' => $user->frozen_until->format('Y-m-d H:i')
