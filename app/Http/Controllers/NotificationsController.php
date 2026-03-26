@@ -483,6 +483,44 @@ class NotificationsController extends Controller
                     }
                 }
 
+                // R18変更で成人向け通報を取り消した場合は、通報による制限状態も解除する
+                try {
+                    if (Schema::hasTable('report_restrictions')) {
+                        $restrictionUpdate = [
+                            'status' => 'cleared',
+                        ];
+                        if (Schema::hasColumn('report_restrictions', 'acknowledged_at')) {
+                            $restrictionUpdate['acknowledged_at'] = now();
+                        }
+                        if (Schema::hasColumn('report_restrictions', 'updated_at')) {
+                            $restrictionUpdate['updated_at'] = now();
+                        }
+
+                        // ルーム通報由来の制限
+                        DB::table('report_restrictions')
+                            ->where('status', 'active')
+                            ->where('type', 'thread')
+                            ->where('thread_id', $threadId)
+                            ->update($restrictionUpdate);
+
+                        // リプライ通報由来の制限
+                        if (!empty($responseIds)) {
+                            DB::table('report_restrictions')
+                                ->where('status', 'active')
+                                ->where('type', 'response')
+                                ->whereIn('response_id', $responseIds)
+                                ->update($restrictionUpdate);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Log::warning('R18 approve: clearing report restrictions failed (ignored)', [
+                        'user_id' => $userId,
+                        'admin_message_id' => $message->id,
+                        'thread_id' => $threadId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 // 通報が取り消された旨を通報者へ通知
                 if (!empty($cancelledReporterIds)) {
                     try {
