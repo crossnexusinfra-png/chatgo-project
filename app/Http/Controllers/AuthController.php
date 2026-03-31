@@ -520,7 +520,7 @@ class AuthController extends Controller
 
         // 登録データをセッションに保存
         $registrationData = $request->only([
-            'username', 'email', 'password', 'nationality', 'residence', 'birthdate'
+            'username', 'email', 'password', 'nationality', 'residence', 'birthdate', 'invite_code'
         ]);
         $registrationData['phone'] = $internationalPhone;
         $registrationData['password'] = Hash::make($request->password);
@@ -663,10 +663,11 @@ class AuthController extends Controller
         // 国籍から言語設定を自動決定（英語コードで保存）
         $language = $this->getLanguageFromNationality($registrationData['nationality']);
         
-        // 招待コードを処理
+        // 招待コードを処理（登録時に入力されたコードをセッションから引き継ぐ）
         $inviter = null;
-        if ($request->filled('invite_code')) {
-            $inviter = User::where('invite_code', $request->invite_code)->first();
+        $inviteCode = $registrationData['invite_code'] ?? $request->input('invite_code');
+        if (!empty($inviteCode)) {
+            $inviter = User::where('invite_code', $inviteCode)->first();
         }
         
         // 招待コードを生成
@@ -703,7 +704,7 @@ class AuthController extends Controller
             \App\Models\UserInvite::create([
                 'inviter_id' => $inviter->user_id,
                 'invitee_id' => $user->user_id,
-                'invite_code' => $request->invite_code,
+                'invite_code' => $inviteCode,
                 'coins_given' => true,
                 'friend_request_auto_created' => false,
             ]);

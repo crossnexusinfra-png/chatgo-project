@@ -380,7 +380,9 @@
                                     {{ \App\Services\LanguageService::trans('media_file_upload_failed', $lang) }}
                                 </div>
                             @enderror
-                            <textarea id="body" name="body" class="js-response-body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}">{{ old('body') }}</textarea>
+                            <textarea id="body" name="body" class="js-response-body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}" data-base-coin="{{ (new \App\Services\CoinService())->getResponseCost('', false, true) }}">{{ old('body') }}</textarea>
+                            <small>100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
+                            <p class="thread-create-coin-display" id="responseCoinDisplay" data-reply-label="{{ \App\Services\LanguageService::trans('response_coin_reply', $lang) }}" data-body-label="{{ \App\Services\LanguageService::trans('thread_coin_body', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}"></p>
                         </div>
                         <div class="media-file-container">
                             <input type="file" id="media_file" name="media_file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/webm" class="media-file-input-hidden">

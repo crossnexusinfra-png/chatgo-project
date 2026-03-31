@@ -36,6 +36,7 @@ return [
     'image_aspect_ratio' => '16:9でトリミング',
     'thread_body_coin_per_100' => 'ごとに1コイン消費',
     'thread_coin_room' => 'ルーム',
+    'response_coin_reply' => 'リプライ',
     'thread_coin_body' => '本文',
     'thread_coin_total' => '合計',
     

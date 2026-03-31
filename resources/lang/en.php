@@ -36,6 +36,7 @@ return [
     'image_aspect_ratio' => 'Cropped to 16:9',
     'thread_body_coin_per_100' => 'chars = 1 coin',
     'thread_coin_room' => 'Room',
+    'response_coin_reply' => 'Reply',
     'thread_coin_body' => 'Body',
     'thread_coin_total' => 'Total',
 

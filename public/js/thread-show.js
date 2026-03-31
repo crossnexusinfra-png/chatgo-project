@@ -567,6 +567,39 @@
         }
     };
 
+    function updateResponseCoinDisplay() {
+        const responseForm = document.getElementById('response-form');
+        const displayEl = document.getElementById('responseCoinDisplay');
+        if (!responseForm || !displayEl) {
+            return;
+        }
+
+        const textarea = responseForm.querySelector('.js-response-body') || responseForm.querySelector('textarea[name="body"]');
+        const mediaFileInput = responseForm.querySelector('input[type="file"][name="media_file"]');
+        if (!textarea) {
+            return;
+        }
+
+        const bodyText = (textarea.value || '').trim();
+        const textWithoutUrls = bodyText.replace(/https?:\/\/[^\s]+/g, '');
+        let charCount = 0;
+        try {
+            charCount = (Array.from && Array.from(textWithoutUrls).length) || textWithoutUrls.length;
+        } catch (e) {
+            charCount = textWithoutUrls.length;
+        }
+
+        const hasText = charCount > 0;
+        const hasMediaFile = !!(mediaFileInput && mediaFileInput.files && mediaFileInput.files.length > 0);
+        const baseCoin = parseInt(textarea.getAttribute('data-base-coin'), 10) || 1;
+        const bodyCoin = hasText ? Math.floor(charCount / 100) : 0;
+        const total = hasMediaFile && !hasText ? baseCoin : (baseCoin + bodyCoin);
+        const replyLabel = displayEl.getAttribute('data-reply-label') || 'Reply';
+        const bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';
+        const totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
+        displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + replyLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
+    }
+
     // メディアファイル選択と検証
     function initMediaFileHandlers() {
         const mediaFileBtn = document.getElementById('media-file-btn');
@@ -634,6 +667,7 @@
 
             if (!file) {
                 mediaFileName.style.display = 'none';
+                updateResponseCoinDisplay();
                 return;
             }
 
@@ -657,6 +691,7 @@
                 showMediaError(translations.fileFormatNotAllowed);
                 mediaFileInput.value = '';
                 mediaFileName.style.display = 'none';
+                updateResponseCoinDisplay();
                 return;
             }
 
@@ -686,6 +721,7 @@
                 showMediaError(errorMsg);
                 mediaFileInput.value = '';
                 mediaFileName.style.display = 'none';
+                updateResponseCoinDisplay();
                 return;
             }
 
@@ -707,6 +743,7 @@
                 showMediaError(errorMsg);
                 mediaFileInput.value = '';
                 mediaFileName.style.display = 'none';
+                updateResponseCoinDisplay();
                 return;
             }
 
@@ -723,6 +760,7 @@
             }
             mediaFileName.innerHTML = `${displayFileName} <span class="media-file-info-text">(${fileSizeMB}MB, ${fileTypeLabel})</span>`;
             mediaFileName.style.display = 'block';
+            updateResponseCoinDisplay();
         });
 
         if (responseForm) {
@@ -845,6 +883,13 @@
             });
         }
     }
+
+    const responseBodyInput = document.querySelector('#response-form .js-response-body') || document.querySelector('#response-form textarea[name="body"]');
+    if (responseBodyInput) {
+        responseBodyInput.addEventListener('input', updateResponseCoinDisplay);
+        responseBodyInput.addEventListener('change', updateResponseCoinDisplay);
+    }
+    updateResponseCoinDisplay();
 
     // 画像モーダル表示
     window.openImageModal = function(imageSrc) {
