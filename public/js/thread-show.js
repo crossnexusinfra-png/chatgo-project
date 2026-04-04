@@ -240,7 +240,7 @@
         });
         
         try {
-            const searchUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesSearchRoute) || `/api/threads/${threadId}/responses/search`;
+            const searchUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesSearchRoute) || `/threads/${threadId}/responses/search`;
             const response = await fetch(`${searchUrl}?query=${encodeURIComponent(query)}&target=${selectedTarget}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,
