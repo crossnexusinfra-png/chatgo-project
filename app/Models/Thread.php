@@ -270,7 +270,7 @@ class Thread extends Model
     public function scopeSearch(Builder $query, string $searchTerm, ?string $lang = null)
     {
         // 検索クエリを解析（AND検索と除外検索）
-        $keywords = $this->parseSearchQuery($searchTerm);
+        $keywords = self::parseSearchQuery($searchTerm);
         
         // 有効なキーワードが2文字未満の場合、検索しない
         $validKeywords = array_filter($keywords['include'], function($keyword) {
@@ -325,9 +325,9 @@ class Thread extends Model
     /**
      * 検索クエリを解析してキーワードと除外キーワードに分ける
      * @param string $searchTerm
-     * @return array
+     * @return array{include: array<int, string>, exclude: array<int, string>}
      */
-    private function parseSearchQuery(string $searchTerm): array
+    public static function parseSearchQuery(string $searchTerm): array
     {
         $result = [
             'include' => [],
@@ -367,7 +367,7 @@ class Thread extends Model
     public function scopeByTagAndSearch(Builder $query, string $tag, string $searchTerm, ?string $lang = null)
     {
         // 検索クエリを解析（AND検索と除外検索）
-        $keywords = $this->parseSearchQuery($searchTerm);
+        $keywords = self::parseSearchQuery($searchTerm);
         
         // 有効なキーワードが2文字未満の場合、検索しない
         $validKeywords = array_filter($keywords['include'], function($keyword) {

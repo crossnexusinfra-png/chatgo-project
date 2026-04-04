@@ -1641,109 +1641,178 @@ class ThreadController extends Controller
             ], 403);
         }
         
-        $query = $request->get('query', '');
+        $query = trim((string) $request->get('query', ''));
         $target = $request->get('target', 'both');
-        
-        if (empty($query)) {
+        if (! in_array($target, ['body', 'user', 'both'], true)) {
+            $target = 'both';
+        }
+
+        if ($query === '') {
             return response()->json([
                 'results' => [],
                 'count' => 0,
             ]);
         }
-        
-        // キーワードを空白で分割（AND検索用）
-        $keywords = array_filter(array_map('trim', explode(' ', $query)));
+
+        // ルーム検索と同じクエリ解析（全角空白・AND・-除外・2文字未満の含める語は無効）
+        $parsed = Thread::parseSearchQuery($query);
+        $validKeywords = array_values(array_filter($parsed['include'], function ($keyword) {
+            return mb_strlen($keyword) >= 2;
+        }));
+
+        if ($validKeywords === []) {
+            return response()->json([
+                'results' => [],
+                'count' => 0,
+            ]);
+        }
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
-        
+
         // 全レスポンスを取得（userリレーションを読み込む）
         $responses = $thread->responses()
             ->with('user')
             ->orderBy('created_at', 'asc')
             ->get();
-        
-        // 使用言語の翻訳キャッシュを一括取得（リプライ本文の検索対象に含める）
+
+        // 使用言語の翻訳キャッシュ（本文は原文とUI言語訳の両方を検索対象にする）
         $responseIds = $responses->pluck('response_id')->toArray();
         $translationByResponseId = \App\Models\TranslationCache::whereIn('response_id', $responseIds)
             ->where('target_lang', $targetLang)
             ->get()
             ->keyBy('response_id');
-        
+
         // 削除されたレスポンスのIDを取得
         $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
             ->where('is_approved', true)
             ->pluck('response_id')
             ->toArray();
-        
+
         // ユーザー情報を取得
         $userIds = $responses->pluck('user_id')->unique()->filter()->values();
         $users = $this->buildUserMapByUserIds($userIds);
-        
-        // 検索結果をフィルタリング
+
         $results = [];
-        $responseIndex = 0; // レスポンスの順序を記録（削除されたものも含めてカウント）
+        $responseIndex = 0;
         foreach ($responses as $response) {
-            // 削除されたレスポンスはスキップ
-            if (in_array($response->response_id, $deletedResponseIds)) {
+            if (in_array($response->response_id, $deletedResponseIds, true)) {
                 $responseIndex++;
                 continue;
             }
-            // 検索対象テキスト：使用言語の翻訳があればそれも検索対象（日本語選択時は日本語訳または元の本文）
-            $bodySearchText = ($translationByResponseId->get($response->response_id) && $translationByResponseId->get($response->response_id)->isValid())
-                ? $translationByResponseId->get($response->response_id)->translated_text
-                : $response->body;
+
+            $tc = $translationByResponseId->get($response->response_id);
+            $translatedBody = ($tc && $tc->isValid()) ? $tc->translated_text : null;
+            $originalBody = (string) $response->body;
+            $user = $users[$response->user_id] ?? null;
+
             $matchesAll = true;
-            
-            foreach ($keywords as $keyword) {
-                $matchesKeyword = false;
-                
-                // 検索対象に応じてマッチング（本文は表示言語の翻訳または元の本文を対象）
-                if ($target === 'body' || $target === 'both') {
-                    if (mb_stripos($bodySearchText, $keyword) !== false) {
-                        $matchesKeyword = true;
-                    }
-                }
-                
-                if ($target === 'user' || $target === 'both') {
-                    // user_idからusernameを取得して検索
-                    $user = $users[$response->user_id] ?? null;
-                    if ($user && mb_stripos($user->username, $keyword) !== false) {
-                        $matchesKeyword = true;
-                    }
-                }
-                
-                if (!$matchesKeyword) {
+            foreach ($validKeywords as $keyword) {
+                if (! $this->responseSearchKeywordMatches($target, $keyword, $originalBody, $translatedBody, $user)) {
                     $matchesAll = false;
                     break;
                 }
             }
-            
+
             if ($matchesAll) {
-                $user = $users[$response->user_id] ?? null;
+                foreach ($parsed['exclude'] as $excludeKeyword) {
+                    if (mb_strlen($excludeKeyword) < 2) {
+                        continue;
+                    }
+                    if ($this->responseSearchExcludeHits($target, $excludeKeyword, $originalBody, $translatedBody, $user)) {
+                        $matchesAll = false;
+                        break;
+                    }
+                }
+            }
+
+            if ($matchesAll) {
                 $displayName = $user ? $user->username : '削除されたユーザー';
                 if ($user && $user->display_name) {
                     $displayName = $user->display_name;
                 }
-                
+
                 $results[] = [
                     'response_id' => $response->response_id,
                     'body' => $response->body,
                     'user_id' => $response->user_id,
                     'username' => $user ? $user->username : '削除されたユーザー',
+                    'user_name' => $user ? $user->username : '削除されたユーザー',
                     'display_name' => $displayName,
                     'created_at' => $response->created_at->format('Y-m-d H:i:s'),
-                    'response_order' => $responseIndex, // レスポンスの順序（0始まり）
+                    'response_order' => $responseIndex,
                 ];
             }
-            
+
             $responseIndex++;
         }
-        
+
         return response()->json([
             'results' => $results,
             'count' => count($results),
         ]);
+    }
+
+    /**
+     * リプライ検索: 1キーワードが対象フィールドに含まれるか（本文は原文またはUI言語訳のいずれかで一致）
+     */
+    private function responseSearchKeywordMatches(
+        string $target,
+        string $keyword,
+        string $originalBody,
+        ?string $translatedBody,
+        $user
+    ): bool {
+        $inBody = mb_stripos($originalBody, $keyword) !== false
+            || ($translatedBody !== null && mb_stripos($translatedBody, $keyword) !== false);
+
+        $inUser = false;
+        if ($user) {
+            if (mb_stripos((string) $user->username, $keyword) !== false) {
+                $inUser = true;
+            }
+            if (! empty($user->display_name) && mb_stripos((string) $user->display_name, $keyword) !== false) {
+                $inUser = true;
+            }
+        }
+
+        return match ($target) {
+            'body' => $inBody,
+            'user' => $inUser,
+            default => $inBody || $inUser,
+        };
+    }
+
+    /**
+     * リプライ検索: 除外語が本文（原文・訳）またはユーザー名に含まれるか
+     */
+    private function responseSearchExcludeHits(
+        string $target,
+        string $excludeKeyword,
+        string $originalBody,
+        ?string $translatedBody,
+        $user
+    ): bool {
+        if ($target === 'body' || $target === 'both') {
+            if (mb_stripos($originalBody, $excludeKeyword) !== false) {
+                return true;
+            }
+            if ($translatedBody !== null && mb_stripos($translatedBody, $excludeKeyword) !== false) {
+                return true;
+            }
+        }
+        if ($target === 'user' || $target === 'both') {
+            if ($user) {
+                if (mb_stripos((string) $user->username, $excludeKeyword) !== false) {
+                    return true;
+                }
+                if (! empty($user->display_name) && mb_stripos((string) $user->display_name, $excludeKeyword) !== false) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

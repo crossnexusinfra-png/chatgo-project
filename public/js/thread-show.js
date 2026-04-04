@@ -18,6 +18,11 @@
     const continuationRequestThreshold = config.continuationRequestThreshold || 3;
     const csrfToken = config.csrfToken || '';
 
+    const jsonApiHeaders = {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+
     // 無限スクロール用の変数
     let isLoadingResponses = false;
     let isLoadingForSearch = false;
@@ -85,7 +90,11 @@
 
         try {
             const responsesUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesRoute) || `/api/threads/${threadId}/responses`;
-            const response = await fetch(`${responsesUrl}?offset=${currentOffset}`);
+            const response = await fetch(`${responsesUrl}?offset=${currentOffset}`, {
+                method: 'GET',
+                headers: jsonApiHeaders,
+                credentials: 'same-origin'
+            });
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -232,32 +241,36 @@
         
         try {
             const searchUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesSearchRoute) || `/api/threads/${threadId}/responses/search`;
-            const response = await fetch(`${searchUrl}?query=${encodeURIComponent(query)}&target=${selectedTarget}`);
+            const response = await fetch(`${searchUrl}?query=${encodeURIComponent(query)}&target=${selectedTarget}`, {
+                method: 'GET',
+                headers: jsonApiHeaders,
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                displaySearchResults([], query);
+                return;
+            }
+
             const data = await response.json();
-            
+            if (!data || data.error || !Array.isArray(data.results)) {
+                displaySearchResults([], query);
+                return;
+            }
+
             const results = [];
             data.results.forEach((result, index) => {
-                const searchTargetText = (result.body + ' ' + result.user_name).toLowerCase();
-                let matchesExclude = true;
-                keywords.exclude.forEach(excludeKeyword => {
-                    if (excludeKeyword.length >= 2 && searchTargetText.includes(excludeKeyword.toLowerCase())) {
-                        matchesExclude = false;
-                    }
-                });
+                const element = document.querySelector(`[data-response-id="${result.response_id}"]`);
 
-                if (matchesExclude) {
-                    const element = document.querySelector(`[data-response-id="${result.response_id}"]`);
-                    
-                    results.push({
-                        element: element,
-                        body: result.body,
-                        user: result.display_name,
-                        time: result.created_at,
-                        index: index,
-                        response_id: result.response_id,
-                        response_order: result.response_order
-                    });
-                }
+                results.push({
+                    element: element,
+                    body: result.body,
+                    user: result.display_name || result.username || result.user_name || '',
+                    time: result.created_at,
+                    index: index,
+                    response_id: result.response_id,
+                    response_order: result.response_order
+                });
             });
 
             displaySearchResults(results, query);
@@ -1140,10 +1153,7 @@
             const newUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesNewRoute) || `/api/threads/${threadId}/responses/new`;
             const response = await fetch(`${newUrl}?last_response_id=${lastResponseId}`, {
                 method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
+                headers: jsonApiHeaders,
                 credentials: 'same-origin'
             });
 
