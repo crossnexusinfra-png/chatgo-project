@@ -25,6 +25,7 @@ return [
     
     // ルーム
     'thread_title' => 'タイトル',
+    'thread_title_newline_hint' => '（改行は半角スペース）',
     'thread_body' => '本文',
     'thread_author' => '作成者名',
     'thread_tag' => 'タグ',
@@ -36,6 +37,7 @@ return [
     'image_aspect_ratio' => '16:9でトリミング',
     'thread_body_coin_per_100' => 'ごとに1コイン消費',
     'thread_coin_room' => 'ルーム',
+    'thread_coin_first_reply' => '1リプライ目',
     'response_coin_reply' => 'リプライ',
     'response_coin_media' => 'メディア',
     'thread_coin_body' => '本文',

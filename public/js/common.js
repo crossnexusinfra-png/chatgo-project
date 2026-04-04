@@ -134,11 +134,11 @@
         const cancelCreateThread = document.getElementById('cancelCreateThread');
 
         function updateThreadCreateCoinDisplay() {
-            var bodyEl = document.getElementById('body');
+            var bodyEl = document.querySelector('#createThreadForm textarea.js-create-thread-body');
             var displayEl = document.getElementById('threadCreateCoinDisplay');
             if (!bodyEl || !displayEl) return;
             var baseCoin = parseInt(bodyEl.getAttribute('data-base-coin'), 10) || 2;
-            var bodyText = (bodyEl.value || '').trim();
+            var bodyText = bodyEl.value || '';
             var charCount = 0;
             try {
                 charCount = (Array.from && Array.from(bodyText).length) || bodyText.length;
@@ -148,9 +148,9 @@
             var bodyCoin = charCount > 0 ? Math.ceil(charCount / 100) : 0;
             var total = baseCoin + bodyCoin;
             var roomLabel = displayEl.getAttribute('data-room-label') || 'Room';
-            var bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';
+            var firstReplyLabel = displayEl.getAttribute('data-first-reply-label') || 'First reply';
             var totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
-            displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + roomLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
+            displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + roomLabel + ') + ' + bodyCoin + ' (' + firstReplyLabel + ' ' + charCount + ') = ' + total;
         }
 
         if (openCreateThreadModal && createThreadModal) {
@@ -164,11 +164,23 @@
             });
         }
 
-        var bodyInput = document.getElementById('body');
+        var bodyInput = document.querySelector('#createThreadForm textarea.js-create-thread-body');
         if (bodyInput) {
             bodyInput.addEventListener('input', updateThreadCreateCoinDisplay);
             bodyInput.addEventListener('change', updateThreadCreateCoinDisplay);
         }
+
+        var createThreadTitleInput = document.querySelector('#createThreadForm .js-create-thread-title');
+        if (createThreadTitleInput) {
+            createThreadTitleInput.addEventListener('input', function() {
+                var v = createThreadTitleInput.value;
+                var n = v.replace(/\r\n|\r|\n/g, ' ');
+                if (n !== v) {
+                    createThreadTitleInput.value = n;
+                }
+            });
+        }
+
         updateThreadCreateCoinDisplay();
 
         if (closeCreateThreadModal && createThreadModal) {
@@ -454,6 +466,9 @@
                 var userName = form.querySelector('.js-create-thread-user_name');
                 var title = form.querySelector('.js-create-thread-title');
                 var body = form.querySelector('.js-create-thread-body');
+                if (title) {
+                    title.value = title.value.replace(/\r\n|\r|\n/g, ' ');
+                }
                 var cancelBtn = form.querySelector('#cancelCreateThread');
                 var closeModalBtn = document.getElementById('closeCreateThreadModal');
                 if (userName) { userName.readOnly = true; userName.setAttribute('readonly', 'readonly'); }

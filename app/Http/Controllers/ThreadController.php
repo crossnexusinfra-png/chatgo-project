@@ -524,6 +524,10 @@ class ThreadController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'title' => preg_replace('/\R/u', ' ', (string) $request->input('title', '')),
+        ]);
+
         // バリデーション
         $request->validate([
             'title' => 'required|max:50',
@@ -808,8 +812,8 @@ class ThreadController extends Controller
         $userId = auth()->user()->user_id;
         $sendTimeLang = \App\Services\TranslationService::normalizeLang(auth()->user()->language ?? 'EN');
 
-        // 最初のレスポンスがあるか（本文が空でなければ1件）
-        $hasFirstResponse = $bodyForCost !== '' && trim($bodyForCost) !== '';
+        // 最初のレスポンスがあるか（文字が1文字でもあれば1件・trim しない）
+        $hasFirstResponse = mb_strlen((string) $bodyForCost) > 0;
 
         // スレッドを作成（送信時の表示言語を保存）
         $thread = Thread::create([
@@ -1764,6 +1768,10 @@ class ThreadController extends Controller
     public function update(Request $request, $id)
     {
         $thread = Thread::findOrFail($id);
+
+        $request->merge([
+            'title' => preg_replace('/\R/u', ' ', (string) $request->input('title', '')),
+        ]);
 
         // バリデーション
         $request->validate([

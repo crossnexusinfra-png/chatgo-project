@@ -39,28 +39,27 @@ class CoinService
     }
 
     /**
-     * ルーム作成時の本文コイン（1〜100文字で1コイン、101〜200で2コイン…）
+     * ルーム作成時の1リプライ目（本文）コイン（1〜100文字で1コイン、以降100文字ごとに切り上げ）
+     * 改行・空白も1文字として数える（trim しない）
      */
     public function getThreadBodyCoinCost(string $body): int
     {
-        if ($body === '' || trim($body) === '') {
+        if ($body === '') {
             return 0;
         }
-        $len = mb_strlen(trim($body));
-        if ($len <= 0) {
-            return 0;
-        }
-        return (int) ceil($len / 100);
+        $len = mb_strlen($body);
+        return $len > 0 ? (int) ceil($len / 100) : 0;
     }
 
     /**
      * レスポンス送信に必要なコインを計算
      * メディア添付ごとに1コイン、URLを除く本文は1〜100文字で1コイン、以降100文字ごとに1コイン（切り上げ）。両方ある場合は合算。
+     * 改行・空白も1文字として数える（trim しない）
      */
     public function getResponseCost(string $body, bool $hasMediaFile): int
     {
         $textWithoutUrls = preg_replace('/https?:\/\/[^\s]+/', '', $body);
-        $charCount = mb_strlen(trim($textWithoutUrls));
+        $charCount = mb_strlen($textWithoutUrls);
 
         $mediaCost = $hasMediaFile ? 1 : 0;
         $textCost = $charCount > 0 ? (int) ceil($charCount / 100) : 0;

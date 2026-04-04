@@ -581,8 +581,8 @@
             return;
         }
 
-        const bodyText = (textarea.value || '').trim();
-        const textWithoutUrls = bodyText.replace(/https?:\/\/[^\s]+/g, '');
+        const rawBody = textarea.value || '';
+        const textWithoutUrls = rawBody.replace(/https?:\/\/[^\s]+/g, '');
         let charCount = 0;
         try {
             charCount = (Array.from && Array.from(textWithoutUrls).length) || textWithoutUrls.length;
@@ -775,11 +775,11 @@
                 }
                 var textareaEl = form.querySelector('.js-response-body');
                 if (!textareaEl) textareaEl = form.querySelector('textarea[name="body"]');
-                var body = (textareaEl && textareaEl.value) ? textareaEl.value.trim() : '';
+                var rawBody = (textareaEl && textareaEl.value) ? textareaEl.value : '';
                 var mediaFileInput = form.querySelector('input[type="file"][name="media_file"]');
                 var mediaFile = mediaFileInput && mediaFileInput.files[0];
 
-                if (!body && !mediaFile) {
+                if (!rawBody && !mediaFile) {
                     e.preventDefault();
                     showMediaError(translations.messageOrFileRequired || translations.messageOrFileRequired);
                     return false;
