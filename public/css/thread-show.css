@@ -914,6 +914,40 @@ body {
     font-size: 14px;
 }
 
+/* リプライ送信: 必要コイン（「メッセージ」直上・低い行高） */
+.response-coin-display-compact {
+    margin: 0 0 3px 0;
+    padding: 0;
+    font-size: 11px;
+    line-height: 1.25;
+    color: #5a6169;
+    font-weight: 500;
+}
+
+.response-message-label-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
+}
+
+.response-form-message-label {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+.response-body-coin-hint {
+    font-size: 10px;
+    color: #868e96;
+    line-height: 1.2;
+}
+
 .form-group input,
 .form-group textarea {
     width: 100%;

@@ -159,6 +159,24 @@ class Response extends Model
     }
 
     /**
+     * 通報・お知らせ用：リプライ本文のプレーン文字列。本文が空のときはメディアのみ投稿として種別（画像／動画／音声）を返す。
+     */
+    public function plainBodyOrMediaKindForNotifications(): string
+    {
+        $plain = trim(strip_tags((string) ($this->body ?? '')));
+        if ($plain !== '') {
+            return $plain;
+        }
+
+        return match ($this->media_type ?? '') {
+            'image' => '画像',
+            'video' => '動画',
+            'audio' => '音声',
+            default => !empty($this->media_file) ? 'メディア' : '',
+        };
+    }
+
+    /**
      * このレスポンスの変更ログを取得
      */
     public function changeLogs()

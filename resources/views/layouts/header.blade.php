@@ -63,9 +63,15 @@
                             <span class="notification-badge">{{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}</span>
                         @endif
                     </a>
+                    @if(!empty($viewerAccountFrozen))
+                    <span class="header-button create-btn-disabled" role="button" aria-disabled="true" title="{{ \App\Services\LanguageService::trans('account_frozen_no_friends_nav', $lang) }}">
+                        🤝
+                    </span>
+                    @else
                     <a href="{{ route('friends.index') }}" class="header-button" title="{{ \App\Services\LanguageService::trans('friends', $lang) }}">
                         🤝
                     </a>
+                    @endif
                     <a href="{{ route('profile.index') }}" class="header-button profile-btn" title="{{ \App\Services\LanguageService::trans('profile', $lang) }}">
                         👤
                     </a>

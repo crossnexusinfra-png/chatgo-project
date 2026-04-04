@@ -1826,10 +1826,8 @@ class ThreadController extends Controller
             'is_r18' => $isR18,
         ]);
 
-        // R18スレッドに変更された場合、「成人向けコンテンツが含まれる」理由の未処理通報を承認済みとして処理
-        if ($isChangingToR18) {
-            $this->handleAdultContentReportsOnR18Change($thread);
-        }
+        // 「成人向け」通報の取り下げ・削除・通報者通知は NotificationsController の R18 承認フロー（#11）で行う。
+        // 本 update は現状ルート未接続だが、将来ルートを付けた場合も二重通知を避けるためここでは通報を触らない。
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return redirect()->route('threads.show', $thread->thread_id)
@@ -2885,121 +2883,6 @@ class ThreadController extends Controller
             'offset' => $offset + $limit,
             'total' => $totalCount,
         ]);
-    }
-
-    /**
-     * R18スレッドに変更された場合、「成人向けコンテンツが含まれる」理由の未処理通報を承認済みとして処理
-     * 
-     * @param Thread $thread
-     * @return void
-     */
-    private function handleAdultContentReportsOnR18Change(Thread $thread)
-    {
-        // 「成人向けコンテンツが含まれる」理由の未処理通報を取得（通報順位を取得するため、created_atでソート）
-        $reports = Report::where('thread_id', $thread->thread_id)
-            ->where('reason', '成人向けコンテンツが含まれる')
-            ->whereNull('approved_at')
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        if ($reports->isEmpty()) {
-            return;
-        }
-
-        // 通報を承認済みとして更新
-        Report::where('thread_id', $thread->thread_id)
-            ->where('reason', '成人向けコンテンツが含まれる')
-            ->whereNull('approved_at')
-            ->update([
-                'is_approved' => true,
-                'approved_at' => now(),
-            ]);
-
-        // 各通報者にメッセージを送信（通報順位を渡す）
-        $rank = 1;
-        foreach ($reports as $report) {
-            if ($report->user_id) {
-                $this->sendApprovalMessage($report->user_id, 'thread', $thread->title, null, $rank);
-                $rank++;
-            }
-        }
-    }
-
-    /**
-     * 了承時の自動メッセージを送信
-     * 
-     * @param int $userId 通報者のユーザーID
-     * @param string $type 'thread' または 'response'
-     * @param string $threadTitle スレッドタイトル
-     * @param string|null $responseBody レスポンス本文（レスポンスの場合）
-     * @param int $rank 通報順位（1から開始）
-     */
-    private function sendApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1)
-    {
-        $contentType = $type === 'thread' ? 'スレッド' : 'レスポンス';
-        $content = $type === 'thread' 
-            ? $threadTitle 
-            : $threadTitle . "\n\n" . $responseBody;
-        
-        $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認の上、違反投稿として対応いたしました。\n\n{$content}\n\nご協力ありがとうございました。";
-        $bodyEn = "We have reviewed the reported content regarding the following {$contentType} and have taken action as a violation.\n\n{$content}\n\nThank you for your cooperation.";
-        
-        // 通報者のスコアを取得
-        $userScore = Report::calculateUserReportScore($userId);
-        
-        // コイン数を決定
-        $coinAmount = $this->calculateCoinAmount($rank, $userScore);
-        
-        AdminMessage::create([
-            'title' => '通報内容対応完了のお知らせ',
-            'body' => $bodyJa,
-            'audience' => 'members', // 個人向けだが、audienceはmembersとして設定
-            'user_id' => $userId,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-            'coin_amount' => $coinAmount,
-        ]);
-    }
-
-    /**
-     * 通報順位とスコアに基づいてコイン数を計算
-     * 
-     * @param int $rank 通報順位（1から開始）
-     * @param float $userScore 通報者のスコア（0.3〜0.8）
-     * @return int コイン数（0〜5）
-     */
-    private function calculateCoinAmount(int $rank, float $userScore): int
-    {
-        // 6位以降はコイン配布なし
-        if ($rank > 5) {
-            return 0;
-        }
-        
-        // 1位〜3位
-        if ($rank <= 3) {
-            if ($userScore >= 0.7 && $userScore <= 0.8) {
-                return 5;
-            } elseif ($userScore >= 0.5 && $userScore < 0.7) {
-                return 4;
-            } elseif ($userScore >= 0.3 && $userScore < 0.5) {
-                return 3;
-            }
-        }
-        
-        // 4位〜5位
-        if ($rank >= 4 && $rank <= 5) {
-            if ($userScore >= 0.7 && $userScore <= 0.8) {
-                return 3;
-            } elseif ($userScore >= 0.5 && $userScore < 0.7) {
-                return 2;
-            } elseif ($userScore >= 0.3 && $userScore < 0.5) {
-                return 1;
-            }
-        }
-        
-        // デフォルト（スコアが範囲外の場合）
-        return 0;
     }
 
     /**

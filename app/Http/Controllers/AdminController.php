@@ -506,7 +506,7 @@ class AdminController extends Controller
     {
         $thread = Thread::withTrashed()->find($threadId);
         if (!$thread) {
-            return back()->withErrors(['error' => 'スレッドが見つかりません']);
+            return back()->withErrors(['error' => 'ルームが見つかりません']);
         }
         
         // 通報を承認（通報順位を取得するため、created_atでソート）
@@ -515,10 +515,10 @@ class AdminController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
         
-        // 通報理由を収集（重複を除く）
-        $reasons = $reports->pluck('reason')->unique()->toArray();
-        $reasonsText = implode('、', $reasons);
-        
+        // 通報理由を収集（重複を除く・【通報理由】は各行「・」付き）
+        $reasonsLines = $reports->pluck('reason')->filter()->unique()->values()->all();
+        $reasonsText = $this->formatReportReasonsBulletList($reasonsLines);
+
         // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
         $this->approveReportsWithHighestOutCountOnly($reports);
 
@@ -529,7 +529,7 @@ class AdminController extends Controller
         if ($threadOwner) {
             $this->userOutCountFreezeService->processOutCountAndFreeze($threadOwner);
         }
-        
+
         // 各通報者にメッセージを送信（通報順位を渡す）
         $rank = 1;
         foreach ($reports as $report) {
@@ -538,10 +538,11 @@ class AdminController extends Controller
                 $rank++;
             }
         }
-        
-        // スレッド主にお知らせを送信
+
+        // スレッド主へ削除通知（管理者承認）
         if ($threadOwner) {
-            $this->sendThreadDeletionNotice($threadOwner->user_id, $thread->title, $reasonsText);
+            $contentBlock = 'ルーム名：' . "\n" . $thread->title;
+            $this->sendReportDeletionNoticeToAuthor($threadOwner->user_id, 'ルーム', $contentBlock, $reasonsText);
         }
         
         // スレッドをソフトデリート
@@ -555,7 +556,7 @@ class AdminController extends Controller
     {
         $thread = Thread::withTrashed()->find($threadId);
         if (!$thread) {
-            return back()->withErrors(['error' => 'スレッドが見つかりません']);
+            return back()->withErrors(['error' => 'ルームが見つかりません']);
         }
         
         // 通報を拒否
@@ -593,7 +594,7 @@ class AdminController extends Controller
     {
         $response = Response::find($responseId);
         if (!$response) {
-            return back()->withErrors(['error' => 'レスポンスが見つかりません']);
+            return back()->withErrors(['error' => 'リプライが見つかりません']);
         }
         
         $thread = $response->thread;
@@ -604,24 +605,36 @@ class AdminController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
         
+        // 通報理由を収集（重複を除く・【通報理由】は各行「・」付き）
+        $reasonsLines = $reports->pluck('reason')->filter()->unique()->values()->all();
+        $reasonsText = $this->formatReportReasonsBulletList($reasonsLines);
+
         // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
         $this->approveReportsWithHighestOutCountOnly($reports);
-        
+
         // レスポンス作成者のアウト数と凍結処理
         $responseOwner = $response->user;
         if ($responseOwner) {
             $this->userOutCountFreezeService->processOutCountAndFreeze($responseOwner);
         }
-        
+
         // 各通報者にメッセージを送信（通報順位を渡す）
         $rank = 1;
+        $replySnippet = mb_substr($response->plainBodyOrMediaKindForNotifications(), 0, 2000);
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendApprovalMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $response->body, $rank);
+                $this->sendApprovalMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $replySnippet, $rank);
                 $rank++;
             }
         }
-        
+
+        // リプライ投稿者へ削除通知（管理者承認）
+        if ($responseOwner) {
+            $threadTitle = $thread->title ?? '（タイトルなし）';
+            $contentBlock = 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $replySnippet;
+            $this->sendReportDeletionNoticeToAuthor($responseOwner->user_id, 'リプライ', $contentBlock, $reasonsText);
+        }
+
         return back();
     }
 
@@ -630,7 +643,7 @@ class AdminController extends Controller
     {
         $response = Response::find($responseId);
         if (!$response) {
-            return back()->withErrors(['error' => 'レスポンスが見つかりません']);
+            return back()->withErrors(['error' => 'リプライが見つかりません']);
         }
         
         $thread = $response->thread;
@@ -648,9 +661,10 @@ class AdminController extends Controller
             ]);
         
         // 各通報者にメッセージを送信（返信可能）
+        $replySnippet = mb_substr($response->plainBodyOrMediaKindForNotifications(), 0, 2000);
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendRejectionMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $response->body);
+                $this->sendRejectionMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $replySnippet);
             }
         }
         
@@ -666,24 +680,66 @@ class AdminController extends Controller
     }
 
     /**
+     * 【通報理由】用：重複を除き各行「・」＋改行連結
+     *
+     * @param  array<int, string|null>  $reasons
+     */
+    private function formatReportReasonsBulletList(array $reasons): string
+    {
+        $lines = array_values(array_unique(array_filter(array_map('strval', $reasons), fn ($r) => $r !== '')));
+        if ($lines === []) {
+            return '';
+        }
+
+        return implode("\n", array_map(fn (string $r) => '・' . $r, $lines));
+    }
+
+    /**
+     * 通報者向けお知らせの【通報対象】ブロック（ルーム／リプライ／プロフィール）
+     *
+     * @param  string  $type  'thread' | 'response' | 'profile'
+     */
+    private function formatReporterTargetBlock(string $type, string $threadTitle, ?string $responseBody): string
+    {
+        if ($type === 'thread') {
+            return 'ルーム名：' . "\n" . $threadTitle;
+        }
+        if ($type === 'response') {
+            $snippet = mb_substr(strip_tags((string) ($responseBody ?? '')), 0, 2000);
+
+            return 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $snippet;
+        }
+
+        return 'ユーザー名：' . "\n" . $threadTitle;
+    }
+
+    /** @param  string  $type  'thread' | 'response' | 'profile' */
+    private function reporterContentTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'thread' => 'ルーム',
+            'response' => 'リプライ',
+            'profile' => 'プロフィール',
+            default => 'ルーム',
+        };
+    }
+
+    /**
      * 了承時の自動メッセージを送信
      * 
      * @param int $userId 通報者のユーザーID
      * @param string $type 'thread' または 'response'
-     * @param string $threadTitle スレッドタイトル
-     * @param string|null $responseBody レスポンス本文（レスポンスの場合）
+     * @param string $threadTitle ルーム名（タイトル）
+     * @param string|null $responseBody リプライ本文（リプライ通報の場合）
      * @param int $rank 通報順位（1から開始）
      */
     private function sendApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1)
     {
-        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-        $content = $type === 'thread' 
-            ? $threadTitle 
-            : ($type === 'response' ? $threadTitle . "\n\n" . $responseBody : $threadTitle);
-        
+        $contentType = $this->reporterContentTypeLabel($type);
+        $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
+
         $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認の上、違反投稿として対応いたしました。\n\n{$content}\n\nご協力ありがとうございました。";
-        $bodyEn = "We have reviewed the reported content regarding the following {$contentType} and have taken action as a violation.\n\n{$content}\n\nThank you for your cooperation.";
-        
+
         // 通報者のスコアを取得
         $userScore = Report::calculateUserReportScore($userId);
         
@@ -691,7 +747,7 @@ class AdminController extends Controller
         $coinAmount = $this->calculateCoinAmount($rank, $userScore);
         
         AdminMessage::create([
-            'title' => '通報内容対応完了のお知らせ',
+            'title' => '通報内容の対応について',
             'body' => $bodyJa,
             'audience' => 'members', // 個人向けだが、audienceはmembersとして設定
             'user_id' => $userId,
@@ -703,15 +759,19 @@ class AdminController extends Controller
     }
 
     /**
-     * スレッド削除通知をスレッド主に送信
+     * 管理者が通報を承認したとき、被通報者（投稿者）へ削除通知を送る（ルーム／リプライ）
+     *
+     * @param  string  $contentTypeLabel  タイトル・本文先頭の種別（例: ルーム、リプライ）
+     * @param  string  $contentBlock      【通報対象】ブロック全文
+     * @param  string  $reasons             【通報理由】（改行連結）
      */
-    private function sendThreadDeletionNotice(int $userId, string $threadTitle, string $reasons)
+    private function sendReportDeletionNoticeToAuthor(int $userId, string $contentTypeLabel, string $contentBlock, string $reasons): void
     {
-        $bodyJa = "お客様が作成されたスレッド「{$threadTitle}」について、複数のユーザーから通報があり、運営で内容を確認した結果、以下の理由により削除いたしました。\n\n【通報理由】\n{$reasons}\n\n今後は利用規約を遵守した投稿をお願いいたします。";
-        $bodyEn = "Your thread \"{$threadTitle}\" has been deleted following multiple reports and review by our moderation team for the following reasons:\n\n【Reasons】\n{$reasons}\n\nPlease ensure your future posts comply with our terms of service.";
-        
+        $title = $contentTypeLabel . '削除のお知らせ';
+        $bodyJa = "下記の{$contentTypeLabel}について、複数のユーザーから通報があり、運営で内容を確認した結果、以下の理由により削除いたしました。\n\n【通報対象】\n{$contentBlock}\n\n【通報理由】\n{$reasons}\n\n今後は利用規約を遵守した投稿をお願いいたします。";
+
         AdminMessage::create([
-            'title' => 'スレッド削除のお知らせ',
+            'title' => $title,
             'body' => $bodyJa,
             'audience' => 'members',
             'user_id' => $userId,
@@ -797,16 +857,13 @@ class AdminController extends Controller
      */
     private function sendRejectionMessage(int $userId, string $type, string $threadTitle, ?string $responseBody)
     {
-        $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-        $content = $type === 'thread' 
-            ? $threadTitle 
-            : ($type === 'response' ? $threadTitle . "\n\n" . $responseBody : $threadTitle);
-        
-        $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認しましたが、現時点では違反投稿には該当しませんでした。\n\n{$content}\n\n通報内容に補足がある場合は、返信にて追記をお願いします。";
-        $bodyEn = "We have reviewed the reported content regarding the following {$contentType}, but at this time it does not constitute a violation.\n\n{$content}\n\nIf you have any additional information about the report, please add it in your reply.";
-        
+        $contentType = $this->reporterContentTypeLabel($type);
+        $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
+
+        $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認しましたが、現時点では違反投稿には該当しないと判断いたしました。\n\n{$content}\n\n通報内容に補足がある場合は、返信にて追記をお願いします。";
+
         AdminMessage::create([
-            'title' => '通報内容対応完了のお知らせ',
+            'title' => '通報内容の対応について',
             'body' => $bodyJa,
             'audience' => 'members', // 個人向けだが、audienceはmembersとして設定
             'user_id' => $userId,
@@ -821,11 +878,10 @@ class AdminController extends Controller
      */
     private function sendSuggestionApprovalMessage(int $userId, string $suggestionMessage, int $coinAmount)
     {
-        $bodyJa = "ご提出いただいた改善要望を確認の上、採用させていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご協力ありがとうございました。";
-        $bodyEn = "We have reviewed your suggestion and have decided to adopt it.\n\nYour suggestion:\n{$suggestionMessage}\n\nThank you for your cooperation.";
-        
+        $bodyJa = "ご提出いただいた改善要望を確認の上、参考にさせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご協力ありがとうございました。";
+
         AdminMessage::create([
-            'title' => '改善要望採用のお知らせ',
+            'title' => '改善要望の対応について',
             'body' => $bodyJa,
             'audience' => 'members',
             'user_id' => $userId,
@@ -841,11 +897,10 @@ class AdminController extends Controller
      */
     private function sendSuggestionRejectionMessage(int $userId, string $suggestionMessage)
     {
-        $bodyJa = "ご提出いただいた改善要望を確認しましたが、現時点では採用を見送らせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご要望内容に補足がある場合は、返信にて追記をお願いします。";
-        $bodyEn = "We have reviewed your suggestion, but at this time we have decided not to adopt it.\n\nYour suggestion:\n{$suggestionMessage}\n\nIf you have any additional information about your suggestion, please add it in your reply.";
-        
+        $bodyJa = "ご提出いただいた改善要望を確認しましたが、現時点では対応を見送らせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご要望内容に補足がある場合は、返信にて追記をお願いします。";
+
         AdminMessage::create([
-            'title' => '改善要望対応完了のお知らせ',
+            'title' => '改善要望の対応について',
             'body' => $bodyJa,
             'audience' => 'members',
             'user_id' => $userId,

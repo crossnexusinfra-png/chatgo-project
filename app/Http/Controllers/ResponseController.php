@@ -472,7 +472,7 @@ class ResponseController extends Controller
 
         // スレッド内での相互送信を追跡（フレンド申請条件のため）
         if (auth()->check()) {
-            $this->updateThreadInteractions($thread, auth()->user());
+            app(\App\Services\ThreadDirectedInteractionService::class)->syncInteractionsForUserInThread($thread, auth()->user());
         }
 
         // 関連するキャッシュをクリア
@@ -893,7 +893,7 @@ class ResponseController extends Controller
 
         // スレッド内での相互送信を追跡（フレンド申請条件のため）
         if (auth()->check()) {
-            $this->updateThreadInteractions($thread, auth()->user());
+            app(\App\Services\ThreadDirectedInteractionService::class)->syncInteractionsForUserInThread($thread, auth()->user());
         }
 
         // 関連するキャッシュをクリア
@@ -927,68 +927,6 @@ class ResponseController extends Controller
         $categories = config('thread_categories.categories', []);
         foreach (array_keys($categories) as $category) {
             Cache::forget('category_threads_' . md5($category . '1'));
-        }
-    }
-
-    /**
-     * スレッド内での相互送信を追跡
-     */
-    private function updateThreadInteractions($thread, $currentUser)
-    {
-        // このスレッド内の他のユーザーのレスポンスを取得
-        $otherResponses = Response::where('thread_id', $thread->thread_id)
-            ->where('user_id', '!=', $currentUser->user_id)
-            ->whereNotNull('user_id')
-            ->where('created_at', '>=', now()->subHours(12))
-            ->get();
-        
-        foreach ($otherResponses as $otherResponse) {
-            if (!$otherResponse->user_id) {
-                continue;
-            }
-            
-            $otherUser = \App\Models\User::find($otherResponse->user_id);
-            if (!$otherUser) {
-                continue;
-            }
-            
-            // 相互送信を記録
-            $interaction = \App\Models\ThreadInteraction::firstOrNew([
-                'thread_id' => $thread->thread_id,
-                'user_id' => $currentUser->user_id,
-                'other_user_id' => $otherUser->user_id,
-            ]);
-            
-            $interaction->message_count = Response::where('thread_id', $thread->thread_id)
-                ->where('user_id', $currentUser->user_id)
-                ->count();
-            $interaction->total_characters = Response::where('thread_id', $thread->thread_id)
-                ->where('user_id', $currentUser->user_id)
-                ->get()
-                ->sum(function($r) {
-                    return mb_strlen($r->body ?? '');
-                });
-            $interaction->last_interaction_at = now();
-            $interaction->save();
-            
-            // 逆方向も記録
-            $reverseInteraction = \App\Models\ThreadInteraction::firstOrNew([
-                'thread_id' => $thread->thread_id,
-                'user_id' => $otherUser->user_id,
-                'other_user_id' => $currentUser->user_id,
-            ]);
-            
-            $reverseInteraction->message_count = Response::where('thread_id', $thread->thread_id)
-                ->where('user_id', $otherUser->user_id)
-                ->count();
-            $reverseInteraction->total_characters = Response::where('thread_id', $thread->thread_id)
-                ->where('user_id', $otherUser->user_id)
-                ->get()
-                ->sum(function($r) {
-                    return mb_strlen($r->body ?? '');
-                });
-            $reverseInteraction->last_interaction_at = now();
-            $reverseInteraction->save();
         }
     }
 

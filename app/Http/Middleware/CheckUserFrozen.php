@@ -79,6 +79,8 @@ class CheckUserFrozen
                     // 閲覧専用の継続のため、警告/R18確認の了承は許可
                     'threads.acknowledge',
                     'responses.acknowledge',
+                    // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
+                    'friends.delete',
                 ];
                 $isAllowedNonGet = in_array($routeName, $allowedNonGetRoutes, true) || $request->is('logout');
                 if (!$request->isMethod('GET') && !$isAllowedNonGet) {
@@ -106,6 +108,8 @@ class CheckUserFrozen
                         'responses.acknowledge',
                         // 一時凍結中は通知からのコイン受け取りを許可
                         'notifications.receive-coin',
+                        // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
+                        'friends.delete',
                     ];
 
                     // 許可されたルート以外は拒否

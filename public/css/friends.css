@@ -187,6 +187,13 @@
     flex: 1;
 }
 
+.friend-peer-perma-banned-notice {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #721c24;
+    line-height: 1.4;
+}
+
 .friend-info a {
     color: #333;
     font-size: 1.1rem;

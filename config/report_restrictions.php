@@ -23,7 +23,7 @@ return [
     // プロフィール通報を了承した場合、自己紹介文を無記載に戻して変更不可にする期間（日）
     'profile_lock_days' => (int) env('REPORT_PROFILE_LOCK_DAYS', 30),
 
-    // 1アウト警告お知らせを再送しない期間（直近◯ヶ月以内に「アウト警告のお知らせ」があれば送らない）
+    // 1アウト警告お知らせを再送しない期間（直近◯ヶ月以内に「利用に関する警告」があれば送らない）
     'out_warning_suppress_months' => (int) env('REPORT_OUT_WARNING_SUPPRESS_MONTHS', 1),
 ];
 

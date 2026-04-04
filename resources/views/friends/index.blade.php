@@ -90,7 +90,8 @@
                         @php
                             $friendId = $friendship->friend->user_id;
                             $status = $coinSendStatuses[$friendId] ?? ['can_send' => true, 'remaining_seconds' => 0, 'next_available_at' => null];
-                            $canSend = $status['can_send'];
+                            $peerPermaBanned = !empty($friendship->friend->is_permanently_banned);
+                            $canSend = $status['can_send'] && !$peerPermaBanned;
                             $remainingSeconds = $status['remaining_seconds'];
                         @endphp
                         <div class="friend-item">
@@ -98,7 +99,11 @@
                                 <a href="{{ route('profile.show', $friendId) }}" class="friend-link">
                                     {{ $friendship->friend->username . '@' . ($friendship->friend->user_identifier ?? $friendId) }}
                                 </a>
-                                @if(!$canSend && $status['next_available_at'])
+                                @if($peerPermaBanned)
+                                    <div class="friend-peer-perma-banned-notice">
+                                        {{ \App\Services\LanguageService::trans('friend_peer_permanently_banned', $lang) }}
+                                    </div>
+                                @elseif(!$canSend && $status['next_available_at'])
                                     <div class="coin-send-wait-time" data-next-available="{{ $status['next_available_at'] ? $status['next_available_at']->timestamp : 0 }}" data-friend-id="{{ $friendId }}">
                                         <span class="wait-time-label">{{ \App\Services\LanguageService::trans('friend_next_send_available', $lang) }}: </span>
                                         <span class="wait-time-value" id="wait-time-{{ $friendId }}"></span>

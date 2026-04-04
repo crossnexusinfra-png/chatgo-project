@@ -163,25 +163,20 @@ class FriendService
             
             if ($user1Interaction && $user2Interaction) {
                 if ($user1Interaction->message_count >= 10 && $user2Interaction->message_count >= 10) {
-                    // 双方それぞれ1000文字以上かチェック
                     if ($user1Interaction->total_characters >= 1000 && $user2Interaction->total_characters >= 1000) {
-                        // 12時間以内に相互に送信したかチェック
-                        if ($user1Interaction->last_interaction_at && $user2Interaction->last_interaction_at) {
-                            $timeDiff = abs($user1Interaction->last_interaction_at->diffInSeconds($user2Interaction->last_interaction_at));
-                            if ($timeDiff <= 43200) { // 12時間 = 43200秒
-                                return [
-                                    'can_request' => true,
-                                ];
-                            }
-                        }
+                        return [
+                            'can_request' => true,
+                        ];
                     }
                 }
             }
         }
         
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
         return [
             'can_request' => false,
-            'reason' => 'スレッド内でお互いに10通以上（双方それぞれ1000文字以上）送信し合う必要があります',
+            'reason' => \App\Services\LanguageService::trans('friend_request_interaction_not_met', $lang),
         ];
     }
 
@@ -324,6 +319,15 @@ class FriendService
             return [
                 'success' => false,
                 'message' => 'フレンドではありません',
+            ];
+        }
+
+        if ($toUser->is_permanently_banned) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return [
+                'success' => false,
+                'message' => \App\Services\LanguageService::trans('friend_send_coins_peer_permanently_banned', $lang),
             ];
         }
         
@@ -488,7 +492,16 @@ class FriendService
             $query->where('user_id', $friend->user_id)
                   ->where('friend_id', $user->user_id);
         })->delete();
-        
+
+        // 会話条件の集計をリセットし、再フレンド時は同一条件を満たす必要がある
+        ThreadInteraction::where(function ($query) use ($user, $friend) {
+            $query->where('user_id', $user->user_id)
+                ->where('other_user_id', $friend->user_id);
+        })->orWhere(function ($query) use ($user, $friend) {
+            $query->where('user_id', $friend->user_id)
+                ->where('other_user_id', $user->user_id);
+        })->delete();
+
         return true;
     }
 

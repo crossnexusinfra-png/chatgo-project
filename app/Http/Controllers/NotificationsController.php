@@ -604,8 +604,8 @@ class NotificationsController extends Controller
     {
         foreach ($reporterIds as $reporterId) {
             AdminMessage::create([
-                'title' => '通報取り消しのお知らせ',
-                'body' => "あなたが「成人向けコンテンツが含まれる」で通報した内容は、ルーム「{$thread->title}」がR18ルームへ変更されたため取り消されました。",
+                'title' => '通報内容の対応について',
+                'body' => "あなたが「成人向けコンテンツが含まれる」で通報した内容は、ルーム「{$thread->title}」がR18ルームへ変更されたため取り下げられました。",
                 'audience' => 'members',
                 'user_id' => $reporterId,
                 'thread_id' => $thread->thread_id,

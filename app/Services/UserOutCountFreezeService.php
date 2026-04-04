@@ -49,7 +49,7 @@ class UserOutCountFreezeService
             if ($outCount >= 1.0 && $outCount < 2.0) {
                 $suppressMonths = max(1, (int) config('report_restrictions.out_warning_suppress_months', 1));
                 $recentWarning = AdminMessage::where('user_id', $user->user_id)
-                    ->where('title', 'アウト警告のお知らせ')
+                    ->where('title', '利用に関する警告')
                     ->where('created_at', '>=', now()->subMonths($suppressMonths))
                     ->exists();
 
@@ -69,10 +69,10 @@ class UserOutCountFreezeService
 
     private function sendWarningNotice(User $user): void
     {
-        $bodyJa = "お客様の投稿について、通報が承認されました。現在、アウト数が1に達しています。\n\n今後、同様の行為を続けると、アカウントが一時凍結または永久凍結される可能性があります。利用規約を遵守した投稿をお願いいたします。";
+        $bodyJa = "あなたの投稿について、違反行為が確認されました。\n今後、同様の行為を続けると、アカウントが凍結される可能性があります。利用規約を遵守した投稿をお願いいたします。";
 
         AdminMessage::create([
-            'title' => 'アウト警告のお知らせ',
+            'title' => '利用に関する警告',
             'body' => $bodyJa,
             'audience' => 'members',
             'user_id' => $user->user_id,
@@ -85,7 +85,7 @@ class UserOutCountFreezeService
     private function sendFreezeNotice(User $user, \Carbon\Carbon $freezeUntil): void
     {
         $freezeUntilFormatted = $freezeUntil->format('Y年m月d日 H:i');
-        $bodyJa = "お客様のアカウントが一時凍結されました。\n\n凍結解除予定日時: {$freezeUntilFormatted}\n\n凍結期間中は、閲覧以外の操作（スレッド・レスポンスの投稿、プロフィール編集、コイン獲得送信など）ができません。\n\n今後は利用規約を遵守した投稿をお願いいたします。";
+        $bodyJa = "あなたのアカウントが一時的に凍結されました。\n\n凍結解除予定日時: {$freezeUntilFormatted}\n\n凍結期間中は、閲覧以外の操作はできません。\n今後は利用規約を遵守した投稿をお願いいたします。";
 
         AdminMessage::create([
             'title' => 'アカウント一時凍結のお知らせ',
@@ -100,7 +100,7 @@ class UserOutCountFreezeService
 
     private function sendPermanentBanNotice(User $user): void
     {
-        $bodyJa = "お客様のアカウントが永久凍結されました。\n\n今後、このアカウントでログインすることはできますが、閲覧以外の操作は一切できません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
+        $bodyJa = "あなたのアカウントが永久凍結されました。\n今後、このアカウントでログインすることはできますが、閲覧以外の操作はできません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
 
         AdminMessage::create([
             'title' => 'アカウント永久凍結のお知らせ',

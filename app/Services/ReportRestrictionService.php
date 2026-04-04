@@ -65,7 +65,7 @@ class ReportRestrictionService
             'thread_id' => (int) $response->thread_id,
         ], function () use ($response) {
             $threadTitle = $response->thread?->title ?? '（タイトルなし）';
-            $replySnippet = $response->body ? $this->safeTrim(strip_tags($response->body), 80, '…') : '';
+            $replySnippet = $this->safeTrim($response->plainBodyOrMediaKindForNotifications(), 2000, '…');
             $reasons = $this->getReportReasonsForResponse($response->response_id);
             $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons);
             $message = $this->sendRestrictionAckMessage([
@@ -202,8 +202,8 @@ class ReportRestrictionService
                             throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
                         }
 
-                    // 通報理由（重複除外）
-                    $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
+                    // 通報理由（重複除外・各行「・」）
+                    $reasonsText = $this->formatReportReasonsBulletList($reports->pluck('reason')->filter()->unique()->values()->all());
 
                         // 管理者承認と同様に、同一対象の複数理由は合算せず最大アウト値1件のみ加算。
                         $result['approved_reports'] += $this->approveReportsWithHighestOutCountOnly($reports, $selfAckMultiplier);
@@ -249,10 +249,8 @@ class ReportRestrictionService
                         }
 
                     $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
-                    $responseBody = (string) ($response->body ?? '');
-                    // 念のため長文で通知が落ちないように抑制
-                    $responseBodyForMsg = $this->safeTrim($responseBody, 500, '…');
-                    $reasonsText = implode('、', $reports->pluck('reason')->filter()->unique()->values()->all());
+                    $responseBodyForMsg = $this->safeTrim($response->plainBodyOrMediaKindForNotifications(), 2000, '…');
+                    $reasonsText = $this->formatReportReasonsBulletList($reports->pluck('reason')->filter()->unique()->values()->all());
 
                         $result['approved_reports'] += $this->approveReportsWithHighestOutCountOnly($reports, $selfAckMultiplier);
 
@@ -446,6 +444,36 @@ class ReportRestrictionService
         return strlen($text) > strlen($t) ? ($t . $suffix) : $t;
     }
 
+    /**
+     * @param  array<int, string|null>  $reasons
+     */
+    private function formatReportReasonsBulletList(array $reasons): string
+    {
+        $lines = array_values(array_unique(array_filter(array_map('strval', $reasons), fn ($r) => $r !== '')));
+        if ($lines === []) {
+            return '';
+        }
+
+        return implode("\n", array_map(fn (string $r) => '・' . $r, $lines));
+    }
+
+    /**
+     * @param  string  $type  'thread' | 'response' | 'profile'
+     */
+    private function formatReporterTargetBlock(string $type, string $threadTitle, ?string $responseBody): string
+    {
+        if ($type === 'thread') {
+            return 'ルーム名：' . "\n" . $threadTitle;
+        }
+        if ($type === 'response') {
+            $snippet = mb_substr(strip_tags((string) ($responseBody ?? '')), 0, 2000);
+
+            return 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $snippet;
+        }
+
+        return 'ユーザー名：' . "\n" . $threadTitle;
+    }
+
     private function applyRestrictionCountFreezeIfNeeded(User $user): void
     {
         $threshold = (int) config('report_restrictions.freeze_threshold', 5);
@@ -521,10 +549,12 @@ class ReportRestrictionService
     private function sendSelfAcknowledgeApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1): void
     {
         try {
-            $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-            $content = $type === 'thread'
-                ? $threadTitle
-                : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
+            $contentType = match ($type) {
+                'thread' => 'ルーム',
+                'response' => 'リプライ',
+                default => 'プロフィール',
+            };
+            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
 
             $bodyJa = "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
 
@@ -533,7 +563,7 @@ class ReportRestrictionService
             $coinAmount = $this->calculateCoinAmount($rank, $userScore);
 
             AdminMessage::create([
-                'title' => '通報内容対応完了のお知らせ',
+                'title' => '通報内容の対応について',
                 'body' => $bodyJa,
                 'audience' => 'members',
                 'user_id' => $userId,
@@ -557,17 +587,14 @@ class ReportRestrictionService
     private function sendSelfAcknowledgeDeletionNotice(int $userId, string $type, string $threadTitle, ?string $responseBody, string $reasons): void
     {
         try {
-            $contentType = $type === 'thread' ? 'スレッド' : ($type === 'response' ? 'レスポンス' : 'プロフィール');
-            $content = $type === 'thread'
-                ? $threadTitle
-                : ($type === 'response' ? $threadTitle . "\n\n" . ($responseBody ?? '') : $threadTitle);
-
-            $reasonsBlock = $reasons !== '' ? "【通報理由】\n{$reasons}\n\n" : '';
+            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
+            $reasonsBlock = "【通報理由】\n{$reasons}\n\n";
             if ($type === 'thread') {
-                $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+                $bodyJa = "あなたが通報内容を了承した下記のルームについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+            } elseif ($type === 'response') {
+                $bodyJa = "あなたが通報内容を了承した下記のリプライについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
             } else {
-                // 仕様: 管理者画面の承認と同じ（レスポンスは削除しない）
-                $bodyJa = "お客様が作成された{$contentType}について、通報を受けて審査中でしたが、作成者が通報内容を受け入れ、了承しました。\n\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+                $bodyJa = "あなたが通報内容を了承した下記のプロフィールについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
             }
 
             AdminMessage::create([
@@ -662,31 +689,39 @@ class ReportRestrictionService
      *
      * @param string $type 'thread' | 'response'
      * @param string $roomTitle ルーム名
-     * @param string|null $replySnippet リプライ本文の抜粋（response の場合のみ）
+     * @param string|null $replySnippet リプライ本文の抜粋（response の場合のみ・任意）
      * @param array<int, string> $reasons 通報理由のリスト
      */
     private function buildRestrictionNoticeBody(string $type, string $roomTitle, ?string $replySnippet, array $reasons): string
     {
-        $targetLabel = $type === 'thread' ? 'ルーム' : 'リプライ';
-        $intro = "現在、あなたの作成した以下の（{$targetLabel}）は通報を受け、違反の有無について審査中です。\n\n";
+        $contentType = $type === 'thread' ? 'ルーム' : 'リプライ';
 
-        $contentLine = $roomTitle;
-        if ($replySnippet !== null && $replySnippet !== '') {
-            $contentLine .= "\n" . $replySnippet;
+        $parts = [];
+        $parts[] = "現在、あなたの作成した以下の{$contentType}は通報を受け、違反の有無について審査中です。";
+        $parts[] = '';
+        $parts[] = '【通報対象】';
+
+        $contentLines = ['ルーム名：', $roomTitle];
+        if ($type === 'response') {
+            $contentLines[] = 'リプライ内容：';
+            $contentLines[] = (string) $replySnippet;
         }
-        $intro .= $contentLine . "\n\n";
+        $parts[] = implode("\n", $contentLines);
+        $parts[] = '';
 
-        $reasonBlock = count($reasons) > 0
-            ? implode("\n", array_map(fn (string $r) => '・' . $r, $reasons)) . "\n\n"
-            : '';
+        $parts[] = '【通報理由】';
+        foreach ($reasons as $r) {
+            if ((string) $r !== '') {
+                $parts[] = '・' . $r;
+            }
+        }
+        $parts[] = '';
 
-        $rest = "審査中は一部機能の利用が制限されます。\n\n";
-        $rest .= "なお、通報内容を受け入れる場合は、以下の操作が可能です：\n\n";
-        $rest .= "了承して削除する\n";
-        $rest .= "　該当投稿は削除され、審査を待たずに処理が完了します。\n\n";
-        $rest .= "※本操作を行わない場合、審査は継続されます。";
+        $parts[] = '審査中は一部機能の利用が制限されます。';
+        $parts[] = 'なお、通報内容を以下のボタンから了承して受け入れる場合は、該当投稿は削除され、審査を待たずに処理が完了します。';
+        $parts[] = '※本操作を行わない場合、審査は継続されます。';
 
-        return $intro . $reasonBlock . $rest;
+        return implode("\n", $parts);
     }
 
     /** @return array<int, string> */

@@ -201,28 +201,6 @@ class ReportController extends Controller
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('r18_thread_cannot_report_content_violation', $lang)]);
             }
             
-            // R18スレッドではないのに「成人向け以外のコンテンツ規制違反」で通報された場合、スレッド作成者にお知らせを送信
-            if (!$thread->is_r18 && !in_array($thread->tag, $r18Tags) && $validated['reason'] === '成人向け以外のコンテンツ規制違反') {
-                $threadCreator = $thread->user;
-                if ($threadCreator) {
-                    $threadUrl = route('threads.show', $thread->thread_id);
-                    $body = \App\Services\LanguageService::trans('r18_thread_report_notification_body', $lang, [
-                        'thread_title' => $thread->title,
-                        'thread_url' => $threadUrl
-                    ]);
-                    
-                    \App\Models\AdminMessage::create([
-                        'title_key' => 'r18_thread_report_notification_title',
-                        'body' => $body,
-                        'audience' => 'members',
-                        'user_id' => $threadCreator->user_id,
-                        'published_at' => now(),
-                        'allows_reply' => true,
-                        'reply_used' => false,
-                        'unlimited_reply' => false,
-                    ]);
-                }
-            }
         } elseif ($validated['response_id']) {
             $response = Response::findOrFail($validated['response_id']);
             

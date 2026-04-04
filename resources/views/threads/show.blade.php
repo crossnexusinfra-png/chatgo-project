@@ -351,7 +351,11 @@
                     <input type="hidden" id="parent_response_id" name="parent_response_id" value="">
                     <div class="form-group response-form-group js-response-form-fields">
                         <div class="response-form-input-wrapper">
-                            <label for="body" class="response-form-label-hidden">{{ \App\Services\LanguageService::trans('message_label', $lang) }}</label>
+                            <p class="response-coin-display-compact" id="responseCoinDisplay" data-reply-label="{{ \App\Services\LanguageService::trans('response_coin_reply', $lang) }}" data-body-label="{{ \App\Services\LanguageService::trans('thread_coin_body', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}" role="status" aria-live="polite"></p>
+                            <div class="response-message-label-row">
+                                <label for="body" class="response-form-message-label">{{ \App\Services\LanguageService::trans('message_label', $lang) }}</label>
+                                <span class="response-body-coin-hint">100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</span>
+                            </div>
                             @if ($errors->has('body'))
                                 @foreach ($errors->get('body') as $message)
                                     @php
@@ -381,8 +385,6 @@
                                 </div>
                             @enderror
                             <textarea id="body" name="body" class="js-response-body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}" data-base-coin="{{ (new \App\Services\CoinService())->getResponseCost('', false, true) }}">{{ old('body') }}</textarea>
-                            <small>100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
-                            <p class="thread-create-coin-display" id="responseCoinDisplay" data-reply-label="{{ \App\Services\LanguageService::trans('response_coin_reply', $lang) }}" data-body-label="{{ \App\Services\LanguageService::trans('thread_coin_body', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}"></p>
                         </div>
                         <div class="media-file-container">
                             <input type="file" id="media_file" name="media_file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/webm" class="media-file-input-hidden">
