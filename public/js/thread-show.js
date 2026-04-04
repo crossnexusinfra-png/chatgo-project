@@ -46,6 +46,7 @@
             textarea.placeholder = translations.messagePlaceholder || '';
             textarea.value = '';
         }
+        updateResponseCoinDisplay();
     };
 
     // ページ読み込み時に一番下までスクロール
@@ -591,13 +592,13 @@
 
         const hasText = charCount > 0;
         const hasMediaFile = !!(mediaFileInput && mediaFileInput.files && mediaFileInput.files.length > 0);
-        const baseCoin = parseInt(textarea.getAttribute('data-base-coin'), 10) || 1;
-        const bodyCoin = hasText ? Math.floor(charCount / 100) : 0;
-        const total = hasMediaFile && !hasText ? baseCoin : (baseCoin + bodyCoin);
-        const replyLabel = displayEl.getAttribute('data-reply-label') || 'Reply';
+        const mediaCoin = hasMediaFile ? 1 : 0;
+        const bodyCoin = hasText ? Math.ceil(charCount / 100) : 0;
+        const total = mediaCoin + bodyCoin;
+        const mediaLabel = displayEl.getAttribute('data-media-label') || 'Media';
         const bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';
         const totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
-        displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + replyLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
+        displayEl.textContent = totalLabel + ': ' + mediaCoin + ' (' + mediaLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
     }
 
     // メディアファイル選択と検証
@@ -883,13 +884,6 @@
             });
         }
     }
-
-    const responseBodyInput = document.querySelector('#response-form .js-response-body') || document.querySelector('#response-form textarea[name="body"]');
-    if (responseBodyInput) {
-        responseBodyInput.addEventListener('input', updateResponseCoinDisplay);
-        responseBodyInput.addEventListener('change', updateResponseCoinDisplay);
-    }
-    updateResponseCoinDisplay();
 
     // 画像モーダル表示
     window.openImageModal = function(imageSrc) {
@@ -1484,6 +1478,14 @@
 
         // メディアファイルハンドラーの初期化
         initMediaFileHandlers();
+
+        const responseBodyInput = document.querySelector('#response-form .js-response-body') || document.querySelector('#response-form textarea[name="body"]');
+        if (responseBodyInput && !responseBodyInput._coinDisplayBound) {
+            responseBodyInput._coinDisplayBound = true;
+            responseBodyInput.addEventListener('input', updateResponseCoinDisplay);
+            responseBodyInput.addEventListener('change', updateResponseCoinDisplay);
+        }
+        updateResponseCoinDisplay();
 
         // 動画サムネイルの生成
         const videoThumbnails = document.querySelectorAll('.media-video-thumbnail');

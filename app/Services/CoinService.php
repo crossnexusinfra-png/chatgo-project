@@ -55,26 +55,17 @@ class CoinService
 
     /**
      * レスポンス送信に必要なコインを計算
-     * URLを除く100文字ごとに1コイン追加
+     * メディア添付ごとに1コイン、URLを除く本文は1〜100文字で1コイン、以降100文字ごとに1コイン（切り上げ）。両方ある場合は合算。
      */
-    public function getResponseCost(string $body, bool $hasMediaFile, bool $hasText): int
+    public function getResponseCost(string $body, bool $hasMediaFile): int
     {
-        $baseCost = 1;
-        
-        // メディアファイル単体の送信で1コイン必要（文字も同時に送る場合は0文字としてカウント）
-        if ($hasMediaFile && !$hasText) {
-            return 1;
-        }
-        
-        // 文字も同時に送る場合、メディアファイルは0文字としてカウント（メディアファイルのコストは含まれない）
-        // URLを除いた文字数を計算
         $textWithoutUrls = preg_replace('/https?:\/\/[^\s]+/', '', $body);
         $charCount = mb_strlen(trim($textWithoutUrls));
-        
-        // 100文字ごとに1コイン追加
-        $additionalCost = floor($charCount / 100);
-        
-        return $baseCost + $additionalCost;
+
+        $mediaCost = $hasMediaFile ? 1 : 0;
+        $textCost = $charCount > 0 ? (int) ceil($charCount / 100) : 0;
+
+        return $mediaCost + $textCost;
     }
 
     /**

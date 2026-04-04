@@ -37,6 +37,9 @@ return [
     'thread_body_coin_per_100' => 'ごとに1コイン消費',
     'thread_coin_room' => 'ルーム',
     'response_coin_reply' => 'リプライ',
+    'response_coin_media' => 'メディア',
+    'response_coin_field_hint' => 'URL除く本文・メディアで算出',
+    'response_coin_cost_formula' => '消費コイン＝メディア1件につき1＋本文（URL除く・1〜100文字で1、以降は100文字ごとに切り上げ）。',
     'thread_coin_body' => '本文',
     'thread_coin_total' => '合計',
     

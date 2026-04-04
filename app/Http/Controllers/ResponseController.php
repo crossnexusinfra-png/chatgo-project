@@ -353,14 +353,13 @@ class ResponseController extends Controller
             \Log::debug('ResponseController: No URLs found in response body (store)');
         }
 
-        // コインを消費（レスポンス送信に1コイン必要、URLを除く100文字ごとに1コイン追加）
+        // コインを消費（メディア1件ごとに1コイン、URLを除く本文は1〜100文字で1コイン・以降100文字ごとに1コイン）
         // ※ウイルスチェックやSafeBrowsingなどの重い処理を行う前に、最初に確認する
         if (auth()->check()) {
             $coinService = new \App\Services\CoinService();
             $bodyForCost = $request->body ?? '';
             $hasMediaFileForCost = !empty($mediaFile);
-            $hasTextForCost = !empty(trim($bodyForCost));
-            $cost = $coinService->getResponseCost($bodyForCost, $hasMediaFileForCost, $hasTextForCost);
+            $cost = $coinService->getResponseCost($bodyForCost, $hasMediaFileForCost);
             $user = auth()->user();
             
             if (!$coinService->consumeCoins($user, $cost)) {
@@ -640,14 +639,13 @@ class ResponseController extends Controller
             return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('media_file_required', $lang)]);
         }
 
-        // コインを消費（返信送信に1コイン必要、URLを除く100文字ごとに1コイン追加）
+        // コインを消費（メディア1件ごとに1コイン、URLを除く本文は1〜100文字で1コイン・以降100文字ごとに1コイン）
         // ※ウイルスチェックやSafeBrowsingなどの重い処理を行う前に、最初に確認する
         if (auth()->check()) {
             $coinService = new \App\Services\CoinService();
             $bodyForCost = $request->body ?? '';
             $hasMediaFileForCost = $request->hasFile('media_file');
-            $hasTextForCost = !empty(trim($bodyForCost));
-            $cost = $coinService->getResponseCost($bodyForCost, $hasMediaFileForCost, $hasTextForCost);
+            $cost = $coinService->getResponseCost($bodyForCost, $hasMediaFileForCost);
             $user = auth()->user();
             
             if (!$coinService->consumeCoins($user, $cost)) {
@@ -824,21 +822,6 @@ class ResponseController extends Controller
                     'count' => $mediaLimitResult['count'] ?? null,
                 ]);
                 return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('spam_media_post_limit_exceeded', $lang)]);
-            }
-        }
-
-        // コインを消費（レスポンス送信に1コイン必要、URLを除く100文字ごとに1コイン追加）
-        if (auth()->check()) {
-            $coinService = new \App\Services\CoinService();
-            $body = $request->body ?? '';
-            $hasMediaFile = !empty($mediaFile);
-            $hasText = !empty(trim($body));
-            $cost = $coinService->getResponseCost($body, $hasMediaFile, $hasText);
-            $user = auth()->user();
-            
-            if (!$coinService->consumeCoins($user, $cost)) {
-                return back()->withErrors(['body' => \App\Services\LanguageService::trans('insufficient_coins', $lang)])
-                    ->withInput();
             }
         }
 
