@@ -221,10 +221,24 @@
         return result;
     }
 
+    function isValidSearchIncludeKeyword(keyword) {
+        const t = String(keyword).trim();
+        if (t.length === 0) return false;
+        if (t.length >= 2) return true;
+        return /^[\p{P}\p{S}]$/u.test(t);
+    }
+
+    function escapeHtml(text) {
+        if (text == null) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // 検索実行
     async function performSearch(query) {
         const keywords = parseSearchQuery(query);
-        const validKeywords = keywords.include.filter(keyword => keyword.length >= 2);
+        const validKeywords = keywords.include.filter(keyword => isValidSearchIncludeKeyword(keyword));
         
         if (validKeywords.length === 0) {
             displaySearchResults([], query);
@@ -265,6 +279,8 @@
                 results.push({
                     element: element,
                     body: result.body,
+                    display_body: result.display_body,
+                    has_translation: !!result.has_translation,
                     user: result.display_name || result.username || result.user_name || '',
                     time: result.created_at,
                     index: index,
@@ -288,8 +304,8 @@
 
         if (results.length === 0) {
             const keywords = parseSearchQuery(query);
-            const validKeywords = keywords.include.filter(keyword => keyword.length >= 2);
-            const hasExcludeKeywords = keywords.exclude.filter(keyword => keyword.length >= 2).length > 0;
+            const validKeywords = keywords.include.filter(keyword => isValidSearchIncludeKeyword(keyword));
+            const hasExcludeKeywords = keywords.exclude.filter(keyword => isValidSearchIncludeKeyword(keyword)).length > 0;
             
             let message = '';
             if (validKeywords.length === 0 && !hasExcludeKeywords) {
@@ -300,17 +316,34 @@
             
             searchResultsList.innerHTML = '<div class="search-result-response">' + message + '</div>';
         } else {
+            const showOriginalLabel = translations.show_original || '';
             searchResultsList.innerHTML = results.map(result => {
-                const highlightedUser = highlightText(result.user, query);
-                const highlightedBody = highlightText(result.body, query);
+                const highlightedUser = highlightText(escapeHtml(result.user), query);
                 const responseId = result.response_id || (result.element ? result.element.getAttribute('data-response-id') : '');
                 const responseOrder = result.response_order !== undefined ? result.response_order : '';
-                
-                return `<div class="search-result-response" data-index="${result.index}" data-response-id="${responseId}" data-response-order="${responseOrder}"><div class="search-result-value search-result-value-username">${highlightedUser}</div><div class="search-result-value">${highlightedBody}</div><div class="search-result-value">${result.time}</div></div>`;
+
+                let bodyBlock;
+                if (result.has_translation) {
+                    const disp = result.display_body != null ? result.display_body : '';
+                    const highlightedDisplay = highlightText(escapeHtml(disp), query);
+                    const highlightedOriginal = highlightText(escapeHtml(result.body || ''), query);
+                    bodyBlock = `<div class="response-body-wrapper search-result-body-wrapper">
+                        <div class="response-body response-body-display response-body-visible">${highlightedDisplay}</div>
+                        <div class="response-body response-body-original response-body-hidden">${highlightedOriginal}</div>
+                        <button type="button" class="show-original-response-btn" title="${escapeHtml(showOriginalLabel)}">${escapeHtml(showOriginalLabel)}</button>
+                    </div>`;
+                } else {
+                    bodyBlock = `<div class="search-result-value">${highlightText(escapeHtml(result.body || ''), query)}</div>`;
+                }
+
+                return `<div class="search-result-response" data-index="${result.index}" data-response-id="${responseId}" data-response-order="${responseOrder}"><div class="search-result-value search-result-value-username">${highlightedUser}</div>${bodyBlock}<div class="search-result-value">${escapeHtml(result.time)}</div></div>`;
             }).join('');
 
             searchResultsList.querySelectorAll('.search-result-response').forEach(item => {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function(e) {
+                    if (e.target.closest('.show-original-response-btn')) {
+                        return;
+                    }
                     const responseId = this.getAttribute('data-response-id');
                     const responseOrder = this.getAttribute('data-response-order');
                     scrollToSearchResult(responseId, responseOrder ? parseInt(responseOrder) : undefined);
@@ -341,11 +374,10 @@
         
         let highlightedText = text;
         allKeywords.forEach(keyword => {
-            if (keyword.length >= 2) {
-                const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const regex = new RegExp(`(${escapedKeyword})`, 'gi');
-                highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
-            }
+            if (!isValidSearchIncludeKeyword(keyword)) return;
+            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedKeyword})`, 'giu');
+            highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
         });
         
         return highlightedText;
@@ -1452,6 +1484,9 @@
             const btn = e.target.closest('.show-original-response-btn');
             if (!btn) return;
             e.preventDefault();
+            if (btn.closest('.search-result-response')) {
+                e.stopPropagation();
+            }
             const wrapper = btn.closest('.response-body-wrapper');
             if (!wrapper) return;
             const displayEl = wrapper.querySelector('.response-body-display');

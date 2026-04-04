@@ -264,8 +264,8 @@ class ThreadController extends Controller
         // ユーザーが18歳以上かどうかを判定
         $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
         
-        // 検索クエリが空または空白のみの場合は検索を実行しない
-        if (!$query || trim($query) === '' || mb_strlen(trim($query)) < 2) {
+        // 検索クエリが空、または有効な「含める」キーワードがない場合は検索を実行しない（記号1文字は可）
+        if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
             $threads = collect(); // 空のコレクションを返す
             $searchQuery = $query; // ヘッダーの検索欄に表示するため
             return view('threads.search', compact('threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery'));
@@ -1654,9 +1654,7 @@ class ThreadController extends Controller
 
         // ルーム検索と同じクエリ解析（全角空白・AND・-除外・2文字未満の含める語は無効）
         $parsed = Thread::parseSearchQuery($query);
-        $validKeywords = array_values(array_filter($parsed['include'], function ($keyword) {
-            return mb_strlen($keyword) >= 2;
-        }));
+        $validKeywords = array_values(array_filter($parsed['include'], fn ($kw) => Thread::isValidSearchIncludeKeyword($kw)));
 
         if ($validKeywords === []) {
             return response()->json([
@@ -1668,9 +1666,9 @@ class ThreadController extends Controller
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
 
-        // 全レスポンスを取得（userリレーションを読み込む）
+        // 全レスポンスを取得（翻訳表示は getTranslatedResponseBody の親子文脈に合わせて parentResponse も読み込む）
         $responses = $thread->responses()
-            ->with('user')
+            ->with(['user', 'parentResponse'])
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -1714,7 +1712,7 @@ class ThreadController extends Controller
 
             if ($matchesAll) {
                 foreach ($parsed['exclude'] as $excludeKeyword) {
-                    if (mb_strlen($excludeKeyword) < 2) {
+                    if (! Thread::isValidSearchIncludeKeyword($excludeKeyword)) {
                         continue;
                     }
                     if ($this->responseSearchExcludeHits($target, $excludeKeyword, $originalBody, $translatedBody, $user)) {
@@ -1730,9 +1728,27 @@ class ThreadController extends Controller
                     $displayName = $user->display_name;
                 }
 
+                $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
+                    ? \App\Services\TranslationService::normalizeLang($response->source_lang)
+                    : \App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN');
+                $parentBody = null;
+                if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
+                    $parentBody = $response->parentResponse->body ?? '';
+                }
+                $displayBody = \App\Services\TranslationService::getTranslatedResponseBody(
+                    (int) $response->response_id,
+                    $originalBody,
+                    $targetLang,
+                    $parentBody !== null && trim((string) $parentBody) !== '' ? (string) $parentBody : null,
+                    $responseSourceLang
+                );
+                $hasTranslatedBody = $originalBody !== '' && (string) $displayBody !== (string) $response->body;
+
                 $results[] = [
                     'response_id' => $response->response_id,
                     'body' => $response->body,
+                    'display_body' => $displayBody,
+                    'has_translation' => $hasTranslatedBody,
                     'user_id' => $response->user_id,
                     'username' => $user ? $user->username : '削除されたユーザー',
                     'user_name' => $user ? $user->username : '削除されたユーザー',
@@ -1807,6 +1823,25 @@ class ThreadController extends Controller
                 if (! empty($user->display_name) && mb_stripos((string) $user->display_name, $excludeKeyword) !== false) {
                     return true;
                 }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * ルーム検索用: 解析後の「含める」語に1つでも有効なトークンがあるか
+     */
+    private function threadSearchHasValidIncludeKeyword(string $query): bool
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return false;
+        }
+        $parsed = Thread::parseSearchQuery($query);
+        foreach ($parsed['include'] as $w) {
+            if (Thread::isValidSearchIncludeKeyword($w)) {
+                return true;
             }
         }
 
@@ -2881,8 +2916,8 @@ class ThreadController extends Controller
         // ユーザーが18歳以上かどうかを判定
         $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
         
-        // 検索クエリが空の場合は空の結果を返す
-        if (!$query || trim($query) === '' || mb_strlen(trim($query)) < 2) {
+        // 検索クエリが空、または有効な「含める」キーワードがない場合は空の結果を返す
+        if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
             return response()->json([
                 'html' => '',
                 'hasMore' => false,

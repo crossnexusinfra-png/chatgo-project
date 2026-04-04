@@ -1266,6 +1266,10 @@ body {
     background-color: #f0f0f0;
 }
 
+.search-result-body-wrapper {
+    margin: 6px 0;
+}
+
 /* パルスアニメーション */
 @keyframes pulse {
     0% { transform: scale(1); }

@@ -262,7 +262,7 @@ class Thread extends Model
 
     /**
      * タイトルで検索するスコープ
-     * - 2文字以上で検索を有効化
+     * - 2文字以上、または記号・句読点のみの1文字で検索を有効化
      * - 空白（全角or半角）でAND検索
      * - -(半角)で除外検索（文頭または空白直後）
      * - $lang 指定時は、その言語の翻訳（日本語選択時は日本語訳または元の日本語）も検索対象にする
@@ -272,11 +272,8 @@ class Thread extends Model
         // 検索クエリを解析（AND検索と除外検索）
         $keywords = self::parseSearchQuery($searchTerm);
         
-        // 有効なキーワードが2文字未満の場合、検索しない
-        $validKeywords = array_filter($keywords['include'], function($keyword) {
-            return mb_strlen($keyword) >= 2;
-        });
-        
+        $validKeywords = array_filter($keywords['include'], fn ($keyword) => self::isValidSearchIncludeKeyword($keyword));
+
         if (empty($validKeywords)) {
             return $query->whereRaw('1 = 0'); // 何も返さない
         }
@@ -303,21 +300,22 @@ class Thread extends Model
 
             // 除外検索：タイトルにも翻訳にも含まれない
             foreach ($keywords['exclude'] as $excludeKeyword) {
-                if (mb_strlen($excludeKeyword) >= 2) {
-                    $q->where(function($q2) use ($excludeKeyword, $targetLang) {
-                        $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
-                        if ($targetLang) {
-                            $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
-                                $sub->select(DB::raw(1))
-                                    ->from('translation_caches')
-                                    ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
-                                    ->whereNull('translation_caches.response_id')
-                                    ->where('translation_caches.target_lang', $targetLang)
-                                    ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
-                            });
-                        }
-                    });
+                if (! self::isValidSearchIncludeKeyword($excludeKeyword)) {
+                    continue;
                 }
+                $q->where(function($q2) use ($excludeKeyword, $targetLang) {
+                    $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
+                    if ($targetLang) {
+                        $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
+                            $sub->select(DB::raw(1))
+                                ->from('translation_caches')
+                                ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                ->whereNull('translation_caches.response_id')
+                                ->where('translation_caches.target_lang', $targetLang)
+                                ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
+                        });
+                    }
+                });
             }
         });
     }
@@ -361,6 +359,22 @@ class Thread extends Model
     }
 
     /**
+     * 検索の「含める」「除外」トークンとして有効か（2文字以上、または Unicode 記号・句読点のみの1文字）
+     */
+    public static function isValidSearchIncludeKeyword(string $keyword): bool
+    {
+        $keyword = trim($keyword);
+        if ($keyword === '') {
+            return false;
+        }
+        if (mb_strlen($keyword) >= 2) {
+            return true;
+        }
+
+        return (bool) preg_match('/^[\p{P}\p{S}]$/u', $keyword);
+    }
+
+    /**
      * タグと検索ワードの両方でフィルタリングするスコープ
      * $lang 指定時は、その言語の翻訳も検索対象にする
      */
@@ -369,10 +383,7 @@ class Thread extends Model
         // 検索クエリを解析（AND検索と除外検索）
         $keywords = self::parseSearchQuery($searchTerm);
         
-        // 有効なキーワードが2文字未満の場合、検索しない
-        $validKeywords = array_filter($keywords['include'], function($keyword) {
-            return mb_strlen($keyword) >= 2;
-        });
+        $validKeywords = array_filter($keywords['include'], fn ($kw) => self::isValidSearchIncludeKeyword($kw));
         
         if (empty($validKeywords)) {
             return $query->whereRaw('1 = 0'); // 何も返さない
@@ -398,21 +409,22 @@ class Thread extends Model
                             });
                         }
                         foreach ($keywords['exclude'] as $excludeKeyword) {
-                            if (mb_strlen($excludeKeyword) >= 2) {
-                                $q->where(function($q2) use ($excludeKeyword, $targetLang) {
-                                    $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
-                                    if ($targetLang) {
-                                        $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
-                                            $sub->select(DB::raw(1))
-                                                ->from('translation_caches')
-                                                ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
-                                                ->whereNull('translation_caches.response_id')
-                                                ->where('translation_caches.target_lang', $targetLang)
-                                                ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
-                                        });
-                                    }
-                                });
+                            if (! self::isValidSearchIncludeKeyword($excludeKeyword)) {
+                                continue;
                             }
+                            $q->where(function($q2) use ($excludeKeyword, $targetLang) {
+                                $q2->where('threads.title', 'not like', '%' . $excludeKeyword . '%');
+                                if ($targetLang) {
+                                    $q2->whereNotExists(function($sub) use ($excludeKeyword, $targetLang) {
+                                        $sub->select(DB::raw(1))
+                                            ->from('translation_caches')
+                                            ->whereColumn('translation_caches.thread_id', 'threads.thread_id')
+                                            ->whereNull('translation_caches.response_id')
+                                            ->where('translation_caches.target_lang', $targetLang)
+                                            ->where('translation_caches.translated_text', 'like', '%' . $excludeKeyword . '%');
+                                    });
+                                }
+                            });
                         }
                     });
     }
