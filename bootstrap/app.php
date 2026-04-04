@@ -150,6 +150,10 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // リプライ・ルーム1リプライ目のコイン計算は先頭末尾の空白・改行も1文字と数える（フロントと一致させる）
+        $middleware->trimStrings(except: [
+            'body',
+        ]);
 
         $middleware->trustProxies(
             '*',

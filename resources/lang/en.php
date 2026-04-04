@@ -38,6 +38,7 @@ return [
     'thread_body_coin_per_100' => 'chars = 1 coin',
     'thread_coin_room' => 'Room',
     'thread_coin_first_reply' => 'First reply',
+    'thread_create_first_reply_label' => 'First reply (optional)',
     'response_coin_reply' => 'Reply',
     'response_coin_media' => 'Media',
     'thread_coin_body' => 'Body',

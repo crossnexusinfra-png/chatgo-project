@@ -38,6 +38,7 @@ return [
     'thread_body_coin_per_100' => 'ごとに1コイン消費',
     'thread_coin_room' => 'ルーム',
     'thread_coin_first_reply' => '1リプライ目',
+    'thread_create_first_reply_label' => '1リプライ目（任意）',
     'response_coin_reply' => 'リプライ',
     'response_coin_media' => 'メディア',
     'thread_coin_body' => '本文',

@@ -582,12 +582,16 @@
         }
 
         const rawBody = textarea.value || '';
-        const textWithoutUrls = rawBody.replace(/https?:\/\/[^\s]+/g, '');
+        // CoinService::HTTP_URL_REGEX / SafeBrowsing::extractUrls と同一パターン（URL1件=課金1文字）
+        const urlPattern = new RegExp('https?:\\/\\/[^\\s<>"{}|\\\\^`\\[\\]]+', 'gi');
+        const urlMatches = rawBody.match(urlPattern);
+        const urlCount = urlMatches ? urlMatches.length : 0;
+        const textOnly = rawBody.replace(urlPattern, '');
         let charCount = 0;
         try {
-            charCount = (Array.from && Array.from(textWithoutUrls).length) || textWithoutUrls.length;
+            charCount = ((Array.from && Array.from(textOnly).length) || textOnly.length) + urlCount;
         } catch (e) {
-            charCount = textWithoutUrls.length;
+            charCount = textOnly.length + urlCount;
         }
 
         const hasText = charCount > 0;

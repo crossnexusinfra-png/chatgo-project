@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 class CoinService
 {
     /**
+     * http(s) URL 検出（SafeBrowsingService::extractUrls と同じパターン）
+     */
+    private const HTTP_URL_REGEX = '/https?:\/\/[^\s<>"{}|\\^`\[\]]+/i';
+
+    /**
      * コインを消費する
      */
     public function consumeCoins(User $user, int $amount): bool
@@ -40,26 +45,30 @@ class CoinService
 
     /**
      * ルーム作成時の1リプライ目（本文）コイン（1〜100文字で1コイン、以降100文字ごとに切り上げ）
-     * 改行・空白も1文字として数える（trim しない）
+     * 改行・空白も1文字として数える（trim しない）。URLは出現1件につき課金上1文字。
      */
     public function getThreadBodyCoinCost(string $body): int
     {
         if ($body === '') {
             return 0;
         }
-        $len = mb_strlen($body);
-        return $len > 0 ? (int) ceil($len / 100) : 0;
+        $urlCount = (int) preg_match_all(self::HTTP_URL_REGEX, $body);
+        $textOnly = preg_replace(self::HTTP_URL_REGEX, '', $body);
+        $charCount = mb_strlen($textOnly) + $urlCount;
+
+        return $charCount > 0 ? (int) ceil($charCount / 100) : 0;
     }
 
     /**
      * レスポンス送信に必要なコインを計算
-     * メディア添付ごとに1コイン、URLを除く本文は1〜100文字で1コイン、以降100文字ごとに1コイン（切り上げ）。両方ある場合は合算。
-     * 改行・空白も1文字として数える（trim しない）
+     * メディア添付ごとに1コイン。本文は URL 以外を文字どおり数え、URL は出現1件につき課金上1文字。
+     * 合計を1〜100で1コイン、以降100文字ごとに切り上げ。改行・空白も1文字（trim しない）。
      */
     public function getResponseCost(string $body, bool $hasMediaFile): int
     {
-        $textWithoutUrls = preg_replace('/https?:\/\/[^\s]+/', '', $body);
-        $charCount = mb_strlen($textWithoutUrls);
+        $urlCount = (int) preg_match_all(self::HTTP_URL_REGEX, $body);
+        $textOnly = preg_replace(self::HTTP_URL_REGEX, '', $body);
+        $charCount = mb_strlen($textOnly) + $urlCount;
 
         $mediaCost = $hasMediaFile ? 1 : 0;
         $textCost = $charCount > 0 ? (int) ceil($charCount / 100) : 0;

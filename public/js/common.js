@@ -139,11 +139,16 @@
             if (!bodyEl || !displayEl) return;
             var baseCoin = parseInt(bodyEl.getAttribute('data-base-coin'), 10) || 2;
             var bodyText = bodyEl.value || '';
+            // CoinService と同等の URL 検出（URL1件=課金1文字）
+            var urlPattern = new RegExp('https?:\\/\\/[^\\s<>"{}|\\\\^`\\[\\]]+', 'gi');
+            var urlMatches = bodyText.match(urlPattern);
+            var urlCount = urlMatches ? urlMatches.length : 0;
+            var textOnly = bodyText.replace(urlPattern, '');
             var charCount = 0;
             try {
-                charCount = (Array.from && Array.from(bodyText).length) || bodyText.length;
+                charCount = ((Array.from && Array.from(textOnly).length) || textOnly.length) + urlCount;
             } catch (e) {
-                charCount = bodyText.length;
+                charCount = textOnly.length + urlCount;
             }
             var bodyCoin = charCount > 0 ? Math.ceil(charCount / 100) : 0;
             var total = baseCoin + bodyCoin;
