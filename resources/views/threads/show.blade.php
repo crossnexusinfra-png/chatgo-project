@@ -351,11 +351,10 @@
                     <input type="hidden" id="parent_response_id" name="parent_response_id" value="">
                     <div class="form-group response-form-group js-response-form-fields">
                         <div class="response-form-input-wrapper">
-                            <p class="response-coin-formula-hint">{{ \App\Services\LanguageService::trans('response_coin_cost_formula', $lang) }}</p>
                             <p class="response-coin-display-compact" id="responseCoinDisplay" data-media-label="{{ \App\Services\LanguageService::trans('response_coin_media', $lang) }}" data-body-label="{{ \App\Services\LanguageService::trans('thread_coin_body', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}" role="status" aria-live="polite"></p>
                             <div class="response-message-label-row">
                                 <label for="body" class="response-form-message-label">{{ \App\Services\LanguageService::trans('message_label', $lang) }}</label>
-                                <span class="response-body-coin-hint">{{ \App\Services\LanguageService::trans('response_coin_field_hint', $lang) }}</span>
+                                <span class="response-body-coin-hint">100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</span>
                             </div>
                             @if ($errors->has('body'))
                                 @foreach ($errors->get('body') as $message)

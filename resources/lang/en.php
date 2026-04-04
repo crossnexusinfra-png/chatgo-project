@@ -38,8 +38,6 @@ return [
     'thread_coin_room' => 'Room',
     'response_coin_reply' => 'Reply',
     'response_coin_media' => 'Media',
-    'response_coin_field_hint' => 'Based on body (excl. URLs) and media',
-    'response_coin_cost_formula' => 'Cost = 1 coin per media file + body (excluding URLs): 1 coin for 1–100 chars, then +1 per 100 chars (rounded up).',
     'thread_coin_body' => 'Body',
     'thread_coin_total' => 'Total',
 
