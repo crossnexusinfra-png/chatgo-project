@@ -264,7 +264,7 @@ class ThreadController extends Controller
         // ユーザーが18歳以上かどうかを判定
         $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
         
-        // 検索クエリが空、または有効な「含める」キーワードがない場合は検索を実行しない（記号1文字は可）
+        // 検索クエリが空、または有効な「含める」キーワード（2文字以上）がない場合は検索を実行しない
         if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
             $threads = collect(); // 空のコレクションを返す
             $searchQuery = $query; // ヘッダーの検索欄に表示するため
@@ -1654,7 +1654,7 @@ class ThreadController extends Controller
 
         // ルーム検索と同じクエリ解析（全角空白・AND・-除外・2文字未満の含める語は無効）
         $parsed = Thread::parseSearchQuery($query);
-        $validKeywords = array_values(array_filter($parsed['include'], fn ($kw) => Thread::isValidSearchIncludeKeyword($kw)));
+        $validKeywords = array_values(array_filter($parsed['include'], fn ($kw) => mb_strlen(trim($kw)) >= 2));
 
         if ($validKeywords === []) {
             return response()->json([
@@ -1712,7 +1712,7 @@ class ThreadController extends Controller
 
             if ($matchesAll) {
                 foreach ($parsed['exclude'] as $excludeKeyword) {
-                    if (! Thread::isValidSearchIncludeKeyword($excludeKeyword)) {
+                    if (mb_strlen(trim($excludeKeyword)) < 2) {
                         continue;
                     }
                     if ($this->responseSearchExcludeHits($target, $excludeKeyword, $originalBody, $translatedBody, $user)) {
@@ -1830,7 +1830,7 @@ class ThreadController extends Controller
     }
 
     /**
-     * ルーム検索用: 解析後の「含める」語に1つでも有効なトークンがあるか
+     * ルーム検索用: 解析後の「含める」語に1つでも2文字以上のトークンがあるか
      */
     private function threadSearchHasValidIncludeKeyword(string $query): bool
     {
@@ -1840,7 +1840,7 @@ class ThreadController extends Controller
         }
         $parsed = Thread::parseSearchQuery($query);
         foreach ($parsed['include'] as $w) {
-            if (Thread::isValidSearchIncludeKeyword($w)) {
+            if (mb_strlen(trim($w)) >= 2) {
                 return true;
             }
         }
@@ -2916,7 +2916,7 @@ class ThreadController extends Controller
         // ユーザーが18歳以上かどうかを判定
         $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
         
-        // 検索クエリが空、または有効な「含める」キーワードがない場合は空の結果を返す
+        // 検索クエリが空、または有効な「含める」キーワード（2文字以上）がない場合は空の結果を返す
         if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
             return response()->json([
                 'html' => '',

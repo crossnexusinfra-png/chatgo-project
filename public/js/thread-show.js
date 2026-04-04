@@ -221,13 +221,6 @@
         return result;
     }
 
-    function isValidSearchIncludeKeyword(keyword) {
-        const t = String(keyword).trim();
-        if (t.length === 0) return false;
-        if (t.length >= 2) return true;
-        return /^[\p{P}\p{S}]$/u.test(t);
-    }
-
     function escapeHtml(text) {
         if (text == null) return '';
         const div = document.createElement('div');
@@ -238,7 +231,7 @@
     // 検索実行
     async function performSearch(query) {
         const keywords = parseSearchQuery(query);
-        const validKeywords = keywords.include.filter(keyword => isValidSearchIncludeKeyword(keyword));
+        const validKeywords = keywords.include.filter(keyword => keyword.trim().length >= 2);
         
         if (validKeywords.length === 0) {
             displaySearchResults([], query);
@@ -304,8 +297,8 @@
 
         if (results.length === 0) {
             const keywords = parseSearchQuery(query);
-            const validKeywords = keywords.include.filter(keyword => isValidSearchIncludeKeyword(keyword));
-            const hasExcludeKeywords = keywords.exclude.filter(keyword => isValidSearchIncludeKeyword(keyword)).length > 0;
+            const validKeywords = keywords.include.filter(keyword => keyword.trim().length >= 2);
+            const hasExcludeKeywords = keywords.exclude.filter(keyword => keyword.trim().length >= 2).length > 0;
             
             let message = '';
             if (validKeywords.length === 0 && !hasExcludeKeywords) {
@@ -374,7 +367,7 @@
         
         let highlightedText = text;
         allKeywords.forEach(keyword => {
-            if (!isValidSearchIncludeKeyword(keyword)) return;
+            if (keyword.trim().length < 2) return;
             const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`(${escapedKeyword})`, 'giu');
             highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
