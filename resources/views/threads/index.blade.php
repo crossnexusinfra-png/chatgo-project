@@ -62,13 +62,13 @@
                 <section class="post-list post-list-margin freeze-appeal-section">
                     <div class="thread-category">
                         <h3 class="category-title">{{ \App\Services\LanguageService::trans('freeze_appeal_section_title', $lang) }}</h3>
-                        <div class="thread-scroll-container thread-scroll-container-padding">
-                            <p class="thread-restriction-info">{{ \App\Services\LanguageService::trans('freeze_appeal_section_hint', $lang) }}</p>
-                            @error('freeze_appeal')
-                                <div class="alert alert-danger" role="alert">{{ $message }}</div>
-                            @enderror
+                        <div class="freeze-appeal-body">
                             @if(!empty($viewerFreezeAppealCanSubmit))
-                                <form method="post" action="{{ route('freeze-appeals.store') }}" class="post-form">
+                                <p class="freeze-appeal-note">{{ \App\Services\LanguageService::trans('freeze_appeal_section_hint', $lang) }}</p>
+                                @error('freeze_appeal')
+                                    <div class="alert alert-danger freeze-appeal-alert" role="alert">{{ $message }}</div>
+                                @enderror
+                                <form method="post" action="{{ route('freeze-appeals.store') }}" class="post-form freeze-appeal-form">
                                     @csrf
                                     <div class="form-group">
                                         <label for="freeze-appeal-message">{{ \App\Services\LanguageService::trans('freeze_appeal_message_label', $lang) }}</label>
@@ -77,7 +77,7 @@
                                     <button type="submit" class="btn btn-primary">{{ \App\Services\LanguageService::trans('freeze_appeal_submit', $lang) }}</button>
                                 </form>
                             @else
-                                <p class="thread-restriction-info">{{ \App\Services\LanguageService::trans('freeze_appeal_already_used', $lang) }}</p>
+                                <p class="freeze-appeal-note">{{ \App\Services\LanguageService::trans('freeze_appeal_already_used', $lang) }}</p>
                             @endif
                         </div>
                     </div>

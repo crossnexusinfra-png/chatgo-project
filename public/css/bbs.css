@@ -2762,6 +2762,35 @@ form.form-submitting input[readonly] {
     margin: 0;
 }
 
+/* 凍結・異議申し立て（注意書きは目立たせすぎない） */
+.freeze-appeal-section .freeze-appeal-body {
+    padding: 4px 14px 14px;
+}
+
+.freeze-appeal-section .freeze-appeal-note {
+    margin: 0 0 12px;
+    padding: 0;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: #6a6a6a;
+    text-align: left;
+    background: none;
+    border: none;
+}
+
+.freeze-appeal-section .freeze-appeal-note:last-child {
+    margin-bottom: 0;
+}
+
+.freeze-appeal-section .freeze-appeal-alert {
+    margin: 0 0 10px;
+    font-size: 0.875rem;
+}
+
+.freeze-appeal-section .freeze-appeal-form.post-form {
+    margin-top: 0;
+}
+
 /* アカウント凍結: ルーム作成ボタン・モーダル */
 .header-button.create-btn-disabled {
     opacity: 0.45;
