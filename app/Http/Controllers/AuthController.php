@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Admin;
@@ -14,6 +15,7 @@ use App\Services\PhoneNumberService;
 use App\Services\VeriphoneService;
 use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
+use App\Mail\PasswordResetLinkMail;
 
 class AuthController extends Controller
 {
@@ -195,7 +197,7 @@ class AuthController extends Controller
     }
 
     /**
-     * パスワード初期化フォーム表示（電話番号・メールアドレス入力）
+     * パスワード再設定（メールアドレス入力）
      */
     public function showPasswordResetForm()
     {
@@ -203,13 +205,63 @@ class AuthController extends Controller
     }
 
     /**
-     * パスワード初期化リクエスト（電話+メール一致でSMS+メール認証コード送信）
+     * メールにパスワード再設定用リンクを送信
      */
-    public function requestPasswordReset(Request $request)
+    public function requestPasswordResetEmail(Request $request)
     {
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return $this->redirectAfterPasswordResetLinkRequest(null);
+        }
+
+        $devUrlForNextPage = null;
+        $status = Password::sendResetLink(
+            ['email' => $user->email],
+            function (User $u, string $token) use ($lang, &$devUrlForNextPage) {
+                $url = $this->passwordResetUrlForUser($u, $token);
+                if (app()->environment('local') || config('app.show_verification_code_on_screen')) {
+                    $devUrlForNextPage = $url;
+                }
+                try {
+                    Mail::to($u->email)->send(new PasswordResetLinkMail($url, $lang));
+                } catch (\Throwable $e) {
+                    \Log::warning('AuthController: Failed to send password reset email', [
+                        'email' => $u->email,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+                return Password::RESET_LINK_SENT;
+            }
+        );
+
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => \App\Services\LanguageService::trans('password_reset_throttled', $lang)]);
+        }
+
+        return $this->redirectAfterPasswordResetLinkRequest($devUrlForNextPage);
+    }
+
+    /**
+     * メールを忘れた場合：登録電話番号でSMS（ログ）に同じ再設定リンクを送る
+     */
+    public function showPasswordResetPhoneForm()
+    {
+        return view('auth.password-reset-phone');
+    }
+
+    /**
+     * 電話番号でパスワード再設定リンクをSMS相当で通知（実装はログ出力）
+     */
+    public function requestPasswordResetPhone(Request $request)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $request->validate([
             'phone_country' => 'required|string|max:10',
             'phone_local' => 'required|string|max:20',
         ]);
@@ -223,111 +275,157 @@ class AuthController extends Controller
             return back()->withErrors(['phone_country' => $e->getMessage()])->withInput();
         }
 
-        $user = User::where('email', $request->email)->first();
-        if (!$user || $user->phone !== $internationalPhone) {
-            return back()->withErrors(['email' => \App\Services\LanguageService::trans('login_failed', $lang)])
-                ->withInput($request->only('email'));
-        }
-
-        $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put('password_reset_sms:' . $internationalPhone, $smsCode, 300);
-        Cache::put('password_reset_email:' . $request->email, $emailCode, 600);
-
-        \Log::info('Password reset codes', ['sms' => $smsCode, 'email' => $emailCode, 'user_id' => $user->user_id]);
-
-        session([
-            'password_reset_user_id' => $user->user_id,
-            'password_reset_email' => $user->email,
-            'password_reset_phone' => $internationalPhone,
-        ]);
-
-        return redirect()->route('login.password-reset.verify');
-    }
-
-    /**
-     * パスワード初期化・認証コード入力画面表示
-     */
-    public function showPasswordResetVerify()
-    {
-        if (!session('password_reset_user_id')) {
-            return redirect()->route('login.password-reset');
-        }
-        return view('auth.password-reset-verify');
-    }
-
-    /**
-     * パスワード初期化・SMS+メール認証コード検証→強制パスワード変更へ
-     */
-    public function verifyPasswordReset(Request $request)
-    {
-        if (!session('password_reset_user_id')) {
-            return redirect()->route('login.password-reset');
-        }
-
-        $request->validate([
-            'sms_code' => 'required|string|size:6',
-            'email_code' => 'required|string|size:6',
-        ]);
-
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $phone = session('password_reset_phone');
-        $email = session('password_reset_email');
-        $cachedSms = Cache::get('password_reset_sms:' . $phone);
-        $cachedEmail = Cache::get('password_reset_email:' . $email);
-
-        if (!$cachedSms || $cachedSms !== $request->sms_code) {
-            return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
-        }
-        if (!$cachedEmail || $cachedEmail !== $request->email_code) {
-            return back()->withErrors(['email_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
-        }
-
-        Cache::forget('password_reset_sms:' . $phone);
-        Cache::forget('password_reset_email:' . $email);
-        session(['password_reset_verified' => true]);
-
-        return redirect()->route('login.password-reset.change');
-    }
-
-    /**
-     * 強制パスワード変更画面表示
-     */
-    public function showPasswordResetChange()
-    {
-        if (!session('password_reset_verified') || !session('password_reset_user_id')) {
-            return redirect()->route('login.password-reset');
-        }
-        return view('auth.password-reset-change');
-    }
-
-    /**
-     * 強制パスワード変更実行→ログイン停止解除→ログインへ
-     */
-    public function submitPasswordResetChange(Request $request)
-    {
-        if (!session('password_reset_verified') || !session('password_reset_user_id')) {
-            return redirect()->route('login.password-reset');
-        }
-
-        $request->validate([
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $user = User::find(session('password_reset_user_id'));
+        $user = User::where('phone', $internationalPhone)->first();
         if (!$user) {
-            session()->forget(['password_reset_user_id', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
+            return $this->redirectAfterPasswordResetLinkRequest(null);
+        }
+
+        $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
+        if (!$verificationResult['is_valid']) {
+            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+        }
+        if (!empty($verificationResult['is_voip'])) {
+            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+        }
+
+        $devUrlForNextPage = null;
+        $status = Password::sendResetLink(
+            ['email' => $user->email],
+            function (User $u, string $token) use ($internationalPhone, &$devUrlForNextPage) {
+                $url = $this->passwordResetUrlForUser($u, $token);
+                if (app()->environment('local') || config('app.show_verification_code_on_screen')) {
+                    $devUrlForNextPage = $url;
+                }
+                \Log::info('Password reset link (SMS path)', [
+                    'phone' => $internationalPhone,
+                    'user_id' => $u->user_id,
+                    'url' => $url,
+                ]);
+                return Password::RESET_LINK_SENT;
+            }
+        );
+
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withInput($request->only('phone_country', 'phone_local'))
+                ->withErrors(['phone_local' => \App\Services\LanguageService::trans('password_reset_throttled', $lang)]);
+        }
+
+        return $this->redirectAfterPasswordResetLinkRequest($devUrlForNextPage, true);
+    }
+
+    /**
+     * リンク送信完了（メール／SMS とも同一メッセージでユーザー存在を秘匿）
+     */
+    public function showPasswordResetSent(Request $request)
+    {
+        if (!$request->session()->get('password_reset_generic_notice')) {
             return redirect()->route('login.password-reset');
         }
 
-        $user->password = Hash::make($request->password);
-        $user->save();
+        return view('auth.password-reset-sent', [
+            'byPhone' => (bool) $request->session()->get('password_reset_sent_via_phone'),
+        ]);
+    }
 
-        LoginFailureService::clearFailures($user->email);
-        session()->forget(['password_reset_user_id', 'password_reset_email', 'password_reset_phone', 'password_reset_verified']);
-
+    /**
+     * トークン付きリンクから新パスワード入力画面
+     */
+    public function showPasswordResetComplete(Request $request, string $token)
+    {
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
+        $email = $request->query('email');
+        if (!is_string($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->route('login.password-reset')
+                ->withErrors(['email' => \App\Services\LanguageService::trans('password_reset_invalid_link', $lang)]);
+        }
+
+        return view('auth.password-reset-complete', [
+            'token' => $token,
+            'email' => $email,
+        ]);
+    }
+
+    /**
+     * トークン検証後に新パスワードを保存
+     */
+    public function submitPasswordResetFromToken(Request $request)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $messages = [
+            'password.required' => \App\Services\LanguageService::trans('validation_password_required', $lang),
+            'password.string' => \App\Services\LanguageService::trans('validation_password_string', $lang),
+            'password.min' => \App\Services\LanguageService::trans('validation_password_min', $lang),
+            'password.confirmed' => \App\Services\LanguageService::trans('validation_password_confirmed', $lang),
+            'email.required' => \App\Services\LanguageService::trans('validation_email_required', $lang),
+            'email.email' => \App\Services\LanguageService::trans('validation_email_email', $lang),
+        ];
+
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email|max:255',
+            'password' => 'required|string|min:16|confirmed',
+        ], $messages);
+
+        if (!$this->passwordMeetsComplexityRules($request->password)) {
+            return back()->withErrors(['password' => \App\Services\LanguageService::trans('validation_password_complexity', $lang)])->withInput();
+        }
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+                LoginFailureService::clearFailures($user->email);
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
+        }
+
+        if ($status === Password::INVALID_TOKEN) {
+            return redirect()->route('login.password-reset')
+                ->withErrors(['email' => \App\Services\LanguageService::trans('password_reset_token_invalid', $lang)]);
+        }
+
+        return back()->withErrors(['email' => \App\Services\LanguageService::trans('password_reset_try_again', $lang)])->withInput();
+    }
+
+    private function passwordResetUrlForUser(User $user, string $token): string
+    {
+        return route('login.password-reset.complete', [
+            'token' => $token,
+            'email' => $user->getEmailForPasswordReset(),
+        ], true);
+    }
+
+    private function redirectAfterPasswordResetLinkRequest(?string $devUrl, bool $viaPhone = false)
+    {
+        session()->flash('password_reset_sent_via_phone', $viaPhone);
+        if ($devUrl) {
+            session()->flash('password_reset_dev_url', $devUrl);
+        }
+
+        return redirect()->route('login.password-reset.sent')
+            ->with('password_reset_generic_notice', true);
+    }
+
+    private function passwordMeetsComplexityRules(string $password): bool
+    {
+        $characterTypes = 0;
+        if (preg_match('/[a-z]/', $password)) {
+            $characterTypes++;
+        }
+        if (preg_match('/[A-Z]/', $password)) {
+            $characterTypes++;
+        }
+        if (preg_match('/\d/', $password)) {
+            $characterTypes++;
+        }
+        if (preg_match('/[^a-zA-Z0-9]/', $password)) {
+            $characterTypes++;
+        }
+
+        return $characterTypes >= 3;
     }
 
     /**

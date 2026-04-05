@@ -41,6 +41,11 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         Route::post('/suggestions/{suggestion}/reject', [AdminController::class, 'rejectSuggestion'])->name('suggestions.reject');
         Route::post('/suggestions/{suggestion}/toggle-star', [AdminController::class, 'toggleSuggestionStar'])->name('suggestions.toggle-star');
 
+        Route::get('/freeze-appeals', [AdminController::class, 'freezeAppeals'])->name('freeze-appeals');
+        Route::post('/freeze-appeals/{freezeAppeal}/approve', [AdminController::class, 'approveFreezeAppeal'])->name('freeze-appeals.approve');
+        Route::post('/freeze-appeals/{freezeAppeal}/reject', [AdminController::class, 'rejectFreezeAppeal'])->name('freeze-appeals.reject');
+        Route::get('/freeze-appeals/user/{userId}/report-history', [AdminController::class, 'freezeAppealUserReportHistory'])->name('freeze-appeals.user-reports');
+
         // ログ管理
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
         Route::get('/logs/download', [AdminController::class, 'downloadLogs'])->name('logs.download');

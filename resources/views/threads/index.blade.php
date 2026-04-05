@@ -58,6 +58,31 @@
                 <!-- メインページのコンテンツ -->
 
                 @auth
+                @if(!empty($viewerAccountFrozen))
+                <section class="post-list post-list-margin freeze-appeal-section">
+                    <div class="thread-category">
+                        <h3 class="category-title">{{ \App\Services\LanguageService::trans('freeze_appeal_section_title', $lang) }}</h3>
+                        <div class="thread-scroll-container thread-scroll-container-padding">
+                            <p class="thread-restriction-info">{{ \App\Services\LanguageService::trans('freeze_appeal_section_hint', $lang) }}</p>
+                            @error('freeze_appeal')
+                                <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                            @enderror
+                            @if(!empty($viewerFreezeAppealCanSubmit))
+                                <form method="post" action="{{ route('freeze-appeals.store') }}" class="post-form">
+                                    @csrf
+                                    <div class="form-group">
+                                        <label for="freeze-appeal-message">{{ \App\Services\LanguageService::trans('freeze_appeal_message_label', $lang) }}</label>
+                                        <textarea id="freeze-appeal-message" name="message" rows="5" maxlength="2000" minlength="10" required>{{ old('message') }}</textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">{{ \App\Services\LanguageService::trans('freeze_appeal_submit', $lang) }}</button>
+                                </form>
+                            @else
+                                <p class="thread-restriction-info">{{ \App\Services\LanguageService::trans('freeze_appeal_already_used', $lang) }}</p>
+                            @endif
+                        </div>
+                    </div>
+                </section>
+                @endif
                 <!-- 広告報酬ルーレット用オーバーレイ -->
                 <div id="coinRouletteOverlay" class="coin-roulette-overlay">
                     <div class="coin-roulette-container">

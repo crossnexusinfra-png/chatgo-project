@@ -15,7 +15,7 @@
         <div class="auth-card">
             <div class="auth-header">
                 <h1>{{ \App\Services\LanguageService::trans('login_reset_title', $lang) }}</h1>
-                <p>{{ \App\Services\LanguageService::trans('login_reset_enter_phone_email', $lang) }}</p>
+                <p>{{ \App\Services\LanguageService::trans('password_reset_email_intro', $lang) }}</p>
             </div>
 
             <form method="POST" action="{{ route('login.password-reset.request') }}" class="auth-form">
@@ -27,25 +27,12 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                <div class="form-group">
-                    <label for="phone_country">{{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }} <span class="required">*</span></label>
-                    <x-country-select name="phone_country" id="phone_country" value="{{ old('phone_country') }}" required />
-                    @error('phone_country')
-                        <span class="error-message">{{ $message }}</span>
-                    @enderror
-                </div>
-                <div class="form-group">
-                    <label for="phone_local">{{ \App\Services\LanguageService::trans('register_phone_local_label', $lang) }} <span class="required">*</span></label>
-                    <div class="phone-input-container">
-                        <span id="country-code-display" class="country-code-display">+81</span>
-                        <input type="tel" id="phone_local" name="phone_local" value="{{ old('phone_local') }}" required>
-                    </div>
-                    @error('phone_local')
-                        <span class="error-message">{{ $message }}</span>
-                    @enderror
-                </div>
-                <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('next', $lang) }}</button>
+                <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('password_reset_send_link', $lang) }}</button>
             </form>
+
+            <p class="form-group" style="margin-top: 1rem;">
+                <a href="{{ route('login.password-reset.phone') }}">{{ \App\Services\LanguageService::trans('password_reset_forgot_email_link', $lang) }}</a>
+            </p>
 
             <div class="auth-footer">
                 <a href="{{ route('login') }}" class="back-link">{{ \App\Services\LanguageService::trans('login_back', $lang) }}</a>

@@ -889,6 +889,10 @@ curl -X POST https://あなたのサイト/login \
 | `suggestions` | 3/分 | user_id | 改善要望 |
 | `login` | 20/分 | IP | ログイン試行（同一IPあたり） |
 | | 5/分 | ログイン対象メール（user_id） | 同上（同一メールあたり。失敗回数・ロックは LoginFailureService で別管理） |
+| `password_reset_email` | 5/分 | IP | パスワード再設定リンク送信（`POST /login/password-reset`） |
+| | 3/分 | email | 同上（リクエストのメールアドレスでキー、`pwreset_email:`） |
+| `password_reset_phone` | 5/分 | IP | パスワード再設定リンク送信（`POST /login/password-reset/phone`） |
+| | 3/分 | 国番号+番号 | 同上（`phone_country` + `phone_local` でキー、`pwreset_phone:`） |
 
 設定: `bootstrap/app.php` の `RateLimiter::for(...)`。適用: `routes/web.php` の `->middleware('throttle:xxx')`。コイン送信・通報などは「1 フレンド/1 投稿あたり」ではなく **送信元 user_id 単位** の制限。
 
@@ -929,13 +933,20 @@ curl -X POST https://あなたのサイト/login \
 
 - **20 req/min/IP** と **5 req/min/ログイン対象メール**: `throttle:login` で制限。クライアント IP は TrustProxies + TrustCloudflareProxies により `$request->ip()` で取得。
 - **失敗回数に応じた措置**（`LoginFailureService` + `AuthController::login`）:
-  - **5回失敗**: ログイン画面に CAPTCHA 用エリア + パスワード初期化リンクを表示。
+  - **常時**: ログイン画面のパスワード欄付近に「パスワードを忘れた方はこちら」リンク（`GET /login/password-reset` へ）。
+  - **5回失敗**: ログイン画面に CAPTCHA 用エリア + パスワード再設定（`/login/password-reset`）への案内を追加表示。
   - **10回失敗**: 10分間ロック + 異常ログインメール送信（IP / Country / Time を記載）。
   - **20回失敗**: 30分間ロック + 異常ログインメール送信（10回で送信済みの場合は20回で再送）。
   - **30回失敗**: 12時間ロック。
-  - **50回失敗**: ログイン停止（パスワード初期化完了までログイン不可）。
+  - **50回失敗**: ログイン停止（パスワード再設定完了までログイン不可）。
 - **異常ログインメール**: 件名「Abnormal login attempts detected」。本文に IP・Country・Time（`CF-IPCountry` を使用、未設定時は「—」）。
-- **パスワード初期化フロー**: 電話番号とメールアドレスを正しく入力 → SMS + メールで認証コード送信 → 認証完了でログイン停止解除 → 強制パスワード変更画面で新パスワード設定 → ログイン可能。ルート: `GET/POST /login/password-reset`, `GET/POST /login/password-reset/verify`, `GET/POST /login/password-reset/change`。
+- **パスワード再設定フロー**（ワンタイムリンク・`password_reset_tokens` + Laravel `Password` ブローカー）:
+  - **メール経路**: 登録メールアドレスを入力 → 再設定用 URL をメール送信（`App\Mail\PasswordResetLinkMail`）。該当ユーザーがいない場合も**同じ完了画面**を返し、存在の有無を秘匿する。
+  - **電話経路（メール不明時）**: `GET/POST /login/password-reset/phone` で国番号・電話番号を入力 → `VeriphoneService` で検証 → 同一トークンによる再設定 URL を **SMS 相当としてアプリログに出力**（登録時 SMS と同様、実 SMS 未接続の運用）。
+  - **リンク消費**: `GET /login/password-reset/complete/{token}?email=` で新パスワード・確認を入力し、`POST /login/password-reset/complete` で `Password::reset` により更新。新規登録と同様 **16 文字以上**および**英大文字・英小文字・数字・記号のうち 3 種類以上**を要求。成功時に `LoginFailureService::clearFailures` で失敗カウント・ログイン停止を解除。
+  - **テスト用表示**: `APP_ENV=local` または `SHOW_VERIFICATION_CODE_ON_SCREEN=true` のとき、送信完了画面（`GET /login/password-reset/sent`）に再設定 URL を表示（メール認証コードの画面表示と同種。`config/app.php` コメント参照）。
+  - **トークン再送の抑制**: `config/auth.php` の `passwords.users.throttle`（秒）に加え、上表の `password_reset_email` / `password_reset_phone` を適用。
+  - **ルート一覧**: `GET/POST /login/password-reset`（メール）、`GET/POST /login/password-reset/phone`（電話）、`GET /login/password-reset/sent`（送信完了）、`GET /login/password-reset/complete/{token}`（フォーム）、`POST /login/password-reset/complete`（確定）。
 - **CAPTCHA**: 5回失敗以降はログイン画面に `#captcha-container` を表示。reCAPTCHA 等を組み込む場合はここに配置する。
 
 ### IP 単位制限（実装済み）

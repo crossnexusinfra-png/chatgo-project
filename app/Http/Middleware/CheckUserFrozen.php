@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\FreezeAppeal;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +32,7 @@ class CheckUserFrozen
         View::share([
             'viewerAccountFrozen' => false,
             'viewerFrozenUiMessage' => '',
+            'viewerFreezeAppealCanSubmit' => false,
         ]);
 
         // ログインユーザーのみチェック
@@ -63,9 +65,17 @@ class CheckUserFrozen
             } else {
                 $uiMessage = \App\Services\LanguageService::trans('user_frozen_message', $lang);
             }
+            if (!$user->freeze_period_started_at) {
+                $user->freeze_period_started_at = now();
+                $user->save();
+            }
+            $canSubmitAppeal = !FreezeAppeal::where('user_id', $user->user_id)
+                ->where('freeze_period_started_at', $user->freeze_period_started_at)
+                ->exists();
             View::share([
                 'viewerAccountFrozen' => true,
                 'viewerFrozenUiMessage' => $uiMessage,
+                'viewerFreezeAppealCanSubmit' => $canSubmitAppeal,
             ]);
         }
 
@@ -79,6 +89,8 @@ class CheckUserFrozen
                     // 閲覧専用の継続のため、警告/R18確認の了承は許可
                     'threads.acknowledge',
                     'responses.acknowledge',
+                    // 凍結中の異議申し立て（1凍結期間につき1回）
+                    'freeze-appeals.store',
                     // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
                     'friends.delete',
                 ];
@@ -94,10 +106,12 @@ class CheckUserFrozen
                 // 凍結期間が過ぎている場合は解除
                 if ($user->frozen_until && $user->frozen_until->isPast()) {
                     $user->frozen_until = null;
+                    $user->freeze_period_started_at = null;
                     $user->save();
                     View::share([
                         'viewerAccountFrozen' => false,
                         'viewerFrozenUiMessage' => '',
+                        'viewerFreezeAppealCanSubmit' => false,
                     ]);
                 } else {
                     // 凍結中の場合、閲覧以外の操作を禁止
@@ -106,6 +120,8 @@ class CheckUserFrozen
                         // 閲覧専用の継続のため、警告/R18確認の了承は許可
                         'threads.acknowledge',
                         'responses.acknowledge',
+                        // 凍結中の異議申し立て（1凍結期間につき1回）
+                        'freeze-appeals.store',
                         // 一時凍結中は通知からのコイン受け取りを許可
                         'notifications.receive-coin',
                         // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）

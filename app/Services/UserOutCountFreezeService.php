@@ -22,6 +22,9 @@ class UserOutCountFreezeService
             $wasBanned = $user->is_permanently_banned;
             $user->is_permanently_banned = true;
             $user->frozen_until = null;
+            if (!$wasBanned) {
+                $user->freeze_period_started_at = now();
+            }
             $user->save();
 
             if (!$wasBanned) {
@@ -38,6 +41,9 @@ class UserOutCountFreezeService
             if ($freezeDuration) {
                 $user->frozen_until = $freezeDuration;
                 $user->freeze_count++;
+                if (!$wasFrozen) {
+                    $user->freeze_period_started_at = now();
+                }
                 $user->save();
 
                 if (!$wasFrozen) {
@@ -61,6 +67,7 @@ class UserOutCountFreezeService
             if ($outCount < 1.0 && $user->frozen_until) {
                 $user->freeze_count = 0;
                 $user->frozen_until = null;
+                $user->freeze_period_started_at = null;
                 $user->save();
                 $user->logFreeze(null, 'アウト数が0になったため凍結解除');
             }

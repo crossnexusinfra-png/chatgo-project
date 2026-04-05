@@ -12,6 +12,7 @@ use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\CoinController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\ThreadContinuationController;
+use App\Http\Controllers\FreezeAppealController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,11 @@ Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {
 
 // サイト改善要望の投稿
 Route::post('/suggestions', [SuggestionController::class, 'store'])->middleware(['throttle:suggestions', 'request.user'])->name('suggestions.store');
+
+// 凍結中の異議申し立て（1凍結期間につき1回）
+Route::post('/freeze-appeals', [FreezeAppealController::class, 'store'])
+    ->middleware(['auth', 'throttle:freeze_appeals', 'request.user'])
+    ->name('freeze-appeals.store');
 // GETリクエストの場合はトップページにリダイレクト
 Route::get('/suggestions', function() {
     return redirect()->route('threads.index');
@@ -132,13 +138,14 @@ Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->name('
 Route::get('/auth', [AuthController::class, 'showAuthChoice'])->name('auth.choice');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
-// パスワード初期化（電話+メール認証→強制パスワード変更）
+// パスワード再設定（メール／SMS のワンタイムリンク）
 Route::get('/login/password-reset', [AuthController::class, 'showPasswordResetForm'])->name('login.password-reset');
-Route::post('/login/password-reset', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:verification_initial_sms')->name('login.password-reset.request');
-Route::get('/login/password-reset/verify', [AuthController::class, 'showPasswordResetVerify'])->name('login.password-reset.verify');
-Route::post('/login/password-reset/verify', [AuthController::class, 'verifyPasswordReset'])->name('login.password-reset.verify.submit');
-Route::get('/login/password-reset/change', [AuthController::class, 'showPasswordResetChange'])->name('login.password-reset.change');
-Route::post('/login/password-reset/change', [AuthController::class, 'submitPasswordResetChange'])->name('login.password-reset.change.submit');
+Route::post('/login/password-reset', [AuthController::class, 'requestPasswordResetEmail'])->middleware('throttle:password_reset_email')->name('login.password-reset.request');
+Route::get('/login/password-reset/phone', [AuthController::class, 'showPasswordResetPhoneForm'])->name('login.password-reset.phone');
+Route::post('/login/password-reset/phone', [AuthController::class, 'requestPasswordResetPhone'])->middleware('throttle:password_reset_phone')->name('login.password-reset.phone.submit');
+Route::get('/login/password-reset/sent', [AuthController::class, 'showPasswordResetSent'])->name('login.password-reset.sent');
+Route::get('/login/password-reset/complete/{token}', [AuthController::class, 'showPasswordResetComplete'])->name('login.password-reset.complete');
+Route::post('/login/password-reset/complete', [AuthController::class, 'submitPasswordResetFromToken'])->name('login.password-reset.complete.submit');
 // GETリクエストの場合はログインページにリダイレクト
 Route::get('/logout', function() {
     return redirect()->route('login');

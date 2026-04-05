@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FreezeAppeal;
 use App\Models\Report;
 use App\Models\Suggestion;
 use App\Models\Thread;
@@ -16,11 +17,13 @@ use Illuminate\Support\Facades\Storage;
 use App\Policies\AdminPolicy;
 use Illuminate\Support\Facades\Auth;
 use App\Services\UserOutCountFreezeService;
+use App\Services\UserOutCountReductionService;
 
 class AdminController extends Controller
 {
     public function __construct(
-        private UserOutCountFreezeService $userOutCountFreezeService
+        private UserOutCountFreezeService $userOutCountFreezeService,
+        private UserOutCountReductionService $userOutCountReductionService
     ) {
     }
 
@@ -412,6 +415,9 @@ class AdminController extends Controller
         $since = $prevDashboardVisit?->created_at ?? now()->subYears(10);
         $newReports = Report::where('created_at', '>', $since)->count();
         $newSuggestions = \App\Models\Suggestion::where('created_at', '>', $since)->count();
+        $newFreezeAppeals = FreezeAppeal::where('status', 'pending')
+            ->where('created_at', '>', $since)
+            ->count();
 
         // 今回のダッシュボード訪問を記録（集計後に記録）
         try {
@@ -431,6 +437,7 @@ class AdminController extends Controller
             'lastLogin' => $lastLogin,
             'newReports' => $newReports,
             'newSuggestions' => $newSuggestions,
+            'newFreezeAppeals' => $newFreezeAppeals,
             'lang' => $lang,
         ]);
     }
@@ -1261,6 +1268,227 @@ class AdminController extends Controller
         }
         
         return back()->with('success', 'アウト数を設定しました');
+    }
+
+    /**
+     * 凍結異議申し立て一覧
+     */
+    public function freezeAppeals()
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $prevVisit = \App\Models\AccessLog::where('type', 'admin_freeze_appeals_visit')
+            ->orderByDesc('created_at')
+            ->first();
+        $appealsSince = $prevVisit?->created_at ?? now()->subYears(10);
+
+        $showCompleted = request()->boolean('show_completed', false);
+        $query = FreezeAppeal::query()->with('user')->orderBy('created_at', 'asc');
+        if (!$showCompleted) {
+            $query->where('status', 'pending');
+        }
+        $appeals = $query->get();
+
+        $newAppealsCount = FreezeAppeal::where('status', 'pending')
+            ->where('created_at', '>', $appealsSince)
+            ->count();
+
+        try {
+            \App\Models\AccessLog::create([
+                'type' => 'admin_freeze_appeals_visit',
+                'user_id' => null,
+                'path' => request()->path(),
+                'ip' => request()->ip(),
+            ]);
+        } catch (\Throwable $e) {
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        return view('admin.freeze-appeals', [
+            'appeals' => $appeals,
+            'showCompleted' => $showCompleted,
+            'appealsSince' => $appealsSince,
+            'newAppealsCount' => $newAppealsCount,
+            'lang' => $lang,
+        ]);
+    }
+
+    public function approveFreezeAppeal(Request $request, FreezeAppeal $freezeAppeal)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        if (!$freezeAppeal->isPending()) {
+            return back()->withErrors(['error' => '既に処理済みです']);
+        }
+
+        $target = User::find($freezeAppeal->user_id);
+        if (!$target) {
+            return back()->withErrors(['error' => 'ユーザーが見つかりません']);
+        }
+
+        $maxOut = max(0.25, round($target->calculateOutCount(), 2));
+        $request->validate([
+            'out_count_reduced' => 'required|numeric|min:0.25|max:' . $maxOut,
+        ]);
+
+        $amount = round((float) $request->input('out_count_reduced'), 2);
+
+        try {
+            DB::transaction(function () use ($freezeAppeal, $amount) {
+                $a = FreezeAppeal::where('freeze_appeal_id', $freezeAppeal->freeze_appeal_id)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$a || $a->status !== 'pending') {
+                    throw new \RuntimeException('appeal_not_pending');
+                }
+                $target = User::where('user_id', $a->user_id)->lockForUpdate()->first();
+                if (!$target) {
+                    throw new \RuntimeException('user_missing');
+                }
+                $this->userOutCountReductionService->subtractFromUserReports($target, $amount);
+                $this->userOutCountFreezeService->processOutCountAndFreeze($target->fresh());
+                $a->status = 'approved';
+                $a->out_count_reduced = $amount;
+                $a->processed_at = now();
+                $a->save();
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'appeal_not_pending') {
+                return back()->withErrors(['error' => '既に処理済みです']);
+            }
+            if ($e->getMessage() === 'user_missing') {
+                return back()->withErrors(['error' => 'ユーザーが見つかりません']);
+            }
+
+            throw $e;
+        }
+
+        try {
+            $this->sendFreezeAppealApprovalMessage(
+                (int) $freezeAppeal->user_id,
+                $freezeAppeal->message,
+                $amount
+            );
+        } catch (\Throwable $e) {
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        return back()->with('success', \App\Services\LanguageService::trans('admin_freeze_appeal_approved_ok', $lang));
+    }
+
+    public function rejectFreezeAppeal(FreezeAppeal $freezeAppeal)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        if (!$freezeAppeal->isPending()) {
+            return back()->withErrors(['error' => '既に処理済みです']);
+        }
+
+        $freezeAppeal->status = 'rejected';
+        $freezeAppeal->processed_at = now();
+        $freezeAppeal->save();
+
+        try {
+            $this->sendFreezeAppealRejectionMessage((int) $freezeAppeal->user_id, $freezeAppeal->message);
+        } catch (\Throwable $e) {
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        return back()->with('success', \App\Services\LanguageService::trans('admin_freeze_appeal_rejected_ok', $lang));
+    }
+
+    /**
+     * 対象ユーザーへの被通報一覧（管理者用）
+     */
+    public function freezeAppealUserReportHistory(int $userId)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $target = User::findOrFail($userId);
+
+        $reports = Report::query()
+            ->with([
+                'thread' => fn ($q) => $q->withTrashed(),
+                'response' => fn ($q) => $q->with(['thread' => fn ($qq) => $qq->withTrashed()]),
+            ])
+            ->where(function ($q) use ($userId) {
+                $q->whereHas('thread', fn ($qq) => $qq->where('user_id', $userId))
+                    ->orWhereHas('response', fn ($qq) => $qq->where('user_id', $userId))
+                    ->orWhere('reported_user_id', $userId);
+            })
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->get();
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        return view('admin.freeze-appeal-report-history', [
+            'target' => $target,
+            'reports' => $reports,
+            'lang' => $lang,
+        ]);
+    }
+
+    private function sendFreezeAppealApprovalMessage(int $userId, string $appealMessage, float $reduced): void
+    {
+        $bodyJa = "ご提出いただいた凍結に関する異議申し立てを確認し、アウト数を調整しました。\n\n"
+            . "減算したアウト数: {$reduced}\n\n"
+            . "申し立て内容:\n{$appealMessage}\n\n"
+            . 'アウト数の変化により、凍結状態が更新されている場合があります。マイページ等でご確認ください。';
+
+        AdminMessage::create([
+            'title' => '異議申し立ての対応について（承認）',
+            'body' => $bodyJa,
+            'audience' => 'members',
+            'user_id' => $userId,
+            'published_at' => now(),
+            'allows_reply' => true,
+            'reply_used' => false,
+        ]);
+    }
+
+    private function sendFreezeAppealRejectionMessage(int $userId, string $appealMessage): void
+    {
+        $bodyJa = "ご提出いただいた凍結に関する異議申し立てを確認しましたが、現時点では申し立てを却下いたしました。\n\n"
+            . "申し立て内容:\n{$appealMessage}\n\n"
+            . '補足がある場合は、返信にて追記をお願いします。なお、この凍結期間中に再申し立てはできません。';
+
+        AdminMessage::create([
+            'title' => '異議申し立ての対応について（却下）',
+            'body' => $bodyJa,
+            'audience' => 'members',
+            'user_id' => $userId,
+            'published_at' => now(),
+            'allows_reply' => true,
+            'reply_used' => false,
+        ]);
     }
 
     /**

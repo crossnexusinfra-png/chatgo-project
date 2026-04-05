@@ -60,6 +60,26 @@ return Application::configure(basePath: dirname(__DIR__))
                 ];
             });
 
+            // パスワード再設定リンク（メール）: 5/分 IP, 3/分 メールアドレス
+            RateLimiter::for('password_reset_email', function (Request $request) {
+                $ip = $request->ip();
+                $email = strtolower((string) $request->input('email', ''));
+                return [
+                    Limit::perMinute(5)->by("ip:{$ip}"),
+                    Limit::perMinute(3)->by('pwreset_email:' . ($email ?: 'unknown')),
+                ];
+            });
+
+            // パスワード再設定リンク（SMS・電話番号）: 5/分 IP, 3/分 国番号+番号
+            RateLimiter::for('password_reset_phone', function (Request $request) {
+                $ip = $request->ip();
+                $key = (string) $request->input('phone_country', '') . '|' . (string) $request->input('phone_local', '');
+                return [
+                    Limit::perMinute(5)->by("ip:{$ip}"),
+                    Limit::perMinute(3)->by('pwreset_phone:' . ($key !== '|' ? $key : 'unknown')),
+                ];
+            });
+
             // 電話番号・メアド変更時 認証コード再送信: 1/分 user_id
             RateLimiter::for('verification_profile', function (Request $request) {
                 $uid = $request->user()?->id;
@@ -132,6 +152,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // 改善要望: 3/分 user_id
             RateLimiter::for('suggestions', function (Request $request) {
+                $uid = $request->user()?->id;
+                $ip = $request->ip();
+                return Limit::perMinute(3)->by($uid ? "user:{$uid}" : "ip:{$ip}");
+            });
+
+            // 凍結異議申し立て: 3/分 user_id
+            RateLimiter::for('freeze_appeals', function (Request $request) {
                 $uid = $request->user()?->id;
                 $ip = $request->ip();
                 return Limit::perMinute(3)->by($uid ? "user:{$uid}" : "ip:{$ip}");

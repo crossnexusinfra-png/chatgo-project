@@ -489,7 +489,11 @@ class ReportRestrictionService
         if ($user->frozen_until && $user->frozen_until->isFuture() && $user->frozen_until->gte($until)) {
             return;
         }
+        $wasFutureFrozen = $user->frozen_until && $user->frozen_until->isFuture();
         $user->frozen_until = $until;
+        if (!$wasFutureFrozen) {
+            $user->freeze_period_started_at = now();
+        }
         $user->save();
         try {
             $user->logFreeze($until, '通報制限を同時に5件以上受けているため一時凍結');

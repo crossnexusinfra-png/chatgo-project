@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,7 +13,7 @@ use App\Models\UserChangeLog;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use CanResetPassword, HasFactory, Notifiable;
 
     /**
      * 主キーのカラム名を指定
@@ -106,6 +107,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'is_verified' => 'boolean',
             'frozen_until' => 'datetime',
+            'freeze_period_started_at' => 'datetime',
             'profile_update_locked_until' => 'datetime',
             'is_permanently_banned' => 'boolean',
         ];
@@ -275,6 +277,14 @@ class User extends Authenticatable
     public function reports()
     {
         return $this->hasMany(Report::class, 'reported_user_id', 'user_id');
+    }
+
+    /**
+     * 凍結に関する異議申し立て
+     */
+    public function freezeAppeals()
+    {
+        return $this->hasMany(FreezeAppeal::class, 'user_id', 'user_id');
     }
 
     /**

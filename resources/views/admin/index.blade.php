@@ -34,6 +34,12 @@
                     <span class="admin-new-badge">NEW {{ $newSuggestions }}</span>
                 @endif
             </li>
+            <li>
+                <a href="{{ route('admin.freeze-appeals') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_freeze_appeals', $lang) }}</a>
+                @if(!empty($newFreezeAppeals))
+                    <span class="admin-new-badge">NEW {{ $newFreezeAppeals }}</span>
+                @endif
+            </li>
             <li><a href="{{ route('admin.messages') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_messages', $lang) }}</a></li>
             <li><a href="{{ route('admin.logs') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_logs', $lang) }}</a></li>
         </ul>
