@@ -52,9 +52,6 @@ Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {
     Route::get('/tag/{tag}/more', [ThreadController::class, 'getMoreTagThreads'])->name('api.threads.tag.more');
     Route::get('/category/{category}/more', [ThreadController::class, 'getMoreCategoryThreads'])->name('api.threads.category.more');
 
-    Route::get('/threads/{thread}/responses', [ThreadController::class, 'getResponses'])->name('api.threads.responses');
-    Route::get('/threads/{thread}/responses/new', [ThreadController::class, 'getNewResponses'])->name('api.threads.responses.new');
-
     Route::middleware('auth')->group(function () {
         Route::get('/profile/threads/more', [ProfileController::class, 'getMoreThreads'])->name('api.profile.threads.more');
         Route::get('/reports/existing', [ReportController::class, 'getExisting'])->name('api.reports.existing');
@@ -93,12 +90,18 @@ Route::get('/threads', function() {
     return redirect()->route('threads.index');
 });
 
-// リプライ検索は /api 配下に置かない（JSON の fetch が CDN で 403 になる事例があるため。通報 getExisting と同様の方針）
+// リプライの JSON 取得は /api 配下に置かない（fetch が CDN で 403 になる事例があるため）
 Route::get('/threads/{thread}/responses/search', [ThreadController::class, 'searchResponses'])
     ->middleware('throttle:api')
     ->name('api.threads.responses.search');
+Route::get('/threads/{thread}/responses/new', [ThreadController::class, 'getNewResponses'])
+    ->middleware('throttle:api')
+    ->name('api.threads.responses.new');
+Route::get('/threads/{thread}/responses', [ThreadController::class, 'getResponses'])
+    ->middleware('throttle:api')
+    ->name('api.threads.responses');
 
-// スレッドの個別表示（レス取得は /api/threads/{thread}/responses 等）
+// スレッドの個別表示
 Route::get('/threads/{thread}', [ThreadController::class, 'show'])->name('threads.show');
 
 // お気に入り（認証が必要）

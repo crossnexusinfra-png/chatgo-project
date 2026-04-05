@@ -89,7 +89,7 @@
         }
 
         try {
-            const responsesUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesRoute) || `/api/threads/${threadId}/responses`;
+            const responsesUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesRoute) || `/threads/${threadId}/responses`;
             const response = await fetch(`${responsesUrl}?offset=${currentOffset}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,
@@ -1175,7 +1175,7 @@
 
         try {
             console.log('[リアルタイム更新] 新しいレスポンスをチェック中... (threadId:', threadId, ', lastResponseId:', lastResponseId, ')');
-            const newUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesNewRoute) || `/api/threads/${threadId}/responses/new`;
+            const newUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesNewRoute) || `/threads/${threadId}/responses/new`;
             const response = await fetch(`${newUrl}?last_response_id=${lastResponseId}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,

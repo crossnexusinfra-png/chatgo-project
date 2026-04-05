@@ -1225,14 +1225,12 @@ class ThreadController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getResponses($id, Request $request)
+    public function getResponses(Thread $thread, Request $request)
     {
         // AJAXリクエストでない場合はスレッド詳細ページにリダイレクト
         if (!$request->ajax() && !$request->wantsJson()) {
-            return redirect()->route('threads.show', $id);
+            return redirect()->route('threads.show', $thread);
         }
-        
-        $thread = Thread::findOrFail($id);
         
         // IDOR防止: R18スレッドの閲覧権限をチェック（18歳未満のユーザーは閲覧不可）
         $currentUser = auth()->user();
@@ -1421,14 +1419,12 @@ class ThreadController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getNewResponses($id, Request $request)
+    public function getNewResponses(Thread $thread, Request $request)
     {
         // AJAXリクエストでない場合はスレッド詳細ページにリダイレクト
         if (!$request->ajax() && !$request->wantsJson()) {
-            return redirect()->route('threads.show', $id);
+            return redirect()->route('threads.show', $thread);
         }
-        
-        $thread = Thread::findOrFail($id);
         
         // IDOR防止: R18スレッドの閲覧権限をチェック（18歳未満のユーザーは閲覧不可）
         $currentUser = auth()->user();
