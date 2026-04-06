@@ -11,15 +11,23 @@ use App\Models\User;
  * 管理者承認（AdminController）と本人了承（ReportRestrictionService）で同一ロジックを共有する。
  *
  * @param  bool  $afterFreezeAppealApproval  true のとき、減算直後の一時凍結の再適用を行わず、
- *                                          一時凍結を期限切れ相当で終了し freeze_count を 1 減らす（下限 0）
+ *                                          一時凍結を期限切れ相当で終了し freeze_count を 1 減らす（下限 0）。
+ *                                          この分岐では「利用に関する警告」は送らない。
+ *
+ * 一時凍結・利用に関する警告は、前回処理時の `sanctions_out_count_snapshot` と比較し
+ * **アウト数が増加したときのみ** 適用する（減算・自動の時効などで下がった場合は新規に発動しない）。
+ * 永久凍結（4アウト以上）は増減に関わらず従来どおり判定する。
  */
 class UserOutCountFreezeService
 {
     public function processOutCountAndFreeze(User $user, bool $afterFreezeAppealApproval = false): void
     {
         Report::resetExpiredOutCounts();
+        $user->refresh();
 
-        $outCount = $user->calculateOutCount();
+        $currentOut = $user->calculateOutCount();
+        $snapshot = $user->sanctions_out_count_snapshot;
+        $sanctionsOutIncreased = $snapshot === null || $this->outStrictlyGreaterThan($currentOut, (float) $snapshot);
 
         if ($user->shouldBePermanentlyBanned()) {
             $wasBanned = $user->is_permanently_banned;
@@ -35,6 +43,8 @@ class UserOutCountFreezeService
                 $this->sendPermanentBanNotice($user);
             }
 
+            $this->persistSanctionsOutCountSnapshot($user);
+
             return;
         }
 
@@ -42,26 +52,16 @@ class UserOutCountFreezeService
             $user->frozen_until = null;
             $user->freeze_period_started_at = null;
             $nextFreezeCount = max(0, (int) $user->freeze_count - 1);
-            $user->freeze_count = $outCount < 1.0 ? 0 : $nextFreezeCount;
+            $user->freeze_count = $currentOut < 1.0 ? 0 : $nextFreezeCount;
             $user->save();
             $user->logFreeze(null, '異議申し立て承認により一時凍結を終了');
-            $outCount = $user->calculateOutCount();
-            if ($outCount >= 1.0 && $outCount < 2.0) {
-                $suppressMonths = max(1, (int) config('report_restrictions.out_warning_suppress_months', 1));
-                $recentWarning = AdminMessage::where('user_id', $user->user_id)
-                    ->where('title', '利用に関する警告')
-                    ->where('created_at', '>=', now()->subMonths($suppressMonths))
-                    ->exists();
 
-                if (!$recentWarning) {
-                    $this->sendWarningNotice($user);
-                }
-            }
+            $this->persistSanctionsOutCountSnapshot($user);
 
             return;
         }
 
-        if ($user->shouldBeTemporarilyFrozen()) {
+        if ($user->shouldBeTemporarilyFrozen() && $sanctionsOutIncreased) {
             $wasFrozen = $user->frozen_until && $user->frozen_until->isFuture();
             $freezeDuration = $user->calculateFreezeDuration();
             if ($freezeDuration) {
@@ -78,7 +78,7 @@ class UserOutCountFreezeService
                 }
             }
         } else {
-            if ($outCount >= 1.0 && $outCount < 2.0) {
+            if ($sanctionsOutIncreased && $currentOut >= 1.0 && $currentOut < 2.0) {
                 $suppressMonths = max(1, (int) config('report_restrictions.out_warning_suppress_months', 1));
                 $recentWarning = AdminMessage::where('user_id', $user->user_id)
                     ->where('title', '利用に関する警告')
@@ -90,7 +90,7 @@ class UserOutCountFreezeService
                 }
             }
 
-            if ($outCount < 1.0 && $user->frozen_until) {
+            if ($currentOut < 1.0 && $user->frozen_until) {
                 $user->freeze_count = 0;
                 $user->frozen_until = null;
                 $user->freeze_period_started_at = null;
@@ -98,6 +98,23 @@ class UserOutCountFreezeService
                 $user->logFreeze(null, 'アウト数が0になったため凍結解除');
             }
         }
+
+        $this->persistSanctionsOutCountSnapshot($user);
+    }
+
+    /**
+     * 制裁ロジック用: 現在のアウト合計を保存（次回呼び出しで増減判定に使う）
+     */
+    private function persistSanctionsOutCountSnapshot(User $user): void
+    {
+        $user->refresh();
+        $user->sanctions_out_count_snapshot = $user->calculateOutCount();
+        $user->save();
+    }
+
+    private function outStrictlyGreaterThan(float $a, float $b): bool
+    {
+        return round($a, 4) > round($b, 4);
     }
 
     private function sendWarningNotice(User $user): void

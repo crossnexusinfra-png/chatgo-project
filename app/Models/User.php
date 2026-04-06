@@ -108,6 +108,7 @@ class User extends Authenticatable
             'is_verified' => 'boolean',
             'frozen_until' => 'datetime',
             'freeze_period_started_at' => 'datetime',
+            'sanctions_out_count_snapshot' => 'float',
             'profile_update_locked_until' => 'datetime',
             'is_permanently_banned' => 'boolean',
         ];
