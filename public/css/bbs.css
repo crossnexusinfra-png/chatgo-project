@@ -2114,6 +2114,11 @@ form.form-submitting input[readonly] {
     text-decoration: underline;
 }
 
+/* フォーム直下など、フッター以外で back-link と同じ 14px を使う場合（余白だけ抑える） */
+.back-link.back-link--inline {
+    margin-top: 0;
+}
+
 /* ヘッダーの認証ボタンスタイル */
 .header-button.auth-btn {
     display: flex;

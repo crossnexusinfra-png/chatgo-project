@@ -53,8 +53,8 @@
                     @error('password')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
-                    <p class="form-help" style="margin-top: 0.5rem;">
-                        <a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_forgot_password_link', $lang) }}</a>
+                    <p style="margin-top: 0.5rem;">
+                        <a href="{{ route('login.password-reset') }}" class="back-link back-link--inline">{{ \App\Services\LanguageService::trans('login_forgot_password_link', $lang) }}</a>
                     </p>
                 </div>
 

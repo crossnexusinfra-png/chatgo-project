@@ -30,8 +30,8 @@
                 <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('password_reset_send_link', $lang) }}</button>
             </form>
 
-            <p class="form-group" style="margin-top: 1rem;">
-                <a href="{{ route('login.password-reset.phone') }}">{{ \App\Services\LanguageService::trans('password_reset_forgot_email_link', $lang) }}</a>
+            <p style="margin-top: 1rem;">
+                <a href="{{ route('login.password-reset.phone') }}" class="back-link back-link--inline">{{ \App\Services\LanguageService::trans('password_reset_forgot_email_link', $lang) }}</a>
             </p>
 
             <div class="auth-footer">
