@@ -216,7 +216,10 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
         if (!$user) {
-            return $this->redirectAfterPasswordResetLinkRequest(null);
+            return back()->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => \App\Services\LanguageService::trans('password_reset_email_not_registered', $lang),
+                ]);
         }
 
         $devUrlForNextPage = null;
@@ -277,7 +280,10 @@ class AuthController extends Controller
 
         $user = User::where('phone', $internationalPhone)->first();
         if (!$user) {
-            return $this->redirectAfterPasswordResetLinkRequest(null);
+            return back()->withInput($request->only('phone_country', 'phone_local'))
+                ->withErrors([
+                    'phone_local' => \App\Services\LanguageService::trans('password_reset_phone_not_registered', $lang),
+                ]);
         }
 
         $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
@@ -314,7 +320,7 @@ class AuthController extends Controller
     }
 
     /**
-     * リンク送信完了（メール／SMS とも同一メッセージでユーザー存在を秘匿）
+     * リンク送信完了（登録済みのメール／電話でのみ遷移）
      */
     public function showPasswordResetSent(Request $request)
     {
@@ -370,16 +376,46 @@ class AuthController extends Controller
             return back()->withErrors(['password' => \App\Services\LanguageService::trans('validation_password_complexity', $lang)])->withInput();
         }
 
+        $resetUser = null;
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
+            function (User $user, string $password) use (&$resetUser) {
                 $user->forceFill(['password' => Hash::make($password)])->save();
                 LoginFailureService::clearFailures($user->email);
+                $resetUser = $user->fresh();
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
+            if (!$resetUser) {
+                return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
+            }
+
+            if ($resetUser->is_permanently_banned) {
+                return redirect()->route('logout')->withErrors([
+                    'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
+                ]);
+            }
+
+            Auth::login($resetUser);
+
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+            }
+
+            $intendedUrl = session('intended_url', '/');
+            session()->forget('intended_url');
+
+            $allSessionData = session()->all();
+            foreach ($allSessionData as $key => $value) {
+                if (strpos($key, 'pending_acknowledge_response_') === 0) {
+                    $responseId = str_replace('pending_acknowledge_response_', '', $key);
+                    session(['acknowledged_response_' . $responseId => true]);
+                    session()->forget($key);
+                }
+            }
+
+            return redirect($intendedUrl)->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
         }
 
         if ($status === Password::INVALID_TOKEN) {

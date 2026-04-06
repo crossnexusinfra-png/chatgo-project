@@ -757,6 +757,49 @@ return [
 
 ---
 
+### 凍結・異議申立て（管理画面の承認／拒否）
+
+凍結中のユーザーがトップから送信した **異議申立て** に対し、管理者が「凍結・異議申立て一覧」で承認または拒否したときに送られる。タイトルは **承認・拒否とも同一**（改善要望 #13／#14 と同様の扱い）。
+
+| # | 概要 | トリガー | 宛先 | タイトル | 備考 |
+|---|------|----------|------|----------|------|
+| 20 | 異議申立て・承認（アウト減算） | `AdminController::approveFreezeAppeal` → `sendFreezeAppealApprovalMessage` | 申立ユーザー | 異議申し立ての対応について | `allows_reply` = false。本文の減算値は管理者が入力したアウト数（`number_format` 後に末尾の不要な 0 を除去）。 |
+| 21 | 異議申立て・拒否 | `rejectFreezeAppeal` → `sendFreezeAppealRejectionMessage` | 同上 | 同上 | `allows_reply` = true |
+
+**#20（異議申立て・承認）** — `申し立て内容：` 以下はユーザーがフォームに入力した全文がそのまま入る。`合計 X 分減算` の `X` は例として `1.5`（実装は `0.25` 刻みなど）。
+
+タイトル: 異議申し立ての対応について
+
+```text
+ご提出いただいた凍結に関する異議申し立てを確認の上、承認し、アウト数を調整いたしました。
+
+申し立て内容：
+通報内容に心当たりがなく、誤解に基づく対応だった可能性があるため、再考をお願いします。
+
+調整内容：
+承認済み通報に基づくアウト数を、合計 1.5 分減算しました。
+
+アウト数の変化に伴い、一時凍結・永久凍結の状態が更新されている場合があります。お知らせおよび各画面の表示をご確認ください。
+
+今後も利用規約を遵守したご利用をお願いいたします。
+```
+
+**#21（異議申立て・拒否）** — `allows_reply` = true
+
+タイトル: 異議申し立ての対応について
+
+```text
+ご提出いただいた凍結に関する異議申し立てを確認しましたが、現時点ではお受けできないと判断いたしました。
+
+申し立て内容：
+通報内容に心当たりがなく、誤解に基づく対応だった可能性があるため、再考をお願いします。
+
+申し立て内容に補足がある場合は、返信にて追記をお願いします。
+（なお、同一の凍結期間につき異議申し立てはお一人様1回までです。）
+```
+
+---
+
 ### 会員登録・その他
 
 | # | 概要 | トリガー |
@@ -941,9 +984,9 @@ curl -X POST https://あなたのサイト/login \
   - **50回失敗**: ログイン停止（パスワード再設定完了までログイン不可）。
 - **異常ログインメール**: 件名「Abnormal login attempts detected」。本文に IP・Country・Time（`CF-IPCountry` を使用、未設定時は「—」）。
 - **パスワード再設定フロー**（ワンタイムリンク・`password_reset_tokens` + Laravel `Password` ブローカー）:
-  - **メール経路**: 登録メールアドレスを入力 → 再設定用 URL をメール送信（`App\Mail\PasswordResetLinkMail`）。該当ユーザーがいない場合も**同じ完了画面**を返し、存在の有無を秘匿する。
-  - **電話経路（メール不明時）**: `GET/POST /login/password-reset/phone` で国番号・電話番号を入力 → `VeriphoneService` で検証 → 同一トークンによる再設定 URL を **SMS 相当としてアプリログに出力**（登録時 SMS と同様、実 SMS 未接続の運用）。
-  - **リンク消費**: `GET /login/password-reset/complete/{token}?email=` で新パスワード・確認を入力し、`POST /login/password-reset/complete` で `Password::reset` により更新。新規登録と同様 **16 文字以上**および**英大文字・英小文字・数字・記号のうち 3 種類以上**を要求。成功時に `LoginFailureService::clearFailures` で失敗カウント・ログイン停止を解除。
+  - **メール経路**: 登録メールアドレスを入力 → 再設定用 URL をメール送信（`App\Mail\PasswordResetLinkMail`）。**未登録のメールアドレス**の場合は送信せず、フォーム上で「登録されていない」旨を明示する。
+  - **電話経路（メール不明時）**: `GET/POST /login/password-reset/phone` で国番号・電話番号を入力。**未登録の電話番号**の場合は送信せず、フォーム上で「登録されていない」旨を明示する。登録済みの場合のみ `VeriphoneService` で検証し、同一トークンによる再設定 URL を **SMS 相当としてアプリログに出力**する（登録時 SMS と同様、実 SMS 未接続の運用）。
+  - **リンク消費**: `GET /login/password-reset/complete/{token}?email=` で新パスワード・確認を入力し、`POST /login/password-reset/complete` で `Password::reset` により更新。新規登録と同様 **16 文字以上**および**英大文字・英小文字・数字・記号のうち 3 種類以上**を要求。成功時に `LoginFailureService::clearFailures` で失敗カウント・ログイン停止を解除。続けて **`Auth::login`** により自動ログイン（セッション再生成、`intended_url`・`pending_acknowledge_response_*` の処理は通常ログインと同様）。**永久垢バン**の場合はログインさせずログアウト系画面へ誘導。
   - **テスト用表示**: `APP_ENV=local` または `SHOW_VERIFICATION_CODE_ON_SCREEN=true` のとき、送信完了画面（`GET /login/password-reset/sent`）に再設定 URL を表示（メール認証コードの画面表示と同種。`config/app.php` コメント参照）。
   - **トークン再送の抑制**: `config/auth.php` の `passwords.users.throttle`（秒）に加え、上表の `password_reset_email` / `password_reset_phone` を適用。
   - **ルート一覧**: `GET/POST /login/password-reset`（メール）、`GET/POST /login/password-reset/phone`（電話）、`GET /login/password-reset/sent`（送信完了）、`GET /login/password-reset/complete/{token}`（フォーム）、`POST /login/password-reset/complete`（確定）。
