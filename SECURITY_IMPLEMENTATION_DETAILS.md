@@ -765,7 +765,7 @@ return [
 
 | # | 概要 | トリガー | 宛先 | タイトル | 備考 |
 |---|------|----------|------|----------|------|
-| 20 | 異議申立て・承認（アウト減算） | `AdminController::approveFreezeAppeal` → `sendFreezeAppealApprovalMessage` | 申立ユーザー | 異議申し立ての対応について | `allows_reply` = false。減算後、`processOutCountAndFreeze(..., true)` により **一時凍結は再適用されず** `frozen_until` / `freeze_period_started_at` を解消し、`freeze_count` を **1 減算**（下限 0、アウト &lt; 1 のときは 0 にリセット）。承認分岐では #15 も送らない。末尾で `sanctions_out_count_snapshot` を更新。本文に減算額は含めない。 |
+| 20 | 異議申立て・承認（アウト減算） | `AdminController::approveFreezeAppeal` → `sendFreezeAppealApprovalMessage` | 申立ユーザー | 異議申し立ての対応について | `allows_reply` = false。減算後、`processOutCountAndFreeze(..., true)` により **一時凍結は再適用されず** `frozen_until` / `freeze_period_started_at` を解消し、`freeze_count` を **1 減算**（下限 0、アウト &lt; 1 のときは 0 にリセット）。**減算後のアウトが永久凍結しきい値（4.0 未満、`shouldBePermanentlyBanned` が false）なら `is_permanently_banned` を解除**し `user_change_logs.action_type` = `permanent_ban_lift`。承認分岐では #15 も送らない。末尾で `sanctions_out_count_snapshot` を更新。本文に減算額は含めない。 |
 | 21 | 異議申立て・拒否 | `rejectFreezeAppeal` → `sendFreezeAppealRejectionMessage` | 同上 | 同上 | `allows_reply` = false |
 
 **#20（異議申立て・承認）** — `申し立て内容：` 以下はユーザーがフォームに入力した全文がそのまま入る。

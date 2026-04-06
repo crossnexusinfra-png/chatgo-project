@@ -180,6 +180,28 @@ class UserChangeLog extends Model
     }
 
     /**
+     * 永久凍結解除ログ（異議申し立て承認など）
+     */
+    public static function logPermanentBanLift(User $user, ?string $reason = null): self
+    {
+        return self::create([
+            'user_id' => $user->user_id,
+            'action_type' => 'permanent_ban_lift',
+            'field_name' => 'is_permanently_banned',
+            'old_value' => 'true',
+            'new_value' => 'false',
+            'changed_by_user_id' => auth()->id(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'reason' => $reason ?? '異議申し立て承認により永久凍結を解除',
+            'metadata' => [
+                'out_count' => $user->calculateOutCount(),
+            ],
+            'changed_at' => now(),
+        ]);
+    }
+
+    /**
      * ユーザー非表示ログを作成
      * 
      * @param User $user 対象ユーザー

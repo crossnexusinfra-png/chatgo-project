@@ -16,7 +16,8 @@ use App\Models\User;
  *
  * 一時凍結・利用に関する警告は、前回処理時の `sanctions_out_count_snapshot` と比較し
  * **アウト数が増加したときのみ** 適用する（減算・自動の時効などで下がった場合は新規に発動しない）。
- * 永久凍結（4アウト以上）は増減に関わらず従来どおり判定する。
+ * 永久凍結（4アウト以上）は通常どおり適用するが、**異議申し立て承認**（`afterFreezeAppealApproval`）のときは
+ * アウトがしきい値未満なら `is_permanently_banned` を解除する。
  */
 class UserOutCountFreezeService
 {
@@ -49,12 +50,26 @@ class UserOutCountFreezeService
         }
 
         if ($afterFreezeAppealApproval) {
+            $liftPermanentBan = $user->is_permanently_banned && !$user->shouldBePermanentlyBanned();
+            if ($liftPermanentBan) {
+                $user->is_permanently_banned = false;
+            }
+
+            $hadFutureTempFreeze = $user->frozen_until && $user->frozen_until->isFuture();
+            if ($hadFutureTempFreeze) {
+                $user->logFreeze(null, '異議申し立て承認により一時凍結を終了');
+            }
+
             $user->frozen_until = null;
             $user->freeze_period_started_at = null;
             $nextFreezeCount = max(0, (int) $user->freeze_count - 1);
             $user->freeze_count = $currentOut < 1.0 ? 0 : $nextFreezeCount;
             $user->save();
-            $user->logFreeze(null, '異議申し立て承認により一時凍結を終了');
+
+            if ($liftPermanentBan) {
+                $user->refresh();
+                $user->logPermanentBanLift('異議申し立て承認によりアウト数が永久凍結しきい値未満となったため解除');
+            }
 
             $this->persistSanctionsOutCountSnapshot($user);
 

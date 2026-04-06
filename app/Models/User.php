@@ -580,6 +580,14 @@ class User extends Authenticatable
     }
 
     /**
+     * 永久凍結解除ログを記録
+     */
+    public function logPermanentBanLift(?string $reason = null): void
+    {
+        UserChangeLog::logPermanentBanLift($this, $reason);
+    }
+
+    /**
      * 非表示ログを記録
      * 
      * @param bool $isHidden 非表示かどうか
