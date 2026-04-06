@@ -15,7 +15,7 @@
         <div class="auth-card verification-card">
             <div class="auth-header">
                 <h1>{{ \App\Services\LanguageService::trans('email_verification_header', $lang) }}</h1>
-                <p>{{ str_replace('{email}', $user->email, \App\Services\LanguageService::trans('email_verification_description', $lang)) }}</p>
+                <p>{{ str_replace('{email}', $displayEmail ?? $user->email, \App\Services\LanguageService::trans('email_verification_description', $lang)) }}</p>
                 
                 @if(session('success'))
                     <div class="alert alert-success">
@@ -65,7 +65,10 @@
             </div>
             
             <div class="auth-footer">
-                <a href="{{ route('profile.index') }}" class="back-link">← {{ \App\Services\LanguageService::trans('back_to_profile', $lang) }}</a>
+                <form method="POST" action="{{ route('profile.cancel-pending-contact') }}" class="auth-inline-form-footer">
+                    @csrf
+                    <button type="submit" class="back-link back-link--button">← {{ \App\Services\LanguageService::trans('back_to_profile', $lang) }}</button>
+                </form>
             </div>
         </div>
     </div>

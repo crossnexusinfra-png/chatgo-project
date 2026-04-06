@@ -384,6 +384,7 @@ return [
     'profile_updated_reauth_both' => 'Profile updated. Please re-authenticate as both email and phone number have been changed.',
     'profile_updated_reauth_email' => 'Profile updated. Please re-authenticate your email as it has been changed.',
     'profile_updated_reauth_sms' => 'Profile updated. Please re-authenticate your phone number as it has been changed.',
+    'profile_pending_contact_cancelled' => 'You have cancelled the contact change. Your registered email and phone stay as they were until verification is completed.',
     
     // Validation Errors
     'validation_username_required' => 'Please enter your username.',

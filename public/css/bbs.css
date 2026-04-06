@@ -2114,9 +2114,30 @@ form.form-submitting input[readonly] {
     text-decoration: underline;
 }
 
-/* フォーム直下など、フッター以外で back-link と同じ 14px を使う場合（余白だけ抑える） */
+/* フォーム直下など：14px は .back-link 共通。色はフッター内リンク（.auth-footer a）と同じ #667eea */
 .back-link.back-link--inline {
     margin-top: 0;
+    color: #667eea;
+    font-weight: 500;
+}
+
+.back-link.back-link--inline:hover {
+    color: #667eea;
+    text-decoration: underline;
+}
+
+.auth-inline-form-footer {
+    display: inline;
+    margin: 0;
+}
+
+button.back-link--button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    margin-top: 10px;
 }
 
 /* ヘッダーの認証ボタンスタイル */

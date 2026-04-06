@@ -1359,7 +1359,7 @@ class AdminController extends Controller
                     throw new \RuntimeException('user_missing');
                 }
                 $this->userOutCountReductionService->subtractFromUserReports($target, $amount);
-                $this->userOutCountFreezeService->processOutCountAndFreeze($target->fresh());
+                $this->userOutCountFreezeService->processOutCountAndFreeze($target->fresh(), true);
                 $a->status = 'approved';
                 $a->out_count_reduced = $amount;
                 $a->processed_at = now();
@@ -1379,8 +1379,7 @@ class AdminController extends Controller
         try {
             $this->sendFreezeAppealApprovalMessage(
                 (int) $freezeAppeal->user_id,
-                $freezeAppeal->message,
-                $amount
+                $freezeAppeal->message
             );
         } catch (\Throwable $e) {
         }
@@ -1456,14 +1455,10 @@ class AdminController extends Controller
         ]);
     }
 
-    private function sendFreezeAppealApprovalMessage(int $userId, string $appealMessage, float $reduced): void
+    private function sendFreezeAppealApprovalMessage(int $userId, string $appealMessage): void
     {
-        $reducedStr = rtrim(rtrim(number_format($reduced, 2, '.', ''), '0'), '.');
-
-        $bodyJa = "ご提出いただいた凍結に関する異議申し立てを確認の上、承認し、アウト数を調整いたしました。\n\n"
+        $bodyJa = "ご提出いただいた凍結に関する異議申し立てを確認の上、承認しました。\n\n"
             . "申し立て内容：\n{$appealMessage}\n\n"
-            . "調整内容：\n承認済み通報に基づくアウト数を、合計 {$reducedStr} 分減算しました。\n\n"
-            . "アウト数の変化に伴い、一時凍結・永久凍結の状態が更新されている場合があります。お知らせおよび各画面の表示をご確認ください。\n\n"
             . '今後も利用規約を遵守したご利用をお願いいたします。';
 
         AdminMessage::create([
@@ -1480,9 +1475,7 @@ class AdminController extends Controller
     private function sendFreezeAppealRejectionMessage(int $userId, string $appealMessage): void
     {
         $bodyJa = "ご提出いただいた凍結に関する異議申し立てを確認しましたが、現時点ではお受けできないと判断いたしました。\n\n"
-            . "申し立て内容：\n{$appealMessage}\n\n"
-            . "申し立て内容に補足がある場合は、返信にて追記をお願いします。\n"
-            . '（なお、同一の凍結期間につき異議申し立てはお一人様1回までです。）';
+            . "申し立て内容：\n{$appealMessage}";
 
         AdminMessage::create([
             'title' => '異議申し立ての対応について',
@@ -1490,7 +1483,7 @@ class AdminController extends Controller
             'audience' => 'members',
             'user_id' => $userId,
             'published_at' => now(),
-            'allows_reply' => true,
+            'allows_reply' => false,
             'reply_used' => false,
         ]);
     }

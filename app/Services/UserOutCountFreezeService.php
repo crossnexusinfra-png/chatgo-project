@@ -9,10 +9,13 @@ use App\Models\User;
 /**
  * 承認済み通報に基づくアウト数・凍結・お知らせを一括処理する。
  * 管理者承認（AdminController）と本人了承（ReportRestrictionService）で同一ロジックを共有する。
+ *
+ * @param  bool  $afterFreezeAppealApproval  true のとき、減算直後の一時凍結の再適用を行わず、
+ *                                          一時凍結を期限切れ相当で終了し freeze_count を 1 減らす（下限 0）
  */
 class UserOutCountFreezeService
 {
-    public function processOutCountAndFreeze(User $user): void
+    public function processOutCountAndFreeze(User $user, bool $afterFreezeAppealApproval = false): void
     {
         Report::resetExpiredOutCounts();
 
@@ -30,6 +33,29 @@ class UserOutCountFreezeService
             if (!$wasBanned) {
                 $user->logPermanentBan('アウト数が4以上に達したため永久凍結');
                 $this->sendPermanentBanNotice($user);
+            }
+
+            return;
+        }
+
+        if ($afterFreezeAppealApproval) {
+            $user->frozen_until = null;
+            $user->freeze_period_started_at = null;
+            $nextFreezeCount = max(0, (int) $user->freeze_count - 1);
+            $user->freeze_count = $outCount < 1.0 ? 0 : $nextFreezeCount;
+            $user->save();
+            $user->logFreeze(null, '異議申し立て承認により一時凍結を終了');
+            $outCount = $user->calculateOutCount();
+            if ($outCount >= 1.0 && $outCount < 2.0) {
+                $suppressMonths = max(1, (int) config('report_restrictions.out_warning_suppress_months', 1));
+                $recentWarning = AdminMessage::where('user_id', $user->user_id)
+                    ->where('title', '利用に関する警告')
+                    ->where('created_at', '>=', now()->subMonths($suppressMonths))
+                    ->exists();
+
+                if (!$recentWarning) {
+                    $this->sendWarningNotice($user);
+                }
             }
 
             return;

@@ -16,6 +16,7 @@ use App\Services\VeriphoneService;
 use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
 use App\Mail\PasswordResetLinkMail;
+use App\Services\ProfilePendingContactService;
 
 class AuthController extends Controller
 {
@@ -942,12 +943,15 @@ class AuthController extends Controller
             return redirect()->route('profile.index');
         }
         
-        // SMS認証が必要な場合のみ表示
-        if ($user->sms_verified_at !== null) {
+        $pending = ProfilePendingContactService::get($user->user_id);
+        $needsPendingPhone = $pending && !empty($pending['phone_changed']);
+        if (!$needsPendingPhone && $user->sms_verified_at !== null) {
             return redirect()->route('profile.index');
         }
 
-        return view('auth.profile-sms-verification', compact('user'));
+        $displayPhone = ProfilePendingContactService::displayPhone($user);
+
+        return view('auth.profile-sms-verification', compact('user', 'displayPhone'));
     }
 
     /**
@@ -976,7 +980,7 @@ class AuthController extends Controller
         ]);
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $user = Auth::user();
+        $user = Auth::user()->fresh();
         $cachedCode = Cache::get("sms_verification_user_{$user->user_id}");
 
         if (!$cachedCode || $cachedCode !== $request->sms_code) {
@@ -985,33 +989,64 @@ class AuthController extends Controller
 
         // SMS認証成功
         Cache::forget("sms_verification_user_{$user->user_id}");
-        
-        $user->sms_verified_at = now();
-        
-        // メールアドレスも認証済みの場合、is_verifiedをtrueに
-        if ($user->email_verified_at !== null) {
-            $user->is_verified = true;
+
+        $pending = ProfilePendingContactService::get($user->user_id);
+        if ($pending && !empty($pending['phone_changed'])) {
+            $user->phone = (string) $pending['phone'];
+            $user->sms_verified_at = now();
             $user->save();
-            // セッションIDを再生成（セキュリティ対策）
+
+            $pending['phone_changed'] = false;
+            $pending['phone'] = null;
+
+            if (!empty($pending['email_changed'])) {
+                ProfilePendingContactService::put($user->user_id, [
+                    'email' => $pending['email'],
+                    'phone' => null,
+                    'email_changed' => true,
+                    'phone_changed' => false,
+                ]);
+                if (!Cache::has("email_verification_user_{$user->user_id}")) {
+                    $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                    Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+                    \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$pending['email']})");
+                }
+                $lang = \App\Services\LanguageService::getCurrentLanguage();
+                return redirect()->route('profile.email-verification')->with('success', \App\Services\LanguageService::trans('sms_verification_completed_next_email', $lang));
+            }
+
+            ProfilePendingContactService::clear($user->user_id);
+            $user->is_verified = $user->email_verified_at !== null;
+            $user->save();
             if ($request->hasSession()) {
                 $request->session()->regenerate();
             }
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.index')->with('success', \App\Services\LanguageService::trans('sms_verification_completed', $lang));
-        } else {
-            // メール認証が必要な場合はメール認証画面にリダイレクト
-            $user->save();
-            
-            // メール認証コードを生成して送信（まだ生成されていない場合）
-            if (!Cache::has("email_verification_user_{$user->user_id}")) {
-                $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-                Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600); // 10分間有効
-                \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
-            }
-            
-            $lang = \App\Services\LanguageService::getCurrentLanguage();
-            return redirect()->route('profile.email-verification')->with('success', \App\Services\LanguageService::trans('sms_verification_completed_next_email', $lang));
         }
+
+        $user->sms_verified_at = now();
+
+        if ($user->email_verified_at !== null) {
+            $user->is_verified = true;
+            $user->save();
+            if ($request->hasSession()) {
+                $request->session()->regenerate();
+            }
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            return redirect()->route('profile.index')->with('success', \App\Services\LanguageService::trans('sms_verification_completed', $lang));
+        }
+
+        $user->save();
+
+        if (!Cache::has("email_verification_user_{$user->user_id}")) {
+            $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
+        }
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        return redirect()->route('profile.email-verification')->with('success', \App\Services\LanguageService::trans('sms_verification_completed_next_email', $lang));
     }
 
     /**
@@ -1040,7 +1075,8 @@ class AuthController extends Controller
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
 
-        \Log::info("既存ユーザーSMS認証コード再送信: {$smsCode} (ユーザーID: {$user->user_id}, 電話番号: {$user->phone})");
+        $logPhone = ProfilePendingContactService::displayPhone($user);
+        \Log::info("既存ユーザーSMS認証コード再送信: {$smsCode} (ユーザーID: {$user->user_id}, 電話番号: {$logPhone})");
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));
@@ -1070,12 +1106,15 @@ class AuthController extends Controller
             return redirect()->route('profile.index');
         }
         
-        // メール認証が必要な場合のみ表示
-        if ($user->email_verified_at !== null) {
+        $pending = ProfilePendingContactService::get($user->user_id);
+        $needsPendingEmail = $pending && !empty($pending['email_changed']);
+        if (!$needsPendingEmail && $user->email_verified_at !== null) {
             return redirect()->route('profile.index');
         }
 
-        return view('auth.profile-email-verification', compact('user'));
+        $displayEmail = ProfilePendingContactService::displayEmail($user);
+
+        return view('auth.profile-email-verification', compact('user', 'displayEmail'));
     }
 
     /**
@@ -1105,7 +1144,7 @@ class AuthController extends Controller
         ]);
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $user = Auth::user();
+        $user = Auth::user()->fresh();
         $cachedCode = Cache::get("email_verification_user_{$user->user_id}");
 
         if (!$cachedCode || $cachedCode !== $request->email_code) {
@@ -1114,14 +1153,19 @@ class AuthController extends Controller
 
         // メール認証成功
         Cache::forget("email_verification_user_{$user->user_id}");
-        
+
+        $pending = ProfilePendingContactService::get($user->user_id);
+        if ($pending && !empty($pending['email_changed'])) {
+            $user->email = (string) $pending['email'];
+            ProfilePendingContactService::clear($user->user_id);
+        }
+
         $user->email_verified_at = now();
-        
-        // SMSも認証済みの場合、is_verifiedをtrueに
+
         if ($user->sms_verified_at !== null) {
             $user->is_verified = true;
         }
-        
+
         $user->save();
 
         // セッションIDを再生成（セキュリティ対策）
@@ -1160,7 +1204,8 @@ class AuthController extends Controller
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
 
-        \Log::info("既存ユーザーメール認証コード再送信: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
+        $logEmail = ProfilePendingContactService::displayEmail($user);
+        \Log::info("既存ユーザーメール認証コード再送信: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$logEmail})");
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));

@@ -393,6 +393,7 @@ return [
     'profile_updated_reauth_both' => 'プロフィールを更新しました。メールアドレスと電話番号が変更されたため、再度認証を行ってください。',
     'profile_updated_reauth_email' => 'プロフィールを更新しました。メールアドレスが変更されたため、再度メール認証を行ってください。',
     'profile_updated_reauth_sms' => 'プロフィールを更新しました。電話番号が変更されたため、再度SMS認証を行ってください。',
+    'profile_pending_contact_cancelled' => 'メール・電話の変更を取りやめました。認証が完了するまで登録内容は変わりません。',
     
     // バリデーションエラー
     'validation_username_required' => 'ユーザー名を入力してください。',

@@ -177,6 +177,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->middleware('request.user')->name('profile.update');
+    Route::post('/profile/cancel-pending-contact', [ProfileController::class, 'cancelPendingContactVerification'])->name('profile.cancel-pending-contact');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     
     // 既存ユーザー向け認証ルート

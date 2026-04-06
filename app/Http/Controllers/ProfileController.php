@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
 use App\Services\VeriphoneService;
+use App\Services\ProfilePendingContactService;
 
 class ProfileController extends Controller
 {
@@ -189,7 +190,32 @@ class ProfileController extends Controller
         try {
 
         // usernameとuser_identifierは変更不可（bioはUI廃止のためフォームから除外、DBカラムは残置）
-        $data = $request->only(['email', 'phone', 'residence', 'language']);
+        $emailChanged = $user->email !== $request->email;
+        $phoneChanged = $user->phone !== $request->phone;
+
+        // 連絡先を変えずに保存した場合、未完了の保留変更があれば破棄
+        if (!$emailChanged && !$phoneChanged && ProfilePendingContactService::get($user->user_id)) {
+            ProfilePendingContactService::clear($user->user_id);
+        }
+
+        if ($phoneChanged) {
+            $verificationResult = VeriphoneService::verifyPhone($request->phone);
+
+            if (!$verificationResult['is_valid']) {
+                return back()->withErrors(['phone' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+            }
+            if ($verificationResult['is_voip']) {
+                return back()->withErrors(['phone' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+            }
+        }
+
+        $data = $request->only(['residence', 'language']);
+        if (!$emailChanged) {
+            $data['email'] = $request->email;
+        }
+        if (!$phoneChanged) {
+            $data['phone'] = $request->phone;
+        }
 
         // 言語設定が変更された場合、セッションキャッシュをクリア
         $oldLanguage = $user->language ?? 'JA';
@@ -197,37 +223,8 @@ class ProfileController extends Controller
             session()->forget('current_language');
         }
 
-        // 変更フラグを保持
-        $emailChanged = false;
-        $phoneChanged = false;
-
-        // メールアドレスが変更された場合、メール認証をリセット
-        if ($user->email !== $request->email) {
-            $data['email_verified_at'] = null;
-            $emailChanged = true;
-        }
-
-        // 電話番号が変更された場合、SMS認証をリセット
-        if ($user->phone !== $request->phone) {
-            // Veriphone APIで電話番号を検証（VOIP番号を除外）
-            $verificationResult = VeriphoneService::verifyPhone($request->phone);
-            
-            $lang = \App\Services\LanguageService::getCurrentLanguage();
-            
-            if (!$verificationResult['is_valid']) {
-                return back()->withErrors(['phone' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
-            }
-            if ($verificationResult['is_voip']) {
-                return back()->withErrors(['phone' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
-            }
-            
-            $data['sms_verified_at'] = null;
-            $phoneChanged = true;
-        }
-
-        // メールアドレスまたは電話番号が変更された場合、is_verifiedをfalseに設定
         if ($emailChanged || $phoneChanged) {
-            $data['is_verified'] = false;
+            ProfilePendingContactService::clear($user->user_id);
         }
 
         // 居住地が変更された場合、履歴を記録
@@ -263,40 +260,41 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        // メールアドレスまたは電話番号が変更された場合、セッションIDを再生成（セキュリティ対策）
-        if (($emailChanged || $phoneChanged) && $request->hasSession()) {
-            $request->session()->regenerate();
+        if ($emailChanged || $phoneChanged) {
+            $user->refresh();
+            ProfilePendingContactService::put($user->user_id, [
+                'email' => $emailChanged ? $request->email : null,
+                'phone' => $phoneChanged ? $request->phone : null,
+                'email_changed' => $emailChanged,
+                'phone_changed' => $phoneChanged,
+            ]);
         }
 
         // メールアドレスまたは電話番号が変更された場合、認証コードを生成して認証画面にリダイレクト
         if ($emailChanged && $phoneChanged) {
-            // SMS認証コードを生成して送信
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300); // 5分間有効
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 電話番号: {$user->phone})");
+            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
+            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$request->phone})");
 
-            // メール認証コードを生成して送信
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600); // 10分間有効
-            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
+            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$request->email})");
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.sms-verification')
                 ->with('success', \App\Services\LanguageService::trans('profile_updated_reauth_both', $lang));
         } elseif ($emailChanged) {
-            // メール認証コードを生成して送信
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600); // 10分間有効
-            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
+            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$request->email})");
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.email-verification')
                 ->with('success', \App\Services\LanguageService::trans('profile_updated_reauth_email', $lang));
         } elseif ($phoneChanged) {
-            // SMS認証コードを生成して送信
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300); // 5分間有効
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 電話番号: {$user->phone})");
+            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
+            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$request->phone})");
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.sms-verification')
@@ -308,6 +306,27 @@ class ProfileController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * メール・電話変更の認証途中で戻る：保留と認証コードを破棄し DB は変更しない
+     */
+    public function cancelPendingContactVerification(Request $request)
+    {
+        $user = Auth::user();
+
+        Gate::authorize('update', $user);
+
+        if (!ProfilePendingContactService::get($user->user_id)) {
+            return redirect()->route('profile.edit');
+        }
+
+        ProfilePendingContactService::clear($user->user_id);
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        return redirect()->route('profile.edit')
+            ->with('success', \App\Services\LanguageService::trans('profile_pending_contact_cancelled', $lang));
     }
 
     /**
