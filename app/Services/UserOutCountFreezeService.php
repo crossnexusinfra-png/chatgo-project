@@ -134,11 +134,14 @@ class UserOutCountFreezeService
 
     private function sendWarningNotice(User $user): void
     {
-        $bodyJa = "あなたの投稿について、違反行為が確認されました。\n今後、同様の行為を続けると、アカウントが凍結される可能性があります。利用規約を遵守した投稿をお願いいたします。";
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $body = $isEn
+            ? "A violation has been detected in your post.\nIf such behavior continues, your account may be suspended.\nPlease ensure that your future posts comply with our terms of service."
+            : "あなたの投稿について、違反行為が確認されました。\n今後、同様の行為を続けると、アカウントが凍結される可能性があります。利用規約を遵守した投稿をお願いいたします。";
 
         AdminMessage::create([
-            'title' => '利用に関する警告',
-            'body' => $bodyJa,
+            'title' => $isEn ? 'Warning Notice' : '利用に関する警告',
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $user->user_id,
             'published_at' => now(),
@@ -149,12 +152,15 @@ class UserOutCountFreezeService
 
     private function sendFreezeNotice(User $user, \Carbon\Carbon $freezeUntil): void
     {
-        $freezeUntilFormatted = $freezeUntil->format('Y年m月d日 H:i');
-        $bodyJa = "あなたのアカウントが一時的に凍結されました。\n\n凍結解除予定日時: {$freezeUntilFormatted}\n\n凍結期間中は、閲覧以外の操作はできません。\n今後は利用規約を遵守した投稿をお願いいたします。";
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $freezeUntilFormatted = $isEn ? $freezeUntil->format('F d, Y H:i') : $freezeUntil->format('Y年m月d日 H:i');
+        $body = $isEn
+            ? "Your account has been temporarily suspended.\n\nSuspension ends at: {$freezeUntilFormatted}\n\nDuring the suspension period, you will not be able to perform any actions other than browsing.\nPlease ensure future use complies with our terms of service."
+            : "あなたのアカウントが一時的に凍結されました。\n\n凍結解除予定日時: {$freezeUntilFormatted}\n\n凍結期間中は、閲覧以外の操作はできません。\n今後は利用規約を遵守した投稿をお願いいたします。";
 
         AdminMessage::create([
-            'title' => 'アカウント一時凍結のお知らせ',
-            'body' => $bodyJa,
+            'title' => $isEn ? 'Temporary Account Suspension' : 'アカウント一時凍結のお知らせ',
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $user->user_id,
             'published_at' => now(),
@@ -165,11 +171,14 @@ class UserOutCountFreezeService
 
     private function sendPermanentBanNotice(User $user): void
     {
-        $bodyJa = "あなたのアカウントが永久凍結されました。\n今後、このアカウントでログインすることはできますが、閲覧以外の操作はできません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $body = $isEn
+            ? "Your account has been permanently suspended.\nYou can still log in to this account, but you will not be able to perform any actions other than browsing.\nYou also cannot register a new account using the same email address or phone number."
+            : "あなたのアカウントが永久凍結されました。\n今後、このアカウントでログインすることはできますが、閲覧以外の操作はできません。また、同じメールアドレスおよび電話番号での新規登録もできません。";
 
         AdminMessage::create([
-            'title' => 'アカウント永久凍結のお知らせ',
-            'body' => $bodyJa,
+            'title' => $isEn ? 'Permanent Account Suspension' : 'アカウント永久凍結のお知らせ',
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $user->user_id,
             'published_at' => now(),

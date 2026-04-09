@@ -86,14 +86,6 @@ class AuthController extends Controller
                 $request->session()->regenerate();
             }
 
-            // 垢バンされたユーザーの場合、ログアウトページにリダイレクト
-            if ($user->is_permanently_banned) {
-                $lang = \App\Services\LanguageService::getCurrentLanguage();
-                return redirect()->route('logout')->withErrors([
-                    'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
-                ]);
-            }
-
             // セッションに保存されたURLがあればそこにリダイレクト、なければトップページ
             $intendedUrl = session('intended_url', '/');
             \Log::info('AuthController login: intended_url', [
@@ -128,13 +120,6 @@ class AuthController extends Controller
 
                 if ($request->hasSession()) {
                     $request->session()->regenerate();
-                }
-
-                if ($user->is_permanently_banned) {
-                    $lang = \App\Services\LanguageService::getCurrentLanguage();
-                    return redirect()->route('logout')->withErrors([
-                        'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
-                    ]);
                 }
 
                 $intendedUrl = session('intended_url', '/');
@@ -390,12 +375,6 @@ class AuthController extends Controller
         if ($status === Password::PASSWORD_RESET) {
             if (!$resetUser) {
                 return redirect()->route('login')->with('success', \App\Services\LanguageService::trans('login_reset_success', $lang));
-            }
-
-            if ($resetUser->is_permanently_banned) {
-                return redirect()->route('logout')->withErrors([
-                    'frozen' => \App\Services\LanguageService::trans('user_permanently_banned_message', $lang),
-                ]);
             }
 
             Auth::login($resetUser);

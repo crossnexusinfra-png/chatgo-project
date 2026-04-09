@@ -257,6 +257,16 @@ return [
 
 ### 通報・モデレーション
 
+#### 可変値（ルーム名・リプライ本文・通報理由）の言語挿入ルール
+
+通報・モデレーション系お知らせでは、**テンプレート本文は受信者の設定言語（JA/EN）で統一**し、可変値のみ以下のルールで挿入する。
+
+- **オリジナル言語で挿入**: `#1 #2 #3 #5 #6 #9 #10`
+- **受信者の設定言語で挿入**: `#4 #7 #8 #11`
+- **例外（優先ルール）**: リプライ通知で `ルーム名` と `リプライ本文` の両方を表示する場合（`#2 #6 #10`）、`ルーム名` は **設定言語**、`リプライ本文` は上記番号ルールどおりに挿入する。
+- **リプライ本文が空（メディアのみ）**: `画像/動画/音声`（EN の場合 `Image/Video/Audio`）を挿入する。
+- **通報理由**: 対象通報の `reason` を重複除去して列挙（複数行あり）。
+
 | # | 概要 | トリガー | 宛先 | タイトル | 本文の型・プレースホルダ |
 |---|------|----------|------|----------|---------------------------|
 | 1 | 通報制限・審査中（ルーム・初回のみ） | `ReportRestrictionService::ensureRestrictionCreatedForThread`（ルームが制限状態で同一制限の active がまだ無いとき） | ルーム作成者 | 通報対象の審査について（`report_restriction_review_title`） | `buildRestrictionNoticeBody('thread', …)`（改行 `\n`）。`{roomTitle}`＝ルーム名。【通報理由】は常に見出しを出し、`reason` 列が空の行は出さない（フォームでは `reason` は必須のため通常は 1 行以上）。 |
@@ -819,6 +829,156 @@ return [
 
 ---
 
+## English Notification Messages (Reviewed)
+
+The examples below are reviewed English drafts for operation/reference.
+
+- Button labels/messages may differ depending on UI implementation and locale handling.
+- `Room Name` and `Reply` are populated from DB values (not fixed strings).
+- `Reason for Report` can contain multiple lines (`- ...`) when multiple distinct reasons exist.
+- For media-only replies (no text body), `Reply` is represented as `Image` / `Video` / `Audio` based on `media_type`.
+
+### Notification Button Labels (EN)
+
+- R18 approve button: `Approve`
+- R18 reject button: `Decline`
+- Report-acknowledgment button: `Accept & Delete`
+- Reply submit button: `Send Reply`
+- Coin reward button: `Claim Coins`
+
+### #1 (Room / With Reason)
+Title: Review of Reported Content
+
+```text
+Your room below has been reported and is currently under review for potential violations.
+
+[Reported Content]
+Room Name:
+Sunset Photo Sharing
+
+[Reason for Report]
+- Contains adult content
+
+Some features are restricted during the review.
+If you acknowledge and accept the report using the button below, the content will be deleted and the process will be completed without waiting for the review.
+*If no action is taken, the review will continue.
+```
+
+### #1″ (Room / Multiple Reasons)
+
+```text
+Your room below has been reported and is currently under review for potential violations.
+
+[Reported Content]
+Room Name:
+Sunset Photo Sharing
+
+[Reason for Report]
+- Spam / nuisance behavior
+- Inappropriate links / external redirection
+- Other
+
+Some features are restricted during the review.
+If you acknowledge and accept the report using the button below, the content will be deleted and the process will be completed without waiting for the review.
+*If no action is taken, the review will continue.
+```
+
+### #2 (Reply / With Content)
+
+```text
+Your reply below has been reported and is currently under review for potential violations.
+
+[Reported Content]
+Room Name:
+Chat Room
+Reply:
+Hello. I would like to share today's weather.
+
+[Reason for Report]
+- Offensive or inappropriate content
+
+Some features are restricted during the review.
+If you acknowledge and accept the report using the button below, the content will be deleted and the process will be completed without waiting for the review.
+*If no action is taken, the review will continue.
+```
+
+### #2′ (Reply / Media Only)
+
+```text
+Your reply below has been reported and is currently under review for potential violations.
+
+[Reported Content]
+Room Name:
+Chat Room
+Reply:
+Image
+
+[Reason for Report]
+- Offensive or inappropriate content
+
+Some features are restricted during the review.
+If you acknowledge and accept the report using the button below, the content will be deleted and the process will be completed without waiting for the review.
+*If no action is taken, the review will continue.
+```
+
+### #3 (R18 Change Request)
+Title: Change this room to R18?
+
+```text
+Your room "Chat Room" or one of its replies has been restricted for containing adult content.
+Would you like to change this room to R18?
+If you tap Approve, this room will be marked as R18 and adult-content restrictions will be lifted.
+```
+
+### #5 (Room Deletion Notice)
+Title: Room Deletion Notice
+
+```text
+The following room has been reported by multiple users. After review, it has been deleted for the reasons below.
+
+[Reported Content]
+Room Name:
+Sunset Photo Sharing
+
+[Reason for Report]
+- Spam / nuisance behavior
+- Offensive or inappropriate content
+
+Please ensure future posts comply with our terms of service.
+```
+
+### #15 (Warning)
+Title: Warning Notice
+
+```text
+A violation has been detected in your post.
+If such behavior continues, your account may be suspended.
+Please ensure that your future posts comply with our terms of service.
+```
+
+### #16 (Temporary Suspension)
+Title: Temporary Account Suspension
+
+```text
+Your account has been temporarily suspended.
+
+Suspension ends at: April 15, 2026 14:30
+
+During the suspension period, you will not be able to perform any actions other than browsing.
+Please ensure future use complies with our terms of service.
+```
+
+### #17 (Permanent Suspension)
+Title: Permanent Account Suspension
+
+```text
+Your account has been permanently suspended.
+You can still log in to this account, but you will not be able to perform any actions other than browsing.
+You also cannot register a new account using the same email address or phone number.
+```
+
+---
+
 ## CSRF・XSS のテスト方法
 
 ### CSRF テスト
@@ -980,7 +1140,7 @@ curl -X POST https://あなたのサイト/login \
 - **パスワード再設定フロー**（ワンタイムリンク・`password_reset_tokens` + Laravel `Password` ブローカー）:
   - **メール経路**: 登録メールアドレスを入力 → 再設定用 URL をメール送信（`App\Mail\PasswordResetLinkMail`）。**未登録のメールアドレス**の場合は送信せず、フォーム上で「登録されていない」旨を明示する。
   - **電話経路（メール不明時）**: `GET/POST /login/password-reset/phone` で国番号・電話番号を入力。**未登録の電話番号**の場合は送信せず、フォーム上で「登録されていない」旨を明示する。登録済みの場合のみ `VeriphoneService` で検証し、同一トークンによる再設定 URL を **SMS 相当としてアプリログに出力**する（登録時 SMS と同様、実 SMS 未接続の運用）。
-  - **リンク消費**: `GET /login/password-reset/complete/{token}?email=` で新パスワード・確認を入力し、`POST /login/password-reset/complete` で `Password::reset` により更新。新規登録と同様 **16 文字以上**および**英大文字・英小文字・数字・記号のうち 3 種類以上**を要求。成功時に `LoginFailureService::clearFailures` で失敗カウント・ログイン停止を解除。続けて **`Auth::login`** により自動ログイン（セッション再生成、`intended_url`・`pending_acknowledge_response_*` の処理は通常ログインと同様）。**永久垢バン**の場合はログインさせずログアウト系画面へ誘導。
+  - **リンク消費**: `GET /login/password-reset/complete/{token}?email=` で新パスワード・確認を入力し、`POST /login/password-reset/complete` で `Password::reset` により更新。新規登録と同様 **16 文字以上**および**英大文字・英小文字・数字・記号のうち 3 種類以上**を要求。成功時に `LoginFailureService::clearFailures` で失敗カウント・ログイン停止を解除。続けて **`Auth::login`** により自動ログイン（セッション再生成、`intended_url`・`pending_acknowledge_response_*` の処理は通常ログインと同様）。**永久凍結**でもログイン・トップ等へのリダイレクトは通常どおり（閲覧制限は `CheckUserFrozen` 等で適用）。
   - **テスト用表示**: `APP_ENV=local` または `SHOW_VERIFICATION_CODE_ON_SCREEN=true` のとき、送信完了画面（`GET /login/password-reset/sent`）に再設定 URL を表示（メール認証コードの画面表示と同種。`config/app.php` コメント参照）。
   - **トークン再送の抑制**: `config/auth.php` の `passwords.users.throttle`（秒）に加え、上表の `password_reset_email` / `password_reset_phone` を適用。
   - **ルート一覧**: `GET/POST /login/password-reset`（メール）、`GET/POST /login/password-reset/phone`（電話）、`GET /login/password-reset/sent`（送信完了）、`GET /login/password-reset/complete/{token}`（フォーム）、`POST /login/password-reset/complete`（確定）。

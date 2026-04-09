@@ -16,6 +16,54 @@ use Illuminate\Database\QueryException;
 
 class ReportRestrictionService
 {
+    private function getUserLanguageCode(int $userId): string
+    {
+        $user = User::where('user_id', $userId)->first();
+        return strtoupper((string) ($user?->language ?? 'JA')) === 'EN' ? 'EN' : 'JA';
+    }
+
+    private function translateThreadTitleForUser(?Thread $thread, int $userId): string
+    {
+        if (!$thread) {
+            return '（タイトルなし）';
+        }
+        $target = $this->getUserLanguageCode($userId);
+        $source = TranslationService::normalizeLang((string) ($thread->source_lang ?? ($thread->user->language ?? 'JA')));
+        return TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $target, $source);
+    }
+
+    private function responseSnippetByRule(Response $response, int $userId, bool $useOriginal): string
+    {
+        $body = trim((string) ($response->body ?? ''));
+        if ($body === '') {
+            $target = $this->getUserLanguageCode($userId);
+            $type = (string) ($response->media_type ?? '');
+            if ($target === 'EN') {
+                return match ($type) {
+                    'image' => 'Image',
+                    'video' => 'Video',
+                    'audio' => 'Audio',
+                    default => !empty($response->media_file) ? 'Media' : '',
+                };
+            }
+            return match ($type) {
+                'image' => '画像',
+                'video' => '動画',
+                'audio' => '音声',
+                default => !empty($response->media_file) ? 'メディア' : '',
+            };
+        }
+
+        if ($useOriginal) {
+            return $this->safeTrim(strip_tags($body), 2000, '…');
+        }
+
+        $target = $this->getUserLanguageCode($userId);
+        $source = TranslationService::normalizeLang((string) ($response->source_lang ?? ($response->user->language ?? 'JA')));
+        $translated = TranslationService::getTranslatedResponseBody((int) $response->response_id, $body, $target, null, $source);
+        return $this->safeTrim(strip_tags($translated), 2000, '…');
+    }
+
     public function __construct(
         private UserOutCountFreezeService $userOutCountFreezeService
     ) {
@@ -36,7 +84,8 @@ class ReportRestrictionService
             'thread_id' => (int) $thread->thread_id,
         ], function () use ($thread) {
             $reasons = $this->getReportReasonsForThread($thread->thread_id);
-            $body = $this->buildRestrictionNoticeBody('thread', $thread->title, null, $reasons);
+            $lang = $this->getUserLanguageCode((int) $thread->user_id);
+            $body = $this->buildRestrictionNoticeBody('thread', $thread->title, null, $reasons, $lang);
             $message = $this->sendRestrictionAckMessage([
                 'user_id' => (int) $thread->user_id,
                 'thread_id' => (int) $thread->thread_id,
@@ -64,10 +113,12 @@ class ReportRestrictionService
             'response_id' => (int) $response->response_id,
             'thread_id' => (int) $response->thread_id,
         ], function () use ($response) {
-            $threadTitle = $response->thread?->title ?? '（タイトルなし）';
-            $replySnippet = $this->safeTrim($response->plainBodyOrMediaKindForNotifications(), 2000, '…');
+            // リプライ系通知はルーム名を設定言語で表示
+            $threadTitle = $this->translateThreadTitleForUser($response->thread, (int) $response->user_id);
+            $replySnippet = $this->responseSnippetByRule($response, (int) $response->user_id, true);
             $reasons = $this->getReportReasonsForResponse($response->response_id);
-            $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons);
+            $lang = $this->getUserLanguageCode((int) $response->user_id);
+            $body = $this->buildRestrictionNoticeBody('response', $threadTitle, $replySnippet, $reasons, $lang);
             $message = $this->sendRestrictionAckMessage([
                 'user_id' => (int) $response->user_id,
                 'thread_id' => (int) $response->thread_id,
@@ -212,7 +263,8 @@ class ReportRestrictionService
                     $rank = 1;
                     foreach ($reports as $rep) {
                         if ($rep->user_id) {
-                            $this->sendSelfAcknowledgeApprovalMessage((int) $rep->user_id, 'thread', (string) $thread->title, null, $rank);
+                            $threadTitleForReporter = $this->translateThreadTitleForUser($thread, (int) $rep->user_id);
+                            $this->sendSelfAcknowledgeApprovalMessage((int) $rep->user_id, 'thread', $threadTitleForReporter, null, $rank);
                             $rank++;
                         }
                     }
@@ -248,8 +300,8 @@ class ReportRestrictionService
                             throw new \RuntimeException('[ACK_STEP]report_query_failed', 0, $e);
                         }
 
-                    $threadTitle = (string) ($response->thread?->title ?? '（タイトルなし）');
-                    $responseBodyForMsg = $this->safeTrim($response->plainBodyOrMediaKindForNotifications(), 2000, '…');
+                    $threadTitleForOwner = $this->translateThreadTitleForUser($response->thread, (int) $response->user_id);
+                    $responseBodyForOwner = $this->responseSnippetByRule($response, (int) $response->user_id, true);
                     $reasonsText = $this->formatReportReasonsBulletList($reports->pluck('reason')->filter()->unique()->values()->all());
 
                         $result['approved_reports'] += $this->approveReportsWithHighestOutCountOnly($reports, $selfAckMultiplier);
@@ -258,14 +310,17 @@ class ReportRestrictionService
                     $rank = 1;
                     foreach ($reports as $rep) {
                         if ($rep->user_id) {
-                            $this->sendSelfAcknowledgeApprovalMessage((int) $rep->user_id, 'response', $threadTitle, $responseBodyForMsg, $rank);
+                            $reporterId = (int) $rep->user_id;
+                            $threadTitleForReporter = $this->translateThreadTitleForUser($response->thread, $reporterId);
+                            $responseBodyForReporter = $this->responseSnippetByRule($response, $reporterId, false);
+                            $this->sendSelfAcknowledgeApprovalMessage($reporterId, 'response', $threadTitleForReporter, $responseBodyForReporter, $rank);
                             $rank++;
                         }
                     }
 
                     // 被通報者（作成者）へ通知（文言のみ「作成者が了承」に差し替え）
                     if ($response->user_id) {
-                        $this->sendSelfAcknowledgeDeletionNotice((int) $response->user_id, 'response', $threadTitle, $responseBodyForMsg, $reasonsText);
+                        $this->sendSelfAcknowledgeDeletionNotice((int) $response->user_id, 'response', $threadTitleForOwner, $responseBodyForOwner, $reasonsText);
                     }
 
                         // 仕様: 管理者画面の承認と同じ（レスポンスは削除しない）
@@ -460,18 +515,18 @@ class ReportRestrictionService
     /**
      * @param  string  $type  'thread' | 'response' | 'profile'
      */
-    private function formatReporterTargetBlock(string $type, string $threadTitle, ?string $responseBody): string
+    private function formatReporterTargetBlock(string $type, string $threadTitle, ?string $responseBody, string $lang = 'JA'): string
     {
+        $isEn = strtoupper($lang) === 'EN';
         if ($type === 'thread') {
-            return 'ルーム名：' . "\n" . $threadTitle;
+            return ($isEn ? 'Room Name:' : 'ルーム名：') . "\n" . $threadTitle;
         }
         if ($type === 'response') {
             $snippet = mb_substr(strip_tags((string) ($responseBody ?? '')), 0, 2000);
-
-            return 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $snippet;
+            return ($isEn ? 'Room Name:' : 'ルーム名：') . "\n" . $threadTitle . "\n" . ($isEn ? 'Reply:' : 'リプライ内容：') . "\n" . $snippet;
         }
 
-        return 'ユーザー名：' . "\n" . $threadTitle;
+        return ($isEn ? 'Username:' : 'ユーザー名：') . "\n" . $threadTitle;
     }
 
     private function applyRestrictionCountFreezeIfNeeded(User $user): void
@@ -553,22 +608,26 @@ class ReportRestrictionService
     private function sendSelfAcknowledgeApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1): void
     {
         try {
+            $lang = $this->getUserLanguageCode($userId);
+            $isEn = $lang === 'EN';
             $contentType = match ($type) {
-                'thread' => 'ルーム',
-                'response' => 'リプライ',
-                default => 'プロフィール',
+                'thread' => $isEn ? 'room' : 'ルーム',
+                'response' => $isEn ? 'reply' : 'リプライ',
+                default => $isEn ? 'profile' : 'プロフィール',
             };
-            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
+            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody, $lang);
 
-            $bodyJa = "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
+            $body = $isEn
+                ? "The creator accepted your report and deleted the {$contentType} below.\n\n{$content}\n\nThank you for your cooperation."
+                : "下記の{$contentType}において、作成者が通報内容を受け入れ、了承して削除しました。\n\n{$content}\n\nご協力ありがとうございました。";
 
             // ここもDBアクセスがあるため例外は握る（本処理を止めない）
             $userScore = (float) Report::calculateUserReportScore($userId);
             $coinAmount = $this->calculateCoinAmount($rank, $userScore);
 
             AdminMessage::create([
-                'title' => '通報内容の対応について',
-                'body' => $bodyJa,
+                'title' => $isEn ? 'Update on Your Report' : '通報内容の対応について',
+                'body' => $body,
                 'audience' => 'members',
                 'user_id' => $userId,
                 'published_at' => now(),
@@ -591,19 +650,27 @@ class ReportRestrictionService
     private function sendSelfAcknowledgeDeletionNotice(int $userId, string $type, string $threadTitle, ?string $responseBody, string $reasons): void
     {
         try {
-            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
-            $reasonsBlock = "【通報理由】\n{$reasons}\n\n";
+            $lang = $this->getUserLanguageCode($userId);
+            $isEn = $lang === 'EN';
+            $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody, $lang);
+            $reasonsBlock = $isEn ? "[Reason for Report]\n" . str_replace('・', '- ', $reasons) . "\n\n" : "【通報理由】\n{$reasons}\n\n";
             if ($type === 'thread') {
-                $bodyJa = "あなたが通報内容を了承した下記のルームについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+                $body = $isEn
+                    ? "You accepted the report for the room below, and the deletion process has been completed.\n\n[Reported Content]\n{$content}\n\n{$reasonsBlock}*This action completed processing without waiting for review."
+                    : "あなたが通報内容を了承した下記のルームについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
             } elseif ($type === 'response') {
-                $bodyJa = "あなたが通報内容を了承した下記のリプライについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+                $body = $isEn
+                    ? "You accepted the report for the reply below, and the deletion process has been completed.\n\n[Reported Content]\n{$content}\n\n{$reasonsBlock}*This action completed processing without waiting for review."
+                    : "あなたが通報内容を了承した下記のリプライについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
             } else {
-                $bodyJa = "あなたが通報内容を了承した下記のプロフィールについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
+                $body = $isEn
+                    ? "You accepted the report for the profile below, and the deletion process has been completed.\n\n[Reported Content]\n{$content}\n\n{$reasonsBlock}*This action completed processing without waiting for review."
+                    : "あなたが通報内容を了承した下記のプロフィールについて、削除処理を完了しました。\n\n【通報対象】\n{$content}\n\n{$reasonsBlock}※本操作により審査を待たずに処理が完了しました。";
             }
 
             AdminMessage::create([
-                'title' => '削除処理完了のお知らせ',
-                'body' => $bodyJa,
+                'title' => $isEn ? 'Deletion Completed' : '削除処理完了のお知らせ',
+                'body' => $body,
                 'audience' => 'members',
                 'user_id' => $userId,
                 'published_at' => now(),
@@ -696,34 +763,43 @@ class ReportRestrictionService
      * @param string|null $replySnippet リプライ本文の抜粋（response の場合のみ・任意）
      * @param array<int, string> $reasons 通報理由のリスト
      */
-    private function buildRestrictionNoticeBody(string $type, string $roomTitle, ?string $replySnippet, array $reasons): string
+    private function buildRestrictionNoticeBody(string $type, string $roomTitle, ?string $replySnippet, array $reasons, string $lang = 'JA'): string
     {
-        $contentType = $type === 'thread' ? 'ルーム' : 'リプライ';
+        $isEn = strtoupper($lang) === 'EN';
+        $contentType = $type === 'thread' ? ($isEn ? 'room' : 'ルーム') : ($isEn ? 'reply' : 'リプライ');
 
         $parts = [];
-        $parts[] = "現在、あなたの作成した以下の{$contentType}は通報を受け、違反の有無について審査中です。";
+        $parts[] = $isEn
+            ? "Your {$contentType} below has been reported and is currently under review for potential violations."
+            : "現在、あなたの作成した以下の{$contentType}は通報を受け、違反の有無について審査中です。";
         $parts[] = '';
-        $parts[] = '【通報対象】';
+        $parts[] = $isEn ? '[Reported Content]' : '【通報対象】';
 
-        $contentLines = ['ルーム名：', $roomTitle];
+        $contentLines = [$isEn ? 'Room Name:' : 'ルーム名：', $roomTitle];
         if ($type === 'response') {
-            $contentLines[] = 'リプライ内容：';
+            $contentLines[] = $isEn ? 'Reply:' : 'リプライ内容：';
             $contentLines[] = (string) $replySnippet;
         }
         $parts[] = implode("\n", $contentLines);
         $parts[] = '';
 
-        $parts[] = '【通報理由】';
+        $parts[] = $isEn ? '[Reason for Report]' : '【通報理由】';
         foreach ($reasons as $r) {
             if ((string) $r !== '') {
-                $parts[] = '・' . $r;
+                $parts[] = $isEn ? '- ' . $r : '・' . $r;
             }
         }
         $parts[] = '';
 
-        $parts[] = '審査中は一部機能の利用が制限されます。';
-        $parts[] = 'なお、通報内容を以下のボタンから了承して受け入れる場合は、該当投稿は削除され、審査を待たずに処理が完了します。';
-        $parts[] = '※本操作を行わない場合、審査は継続されます。';
+        if ($isEn) {
+            $parts[] = 'Some features are restricted during the review.';
+            $parts[] = 'If you acknowledge and accept the report using the button below, the content will be deleted and processing will complete without waiting for review.';
+            $parts[] = '*If no action is taken, the review will continue.';
+        } else {
+            $parts[] = '審査中は一部機能の利用が制限されます。';
+            $parts[] = 'なお、通報内容を以下のボタンから了承して受け入れる場合は、該当投稿は削除され、審査を待たずに処理が完了します。';
+            $parts[] = '※本操作を行わない場合、審査は継続されます。';
+        }
 
         return implode("\n", $parts);
     }

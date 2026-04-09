@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Policies\AdminPolicy;
 use Illuminate\Support\Facades\Auth;
 use App\Services\UserOutCountFreezeService;
+use App\Services\TranslationService;
 use App\Services\UserOutCountReductionService;
 
 class AdminController extends Controller
@@ -541,7 +542,8 @@ class AdminController extends Controller
         $rank = 1;
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendApprovalMessage($report->user_id, 'thread', $thread->title, null, $rank);
+                $threadTitleForReporter = $this->translateThreadTitleForUser($thread, (int) $report->user_id);
+                $this->sendApprovalMessage($report->user_id, 'thread', $threadTitleForReporter, null, $rank);
                 $rank++;
             }
         }
@@ -581,7 +583,8 @@ class AdminController extends Controller
         // 各通報者にメッセージを送信（返信可能）
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendRejectionMessage($report->user_id, 'thread', $thread->title, null);
+                $threadTitleForReporter = $this->translateThreadTitleForUser($thread, (int) $report->user_id);
+                $this->sendRejectionMessage($report->user_id, 'thread', $threadTitleForReporter, null);
             }
         }
         
@@ -627,17 +630,21 @@ class AdminController extends Controller
 
         // 各通報者にメッセージを送信（通報順位を渡す）
         $rank = 1;
-        $replySnippet = mb_substr($response->plainBodyOrMediaKindForNotifications(), 0, 2000);
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendApprovalMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $replySnippet, $rank);
+                $reporterId = (int) $report->user_id;
+                $threadTitleForReporter = $this->translateThreadTitleForUser($thread, $reporterId);
+                $replySnippetForReporter = $this->responseSnippetByRule($response, $reporterId, false);
+                $this->sendApprovalMessage($report->user_id, 'response', $threadTitleForReporter, $replySnippetForReporter, $rank);
                 $rank++;
             }
         }
 
         // リプライ投稿者へ削除通知（管理者承認）
         if ($responseOwner) {
-            $threadTitle = $thread->title ?? '（タイトルなし）';
+            // リプライ系はルーム名を受信者設定言語で挿入
+            $threadTitle = $this->translateThreadTitleForUser($thread, (int) $responseOwner->user_id);
+            $replySnippet = $this->responseSnippetByRule($response, (int) $responseOwner->user_id, true);
             $contentBlock = 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $replySnippet;
             $this->sendReportDeletionNoticeToAuthor($responseOwner->user_id, 'リプライ', $contentBlock, $reasonsText);
         }
@@ -668,10 +675,12 @@ class AdminController extends Controller
             ]);
         
         // 各通報者にメッセージを送信（返信可能）
-        $replySnippet = mb_substr($response->plainBodyOrMediaKindForNotifications(), 0, 2000);
         foreach ($reports as $report) {
             if ($report->user_id) {
-                $this->sendRejectionMessage($report->user_id, 'response', $thread->title ?? '（タイトルなし）', $replySnippet);
+                $reporterId = (int) $report->user_id;
+                $threadTitleForReporter = $this->translateThreadTitleForUser($thread, $reporterId);
+                $replySnippetForReporter = $this->responseSnippetByRule($response, $reporterId, false);
+                $this->sendRejectionMessage($report->user_id, 'response', $threadTitleForReporter, $replySnippetForReporter);
             }
         }
         
@@ -708,27 +717,92 @@ class AdminController extends Controller
      */
     private function formatReporterTargetBlock(string $type, string $threadTitle, ?string $responseBody): string
     {
+        return $this->formatReporterTargetBlockByLang($type, $threadTitle, $responseBody, 'JA');
+    }
+
+    /** @param  string  $type  'thread' | 'response' | 'profile' */
+    private function formatReporterTargetBlockByLang(string $type, string $threadTitle, ?string $responseBody, string $lang): string
+    {
+        $isEn = strtoupper($lang) === 'EN';
+        $roomLabel = $isEn ? 'Room Name:' : 'ルーム名：';
+        $replyLabel = $isEn ? 'Reply:' : 'リプライ内容：';
+        $userLabel = $isEn ? 'Username:' : 'ユーザー名：';
+
         if ($type === 'thread') {
-            return 'ルーム名：' . "\n" . $threadTitle;
+            return $roomLabel . "\n" . $threadTitle;
         }
         if ($type === 'response') {
             $snippet = mb_substr(strip_tags((string) ($responseBody ?? '')), 0, 2000);
-
-            return 'ルーム名：' . "\n" . $threadTitle . "\n" . 'リプライ内容：' . "\n" . $snippet;
+            return $roomLabel . "\n" . $threadTitle . "\n" . $replyLabel . "\n" . $snippet;
         }
 
-        return 'ユーザー名：' . "\n" . $threadTitle;
+        return $userLabel . "\n" . $threadTitle;
     }
 
     /** @param  string  $type  'thread' | 'response' | 'profile' */
     private function reporterContentTypeLabel(string $type): string
     {
+        return $this->reporterContentTypeLabelByLang($type, 'JA');
+    }
+
+    /** @param  string  $type  'thread' | 'response' | 'profile' */
+    private function reporterContentTypeLabelByLang(string $type, string $lang): string
+    {
+        $isEn = strtoupper($lang) === 'EN';
         return match ($type) {
-            'thread' => 'ルーム',
-            'response' => 'リプライ',
-            'profile' => 'プロフィール',
-            default => 'ルーム',
+            'thread' => $isEn ? 'room' : 'ルーム',
+            'response' => $isEn ? 'reply' : 'リプライ',
+            'profile' => $isEn ? 'profile' : 'プロフィール',
+            default => $isEn ? 'room' : 'ルーム',
         };
+    }
+
+    private function getUserLanguageCode(int $userId): string
+    {
+        $user = User::where('user_id', $userId)->first();
+        return strtoupper((string) ($user?->language ?? 'JA')) === 'EN' ? 'EN' : 'JA';
+    }
+
+    private function translateThreadTitleForUser(?Thread $thread, int $userId): string
+    {
+        if (!$thread) {
+            return '（タイトルなし）';
+        }
+        $target = $this->getUserLanguageCode($userId);
+        $source = TranslationService::normalizeLang((string) ($thread->source_lang ?? ($thread->user->language ?? 'JA')));
+        return TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $target, $source);
+    }
+
+    private function responseSnippetByRule(Response $response, int $userId, bool $useOriginal): string
+    {
+        $body = trim((string) ($response->body ?? ''));
+        if ($body === '') {
+            $target = $this->getUserLanguageCode($userId);
+            $type = (string) ($response->media_type ?? '');
+            if ($target === 'EN') {
+                return match ($type) {
+                    'image' => 'Image',
+                    'video' => 'Video',
+                    'audio' => 'Audio',
+                    default => !empty($response->media_file) ? 'Media' : '',
+                };
+            }
+            return match ($type) {
+                'image' => '画像',
+                'video' => '動画',
+                'audio' => '音声',
+                default => !empty($response->media_file) ? 'メディア' : '',
+            };
+        }
+
+        if ($useOriginal) {
+            return mb_substr(strip_tags($body), 0, 2000);
+        }
+
+        $target = $this->getUserLanguageCode($userId);
+        $source = TranslationService::normalizeLang((string) ($response->source_lang ?? ($response->user->language ?? 'JA')));
+        $translated = TranslationService::getTranslatedResponseBody((int) $response->response_id, $body, $target, null, $source);
+        return mb_substr(strip_tags($translated), 0, 2000);
     }
 
     /**
@@ -742,10 +816,13 @@ class AdminController extends Controller
      */
     private function sendApprovalMessage(int $userId, string $type, string $threadTitle, ?string $responseBody, int $rank = 1)
     {
-        $contentType = $this->reporterContentTypeLabel($type);
-        $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
-
-        $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認の上、違反投稿として対応いたしました。\n\n{$content}\n\nご協力ありがとうございました。";
+        $lang = $this->getUserLanguageCode($userId);
+        $contentType = $this->reporterContentTypeLabelByLang($type, $lang);
+        $content = $this->formatReporterTargetBlockByLang($type, $threadTitle, $responseBody, $lang);
+        $body = $lang === 'EN'
+            ? "We reviewed your report for the {$contentType} below and took action for a violation.\n\n{$content}\n\nThank you for your cooperation."
+            : "下記の{$contentType}において、通報いただいた内容を確認の上、違反投稿として対応いたしました。\n\n{$content}\n\nご協力ありがとうございました。";
+        $title = $lang === 'EN' ? 'Update on Your Report' : '通報内容の対応について';
 
         // 通報者のスコアを取得
         $userScore = Report::calculateUserReportScore($userId);
@@ -754,8 +831,8 @@ class AdminController extends Controller
         $coinAmount = $this->calculateCoinAmount($rank, $userScore);
         
         AdminMessage::create([
-            'title' => '通報内容の対応について',
-            'body' => $bodyJa,
+            'title' => $title,
+            'body' => $body,
             'audience' => 'members', // 個人向けだが、audienceはmembersとして設定
             'user_id' => $userId,
             'published_at' => now(),
@@ -774,12 +851,21 @@ class AdminController extends Controller
      */
     private function sendReportDeletionNoticeToAuthor(int $userId, string $contentTypeLabel, string $contentBlock, string $reasons): void
     {
-        $title = $contentTypeLabel . '削除のお知らせ';
-        $bodyJa = "下記の{$contentTypeLabel}について、複数のユーザーから通報があり、運営で内容を確認した結果、以下の理由により削除いたしました。\n\n【通報対象】\n{$contentBlock}\n\n【通報理由】\n{$reasons}\n\n今後は利用規約を遵守した投稿をお願いいたします。";
+        $lang = $this->getUserLanguageCode($userId);
+        if ($lang === 'EN') {
+            $contentTypeEn = $contentTypeLabel === 'リプライ' ? 'Reply' : 'Room';
+            $title = $contentTypeEn . ' Deletion Notice';
+            $contentBlockEn = str_replace(['ルーム名：', 'リプライ内容：', 'ユーザー名：'], ['Room Name:', 'Reply:', 'Username:'], $contentBlock);
+            $reasonsEn = str_replace('・', '- ', $reasons);
+            $body = "The following {$contentTypeEn} has been reported by multiple users. After review, it has been deleted for the reasons below.\n\n[Reported Content]\n{$contentBlockEn}\n\n[Reason for Report]\n{$reasonsEn}\n\nPlease ensure future posts comply with our terms of service.";
+        } else {
+            $title = $contentTypeLabel . '削除のお知らせ';
+            $body = "下記の{$contentTypeLabel}について、複数のユーザーから通報があり、運営で内容を確認した結果、以下の理由により削除いたしました。\n\n【通報対象】\n{$contentBlock}\n\n【通報理由】\n{$reasons}\n\n今後は利用規約を遵守した投稿をお願いいたします。";
+        }
 
         AdminMessage::create([
             'title' => $title,
-            'body' => $bodyJa,
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $userId,
             'published_at' => now(),
@@ -864,14 +950,17 @@ class AdminController extends Controller
      */
     private function sendRejectionMessage(int $userId, string $type, string $threadTitle, ?string $responseBody)
     {
-        $contentType = $this->reporterContentTypeLabel($type);
-        $content = $this->formatReporterTargetBlock($type, $threadTitle, $responseBody);
-
-        $bodyJa = "下記の{$contentType}において、通報いただいた内容を確認しましたが、現時点では違反投稿には該当しないと判断いたしました。\n\n{$content}\n\n通報内容に補足がある場合は、返信にて追記をお願いします。";
+        $lang = $this->getUserLanguageCode($userId);
+        $contentType = $this->reporterContentTypeLabelByLang($type, $lang);
+        $content = $this->formatReporterTargetBlockByLang($type, $threadTitle, $responseBody, $lang);
+        $body = $lang === 'EN'
+            ? "We reviewed your report for the {$contentType} below, but at this time we determined it does not violate our rules.\n\n{$content}\n\nIf you have additional details, please reply to this notice."
+            : "下記の{$contentType}において、通報いただいた内容を確認しましたが、現時点では違反投稿には該当しないと判断いたしました。\n\n{$content}\n\n通報内容に補足がある場合は、返信にて追記をお願いします。";
+        $title = $lang === 'EN' ? 'Update on Your Report' : '通報内容の対応について';
 
         AdminMessage::create([
-            'title' => '通報内容の対応について',
-            'body' => $bodyJa,
+            'title' => $title,
+            'body' => $body,
             'audience' => 'members', // 個人向けだが、audienceはmembersとして設定
             'user_id' => $userId,
             'published_at' => now(),
@@ -885,11 +974,15 @@ class AdminController extends Controller
      */
     private function sendSuggestionApprovalMessage(int $userId, string $suggestionMessage, int $coinAmount)
     {
-        $bodyJa = "ご提出いただいた改善要望を確認の上、参考にさせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご協力ありがとうございました。";
+        $lang = $this->getUserLanguageCode($userId);
+        $body = $lang === 'EN'
+            ? "We reviewed your suggestion and have decided to use it as a reference.\n\nYour suggestion:\n{$suggestionMessage}\n\nThank you for your cooperation."
+            : "ご提出いただいた改善要望を確認の上、参考にさせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご協力ありがとうございました。";
+        $title = $lang === 'EN' ? 'Update on Your Suggestion' : '改善要望の対応について';
 
         AdminMessage::create([
-            'title' => '改善要望の対応について',
-            'body' => $bodyJa,
+            'title' => $title,
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $userId,
             'published_at' => now(),
@@ -904,11 +997,15 @@ class AdminController extends Controller
      */
     private function sendSuggestionRejectionMessage(int $userId, string $suggestionMessage)
     {
-        $bodyJa = "ご提出いただいた改善要望を確認しましたが、現時点では対応を見送らせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご要望内容に補足がある場合は、返信にて追記をお願いします。";
+        $lang = $this->getUserLanguageCode($userId);
+        $body = $lang === 'EN'
+            ? "We reviewed your suggestion, but at this time we decided not to proceed.\n\nYour suggestion:\n{$suggestionMessage}\n\nIf you have additional details, please reply to this notice."
+            : "ご提出いただいた改善要望を確認しましたが、現時点では対応を見送らせていただきました。\n\nご要望内容：\n{$suggestionMessage}\n\nご要望内容に補足がある場合は、返信にて追記をお願いします。";
+        $title = $lang === 'EN' ? 'Update on Your Suggestion' : '改善要望の対応について';
 
         AdminMessage::create([
-            'title' => '改善要望の対応について',
-            'body' => $bodyJa,
+            'title' => $title,
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $userId,
             'published_at' => now(),

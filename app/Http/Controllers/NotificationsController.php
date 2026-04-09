@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
+use App\Models\User;
 
 class NotificationsController extends Controller
 {
@@ -603,9 +604,16 @@ class NotificationsController extends Controller
     private function notifyAdultContentReportCancellation(\App\Models\Thread $thread, array $reporterIds): void
     {
         foreach ($reporterIds as $reporterId) {
+            $user = User::where('user_id', $reporterId)->first();
+            $isEn = strtoupper((string) ($user?->language ?? 'JA')) === 'EN';
+            $targetLang = $isEn ? 'EN' : 'JA';
+            $sourceLang = \App\Services\TranslationService::normalizeLang((string) ($thread->source_lang ?? ($thread->user->language ?? 'JA')));
+            $threadTitle = \App\Services\TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $targetLang, $sourceLang);
             AdminMessage::create([
-                'title' => '通報内容の対応について',
-                'body' => "あなたが「成人向けコンテンツが含まれる」で通報した内容は、ルーム「{$thread->title}」がR18ルームへ変更されたため取り下げられました。",
+                'title' => $isEn ? 'Update on Your Report' : '通報内容の対応について',
+                'body' => $isEn
+                    ? "Your report for \"Contains adult content\" has been withdrawn because the room \"{$threadTitle}\" was changed to R18."
+                    : "あなたが「成人向けコンテンツが含まれる」で通報した内容は、ルーム「{$threadTitle}」がR18ルームへ変更されたため取り下げられました。",
                 'audience' => 'members',
                 'user_id' => $reporterId,
                 'thread_id' => $thread->thread_id,
