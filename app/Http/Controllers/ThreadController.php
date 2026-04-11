@@ -934,10 +934,10 @@ class ThreadController extends Controller
             Cache::forget('threads_index_' . $userIdentifier);
         }
 
-        // スレッド作成者とレスポンス投稿者のユーザー情報を取得
+        // スレッド作成者・レスポンス投稿者・返信先（親）投稿者のユーザー情報を取得（親の source_lang 推定と表示用）
         $thread->load('user');
         $userIds = collect([$thread->user_id])
-            ->merge($initialResponses->pluck('user_id'))
+            ->merge($this->userIdsForResponsesWithParents($initialResponses))
             ->unique()
             ->filter()
             ->values();
@@ -1258,8 +1258,8 @@ class ThreadController extends Controller
         // レスポンスを逆順にして、古い順に表示できるようにする（values でキー正規化）
         $responses = $responses->reverse()->values();
         
-        // ユーザー情報を取得
-        $userIds = $responses->pluck('user_id')->unique()->filter()->values();
+        // ユーザー情報を取得（親リプライ投稿者も含める）
+        $userIds = $this->userIdsForResponsesWithParents($responses);
         $users = $this->buildUserMapByUserIds($userIds);
         
         // ログインユーザーの情報を取得
@@ -1382,7 +1382,7 @@ class ThreadController extends Controller
         
         // HTMLを生成
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $this->applyTranslationsForResponses($responses, $lang, $users);
+        $this->applyTranslationsForResponses($responses, $lang, $users, true);
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -1459,8 +1459,8 @@ class ThreadController extends Controller
             ]);
         }
         
-        // ユーザー情報を取得
-        $userIds = $responses->pluck('user_id')->unique()->filter()->values();
+        // ユーザー情報を取得（親リプライ投稿者も含める）
+        $userIds = $this->userIdsForResponsesWithParents($responses);
         $users = $this->buildUserMapByUserIds($userIds);
         
         // ログインユーザーの情報を取得
@@ -1581,9 +1581,9 @@ class ThreadController extends Controller
             }
         }
         
-        // HTMLを生成
+        // HTMLを生成（返信・送信POSTとは別。未キャッシュの新着はここで初回翻訳しキャッシュへ。キャッシュヒット時はAPIなし）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $this->applyTranslationsForResponses($responses, $lang, $users);
+        $this->applyTranslationsForResponses($responses, $lang, $users, true);
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -1683,8 +1683,8 @@ class ThreadController extends Controller
             ->pluck('response_id')
             ->toArray();
 
-        // ユーザー情報を取得
-        $userIds = $responses->pluck('user_id')->unique()->filter()->values();
+        // ユーザー情報を取得（親リプライ投稿者も含める）
+        $userIds = $this->userIdsForResponsesWithParents($responses);
         $users = $this->buildUserMapByUserIds($userIds);
 
         $results = [];
@@ -2450,6 +2450,28 @@ class ThreadController extends Controller
     }
 
     /**
+     * レスポンス一覧の投稿者と、読み込済みの親リプライの投稿者の user_id を集める（翻訳の source_lang 推定・ビュー表示用）
+     *
+     * @param \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection|null $responses
+     * @return \Illuminate\Support\Collection
+     */
+    private function userIdsForResponsesWithParents($responses)
+    {
+        if ($responses === null || $responses->isEmpty()) {
+            return collect();
+        }
+
+        $ids = $responses->pluck('user_id');
+        foreach ($responses as $r) {
+            if ($r->relationLoaded('parentResponse') && $r->parentResponse && $r->parentResponse->user_id) {
+                $ids->push($r->parentResponse->user_id);
+            }
+        }
+
+        return $ids->unique()->filter()->values();
+    }
+
+    /**
      * レスポンスに紐づくユーザー名の配列から、ビューで利用しやすいユーザーマップを生成
      * - 旧仕様の長過ぎるユーザー名は10文字でカットした名前でも検索
      * - 国コードを表示名に変換して付与
@@ -2623,7 +2645,7 @@ class ThreadController extends Controller
 
         $responses = $thread->responses ?? collect();
         $users = $users ?? collect();
-        $this->applyTranslationsForResponses($responses, $lang, $users);
+        $this->applyTranslationsForResponses($responses, $lang, $users, true);
     }
 
     /**
@@ -2650,9 +2672,10 @@ class ThreadController extends Controller
      * @param \Illuminate\Support\Collection $responses
      * @param string $lang 表示言語（JA / EN）
      * @param \Illuminate\Support\Collection $users user_id => User のマップ
+     * @param bool $allowLiveTranslation false のとき未キャッシュ・期限切れは原文のまま（ポーリング用。APIはスレッド表示・スクロール読み込みで実行）
      * @return void
      */
-    private function applyTranslationsForResponses($responses, $lang, $users)
+    private function applyTranslationsForResponses($responses, $lang, $users, bool $allowLiveTranslation = true)
     {
         if ($responses === null || $responses->isEmpty()) {
             return;
@@ -2681,16 +2704,11 @@ class ThreadController extends Controller
                         $parentBodyRaw,
                         $targetLang,
                         null,
-                        $this->resolveResponseSourceLang($parent, $users)
+                        $this->resolveResponseSourceLang($parent, $users),
+                        $allowLiveTranslation
                     );
                 }
                 $parent->display_body = $resolvedDisplayBody[$pid];
-            }
-
-            if (array_key_exists($rid, $resolvedDisplayBody)) {
-                $response->display_body = $resolvedDisplayBody[$rid];
-
-                continue;
             }
 
             if ($body !== '') {
@@ -2706,14 +2724,14 @@ class ThreadController extends Controller
             }
 
             $parentForApi = null;
-            if ($parent !== null && $pid !== null && trim($parentBodyRaw) !== ''
+            if ($allowLiveTranslation && $parent !== null && $pid !== null && trim($parentBodyRaw) !== ''
                 && \App\Services\TranslationService::shouldTranslate($childSourceLang, $targetLang)) {
                 $aligned = \App\Services\TranslationService::getParentBodyForReplyTranslationContext(
                     $pid,
                     $parentBodyRaw,
                     $this->resolveResponseSourceLang($parent, $users),
                     $childSourceLang,
-                    true
+                    $allowLiveTranslation
                 );
                 if (trim($aligned) !== '') {
                     $parentForApi = $aligned;
@@ -2725,7 +2743,8 @@ class ThreadController extends Controller
                 $body,
                 $targetLang,
                 $parentForApi,
-                $childSourceLang
+                $childSourceLang,
+                $allowLiveTranslation
             );
             $response->display_body = $resolvedDisplayBody[$rid];
         }
