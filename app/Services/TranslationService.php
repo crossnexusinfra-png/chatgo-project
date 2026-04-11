@@ -11,9 +11,10 @@ use Illuminate\Support\Facades\RateLimiter;
  *
  * - ルーム名: 投稿時に保存した translation_caches の行は無期限で利用（1年経過でも再翻訳しない）。
  * - リプライ: 保存から TranslationCache::REPLY_TRANSLATION_TTL_YEARS 年でキャッシュ無効となり、表示時に再翻訳し得る。
- * - ライブ翻訳（API）はスレッド詳細・レス取得など $allowLiveTranslation=true の経路のみ。一覧・通報通知等はキャッシュのみ。
+ * - ルーム名の表示: 一覧・スレッド詳細・通知等はキャッシュのみ（$allowLiveTranslation=false）。APIは主に作成時の他言語キャッシュと、リプライのライブ翻訳経路。
  * - 元言語（source_lang）は「表示言語と比較して翻訳が必要か」の判別にのみ利用する。APIには送らない。
  * - 元言語は送信時の表示言語（threads.source_lang / responses.source_lang）を優先。送信者削除後も正しく判定可能。
+ * - 返信の translateReply では、返信元・返信本文ともに「返信先（子）リプライの source_lang」のテキストを渡す（親が別言語なら getParentBodyForReplyTranslationContext で揃える）。
  */
 class TranslationService
 {
@@ -135,6 +136,37 @@ class TranslationService
     }
 
     /**
+     * 返信元本文を「子リプライの元言語」に揃える（translateReply に渡す親テキスト用）。
+     * 親・子の source_lang が同じなら原文のまま。異なれば getTranslatedResponseBody と同じ規則（キャッシュ・1年失効・同言語はAPIなし）で親のみを子の言語へ翻訳する。
+     */
+    public static function getParentBodyForReplyTranslationContext(
+        int $parentResponseId,
+        string $parentBody,
+        string $parentSourceLang,
+        string $childSourceLang,
+        bool $allowLiveTranslation = true
+    ): string {
+        $parentBody = trim($parentBody);
+        if ($parentBody === '') {
+            return '';
+        }
+        $parentSourceLang = self::normalizeLang($parentSourceLang);
+        $childSourceLang = self::normalizeLang($childSourceLang);
+        if ($parentSourceLang === $childSourceLang) {
+            return $parentBody;
+        }
+
+        return self::getTranslatedResponseBody(
+            $parentResponseId,
+            $parentBody,
+            $childSourceLang,
+            null,
+            $parentSourceLang,
+            $allowLiveTranslation
+        );
+    }
+
+    /**
      * ルーム作成時に、表示言語と異なる言語へ翻訳してキャッシュに保存する
      * （一覧表示で言語切り替え時に利用）
      */
@@ -249,7 +281,7 @@ class TranslationService
      * @param int $responseId レスポンスID
      * @param string $body 元の本文
      * @param string $targetLang 表示言語（JA / EN）
-     * @param string|null $parentBody 親リプライ本文（返信の場合）
+     * @param string|null $parentBody 親リプライ本文（返信の場合）。translateReply 用。親・子とも source_lang と同じ言語のテキストであること（別言語の親は getParentBodyForReplyTranslationContext で揃える）
      * @param string $sourceLang 送信時の表示言語（responses.source_lang。翻訳要否の判別にのみ使用）
      * @param bool $allowLiveTranslation キャッシュ未ヒット時にOpenAIで翻訳して保存するか
      * @return string 表示用テキスト

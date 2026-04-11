@@ -16,6 +16,7 @@ use App\Services\SpamDetectionService;
 use App\Services\SafeBrowsingService;
 use App\Models\Report;
 use App\Models\AdminMessage;
+use App\Models\TranslationCache;
 
 /**
  * 掲示板のスレッドに関連するリクエストを処理するコントローラー
@@ -1727,17 +1728,42 @@ class ThreadController extends Controller
                 $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
                     ? \App\Services\TranslationService::normalizeLang($response->source_lang)
                     : \App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN');
-                $parentBody = null;
-                if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
-                    $parentBody = $response->parentResponse->body ?? '';
+
+                $searchChildCache = TranslationCache::where('response_id', (int) $response->response_id)
+                    ->where('target_lang', $targetLang)
+                    ->first();
+                if ($originalBody !== '' && $searchChildCache && $searchChildCache->isValid()) {
+                    $displayBody = $searchChildCache->translated_text;
+                } else {
+                    $parentForApi = null;
+                    if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse
+                        && \App\Services\TranslationService::shouldTranslate($responseSourceLang, $targetLang)) {
+                        $pr = $response->parentResponse;
+                        $pb = (string) ($pr->body ?? '');
+                        if (trim($pb) !== '') {
+                            $parentSourceLang = $pr->source_lang !== null && $pr->source_lang !== ''
+                                ? \App\Services\TranslationService::normalizeLang($pr->source_lang)
+                                : \App\Services\TranslationService::normalizeLang(($users->get($pr->user_id) ?? $pr->user)?->language ?? 'EN');
+                            $aligned = \App\Services\TranslationService::getParentBodyForReplyTranslationContext(
+                                (int) $pr->response_id,
+                                $pb,
+                                $parentSourceLang,
+                                $responseSourceLang,
+                                true
+                            );
+                            if (trim($aligned) !== '') {
+                                $parentForApi = $aligned;
+                            }
+                        }
+                    }
+                    $displayBody = \App\Services\TranslationService::getTranslatedResponseBody(
+                        (int) $response->response_id,
+                        $originalBody,
+                        $targetLang,
+                        $parentForApi,
+                        $responseSourceLang
+                    );
                 }
-                $displayBody = \App\Services\TranslationService::getTranslatedResponseBody(
-                    (int) $response->response_id,
-                    $originalBody,
-                    $targetLang,
-                    $parentBody !== null && trim((string) $parentBody) !== '' ? (string) $parentBody : null,
-                    $responseSourceLang
-                );
                 $hasTranslatedBody = $originalBody !== '' && (string) $displayBody !== (string) $response->body;
 
                 $results[] = [
@@ -2571,7 +2597,8 @@ class ThreadController extends Controller
 
     /**
      * スレッド詳細表示用：表示ユーザーの言語に合わせてルーム名・リプライ本文を翻訳し display_title / display_body にセット
-     * 元言語は送信者の表示言語設定。翻訳はDBに1年保存。
+     * ルーム名は一覧と同様、作成時に保存した translation_caches のみ参照（詳細表示では OpenAI を呼ばない）。
+     * リプライ本文はキャッシュ優先。未キャッシュ・失効時はライブ翻訳し得る。
      *
      * @param Thread $thread
      * @param string $lang 表示言語（JA / EN）
@@ -2589,34 +2616,35 @@ class ThreadController extends Controller
             $thread->thread_id,
             $thread->getCleanTitle(),
             $targetLang,
-            $threadSourceLang
+            $threadSourceLang,
+            false
         );
 
         $responses = $thread->responses ?? collect();
         $users = $users ?? collect();
-        foreach ($responses as $response) {
-            $body = $response->body ?? '';
-            $parentBody = null;
-            if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
-                $parentBody = $response->parentResponse->body ?? '';
-            }
-            // 送信時の表示言語（DB保存を優先。送信者削除時も source_lang で判定）
-            $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
-                ? \App\Services\TranslationService::normalizeLang($response->source_lang)
-                : (\App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN'));
-            $response->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
-                $response->response_id,
-                $body,
-                $targetLang,
-                $parentBody,
-                $responseSourceLang
-            );
-        }
+        $this->applyTranslationsForResponses($responses, $lang, $users);
     }
 
     /**
-     * レスポンスコレクションに翻訳を適用（getResponses / getNewResponses 用）
-     * 元言語は送信者の表示言語設定。翻訳はDBに1年保存。
+     * responses.source_lang（なければ投稿者の language）を正規化して返す
+     */
+    private function resolveResponseSourceLang($response, $users): string
+    {
+        if ($response->source_lang !== null && $response->source_lang !== '') {
+            return \App\Services\TranslationService::normalizeLang($response->source_lang);
+        }
+
+        return \App\Services\TranslationService::normalizeLang(
+            ($users->get($response->user_id) ?? $response->user)?->language ?? 'EN'
+        );
+    }
+
+    /**
+     * レスポンスコレクションに翻訳を適用（スレッド詳細初回 / getResponses / getNewResponses 用）
+     *
+     * TranslationService::getTranslatedResponseBody は (1) 有効キャッシュ (2) 表示言語＝元言語 のとき API を呼ばない。
+     * さらに response_id ごとに一度だけ解決し、親リレーションと一覧要素が別インスタンスでも同一リプライを二重に翻訳しない。
+     * 返信の OpenAI コンテキストでは親本文を子の source_lang に揃えたうえで translateReply に渡す（getParentBodyForReplyTranslationContext）。
      *
      * @param \Illuminate\Support\Collection $responses
      * @param string $lang 表示言語（JA / EN）
@@ -2625,35 +2653,80 @@ class ThreadController extends Controller
      */
     private function applyTranslationsForResponses($responses, $lang, $users)
     {
+        if ($responses === null || $responses->isEmpty()) {
+            return;
+        }
+
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
+        /** @var array<int, string> $resolvedDisplayBody response_id => 表示用本文 */
+        $resolvedDisplayBody = [];
+
         foreach ($responses as $response) {
-            $body = $response->body ?? '';
-            $parentBody = null;
+            $rid = (int) $response->response_id;
+            $body = (string) ($response->body ?? '');
+            $childSourceLang = $this->resolveResponseSourceLang($response, $users);
+
+            $parent = null;
+            $pid = null;
+            $parentBodyRaw = '';
             if ($response->parent_response_id && $response->relationLoaded('parentResponse') && $response->parentResponse) {
-                $parentBody = $response->parentResponse->body ?? '';
-                if (!isset($response->parentResponse->display_body)) {
-                    $parentSourceLang = $response->parentResponse->source_lang !== null && $response->parentResponse->source_lang !== ''
-                        ? \App\Services\TranslationService::normalizeLang($response->parentResponse->source_lang)
-                        : \App\Services\TranslationService::normalizeLang(($users->get($response->parentResponse->user_id) ?? $response->parentResponse->user)?->language ?? 'EN');
-                    $response->parentResponse->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
-                        $response->parentResponse->response_id,
-                        $parentBody,
+                $parent = $response->parentResponse;
+                $pid = (int) $parent->response_id;
+                $parentBodyRaw = (string) ($parent->body ?? '');
+
+                if (! array_key_exists($pid, $resolvedDisplayBody)) {
+                    $resolvedDisplayBody[$pid] = \App\Services\TranslationService::getTranslatedResponseBody(
+                        $pid,
+                        $parentBodyRaw,
                         $targetLang,
                         null,
-                        $parentSourceLang
+                        $this->resolveResponseSourceLang($parent, $users)
                     );
                 }
+                $parent->display_body = $resolvedDisplayBody[$pid];
             }
-            $responseSourceLang = $response->source_lang !== null && $response->source_lang !== ''
-                ? \App\Services\TranslationService::normalizeLang($response->source_lang)
-                : \App\Services\TranslationService::normalizeLang(($users->get($response->user_id) ?? $response->user)?->language ?? 'EN');
-            $response->display_body = \App\Services\TranslationService::getTranslatedResponseBody(
-                $response->response_id,
+
+            if (array_key_exists($rid, $resolvedDisplayBody)) {
+                $response->display_body = $resolvedDisplayBody[$rid];
+
+                continue;
+            }
+
+            if ($body !== '') {
+                $existingChildCache = TranslationCache::where('response_id', $rid)
+                    ->where('target_lang', $targetLang)
+                    ->first();
+                if ($existingChildCache && $existingChildCache->isValid()) {
+                    $resolvedDisplayBody[$rid] = $existingChildCache->translated_text;
+                    $response->display_body = $existingChildCache->translated_text;
+
+                    continue;
+                }
+            }
+
+            $parentForApi = null;
+            if ($parent !== null && $pid !== null && trim($parentBodyRaw) !== ''
+                && \App\Services\TranslationService::shouldTranslate($childSourceLang, $targetLang)) {
+                $aligned = \App\Services\TranslationService::getParentBodyForReplyTranslationContext(
+                    $pid,
+                    $parentBodyRaw,
+                    $this->resolveResponseSourceLang($parent, $users),
+                    $childSourceLang,
+                    true
+                );
+                if (trim($aligned) !== '') {
+                    $parentForApi = $aligned;
+                }
+            }
+
+            $resolvedDisplayBody[$rid] = \App\Services\TranslationService::getTranslatedResponseBody(
+                $rid,
                 $body,
                 $targetLang,
-                $parentBody,
-                $responseSourceLang
+                $parentForApi,
+                $childSourceLang
             );
+            $response->display_body = $resolvedDisplayBody[$rid];
         }
     }
 
