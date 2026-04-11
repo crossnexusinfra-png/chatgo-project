@@ -255,8 +255,9 @@ class TranslationService
         }
 
         $translated = self::translateStandalone($title, $targetLang);
-        if ($translated === $title) {
-            return $title;
+        $out = trim((string) $translated);
+        if ($out === '') {
+            $out = $title;
         }
 
         TranslationCache::updateOrCreate(
@@ -267,12 +268,12 @@ class TranslationService
             [
                 'response_id' => null,
                 'source_lang' => $sourceLang,
-                'translated_text' => $translated,
+                'translated_text' => $out,
                 'translated_at' => now(),
             ]
         );
 
-        return $translated;
+        return $out;
     }
 
     /**
@@ -315,10 +316,13 @@ class TranslationService
             ? self::translateReply($body, $parentBody, $targetLang)
             : self::translateStandalone($body, $targetLang);
 
-        if ($translated === $body) {
-            return $body;
+        $out = trim((string) $translated);
+        if ($out === '') {
+            $out = $body;
         }
 
+        // 原文と同一でも保存する。API 失敗・レート制限で原文フォールバックした場合に未保存だと
+        // isValid なキャッシュが永遠に無く、毎リクエスト API が走り続ける。
         TranslationCache::updateOrCreate(
             [
                 'response_id' => $responseId,
@@ -327,12 +331,12 @@ class TranslationService
             [
                 'thread_id' => null,
                 'source_lang' => $sourceLang,
-                'translated_text' => $translated,
+                'translated_text' => $out,
                 'translated_at' => now(),
             ]
         );
 
-        return $translated;
+        return $out;
     }
 
     /**

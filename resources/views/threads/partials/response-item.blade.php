@@ -278,7 +278,8 @@
     
     @if(!empty($response->body))
         @php
-            $hasTranslatedBody = $response->display_body !== null && (string)$response->display_body !== (string)$response->body;
+            $hasTranslatedBody = $response->display_body !== null
+                && trim((string) $response->display_body) !== trim((string) $response->body);
         @endphp
         @if($hasTranslatedBody)
             <div class="response-body-wrapper">
