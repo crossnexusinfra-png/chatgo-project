@@ -399,7 +399,7 @@
     <div class="response-actions">
         <div class="response-time" data-utc-datetime="{{ $response->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $response->created_at->format('Y-m-d H:i') }}</div>
         <div class="response-actions-buttons">
-            <button class="reply-btn" data-response-id="{{ $response->response_id }}" data-user-name="{{ $username }}" data-response-body="{{ $response->body }}">
+            <button class="reply-btn" data-response-id="{{ $response->response_id }}" data-user-name="{{ $username }}" data-response-body="{{ $response->display_body ?? $response->body }}">
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
             @auth

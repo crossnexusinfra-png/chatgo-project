@@ -881,11 +881,12 @@ class ThreadController extends Controller
         
         // 最初は最新10件のみ取得（パフォーマンス向上）（翻訳用に parentResponse も取得）
         $initialResponses = $thread->responses()
-            ->with(['user', 'parentResponse'])
+            ->with(['user', 'parentResponse.user'])
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get()
-            ->reverse(); // 古い順に表示するため逆順にする
+            ->reverse()
+            ->values(); // キーを 0..n にし、foreach が必ず古い→新しい順になる（reverse だけだとキー降順で走査順が逆になる）
         
         // R18スレッドの場合、了承済みかどうかをチェック
         $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
@@ -1248,14 +1249,14 @@ class ThreadController extends Controller
         
         // 最新から取得（created_at降順）（翻訳用に parentResponse も取得）
         $responses = $thread->responses()
-            ->with(['user', 'parentResponse'])
+            ->with(['user', 'parentResponse.user'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
             ->get();
         
-        // レスポンスを逆順にして、古い順に表示できるようにする
-        $responses = $responses->reverse();
+        // レスポンスを逆順にして、古い順に表示できるようにする（values でキー正規化）
+        $responses = $responses->reverse()->values();
         
         // ユーザー情報を取得
         $userIds = $responses->pluck('user_id')->unique()->filter()->values();
@@ -1441,7 +1442,7 @@ class ThreadController extends Controller
         
         // 指定されたレスポンスID以降の新しいレスポンスを取得（created_at昇順で取得）（翻訳用に parentResponse も取得）
         $query = $thread->responses()
-            ->with(['user', 'parentResponse'])
+            ->with(['user', 'parentResponse.user'])
             ->orderBy('created_at', 'asc');
         
         if ($lastResponseId > 0) {
@@ -1665,7 +1666,7 @@ class ThreadController extends Controller
 
         // 全レスポンスを取得（翻訳表示は getTranslatedResponseBody の親子文脈に合わせて parentResponse も読み込む）
         $responses = $thread->responses()
-            ->with(['user', 'parentResponse'])
+            ->with(['user', 'parentResponse.user'])
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -2727,6 +2728,17 @@ class ThreadController extends Controller
                 $childSourceLang
             );
             $response->display_body = $resolvedDisplayBody[$rid];
+        }
+
+        // 親リプライが別インスタンスで読み込まれている場合でも、返信元プレビューに表示用訳を必ず付与
+        foreach ($responses as $response) {
+            if (! $response->relationLoaded('parentResponse') || ! $response->parentResponse) {
+                continue;
+            }
+            $ppid = (int) $response->parentResponse->response_id;
+            if (array_key_exists($ppid, $resolvedDisplayBody)) {
+                $response->parentResponse->display_body = $resolvedDisplayBody[$ppid];
+            }
         }
     }
 
