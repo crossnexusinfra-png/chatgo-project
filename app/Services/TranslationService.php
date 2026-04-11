@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\RateLimiter;
 /**
  * GPT-4o mini を用いたルーム名・リプライ本文の翻訳サービス
  *
- * - 翻訳結果はDBに1年間保存。1年経過後は表示時に再翻訳する。
+ * - ルーム名: 投稿時に保存した translation_caches の行は無期限で利用（1年経過でも再翻訳しない）。
+ * - リプライ: 保存から TranslationCache::REPLY_TRANSLATION_TTL_YEARS 年でキャッシュ無効となり、表示時に再翻訳し得る。
+ * - ライブ翻訳（API）はスレッド詳細・レス取得など $allowLiveTranslation=true の経路のみ。一覧・通報通知等はキャッシュのみ。
  * - 元言語（source_lang）は「表示言語と比較して翻訳が必要か」の判別にのみ利用する。APIには送らない。
  * - 元言語は送信時の表示言語（threads.source_lang / responses.source_lang）を優先。送信者削除後も正しく判定可能。
  */
@@ -172,21 +174,23 @@ class TranslationService
                 (int) $thread->thread_id,
                 $thread->getCleanTitle(),
                 $targetLang,
-                $thread->source_lang ?? 'EN'
+                $thread->source_lang ?? 'EN',
+                false
             );
         }
     }
 
     /**
-     * ルーム名の表示用テキストを取得（DBキャッシュ優先、1年で期限切れなら再翻訳）
+     * ルーム名の表示用テキストを取得（DBキャッシュは無期限。$allowLiveTranslation が false なら未キャッシュ時はAPIを呼ばず原文を返す）
      *
      * @param int $threadId スレッドID
      * @param string $title 元のルーム名（getCleanTitle 済み推奨）
      * @param string $targetLang 表示言語（JA / EN）
      * @param string $sourceLang 送信時の表示言語（threads.source_lang。翻訳要否の判別にのみ使用）
+     * @param bool $allowLiveTranslation キャッシュ未ヒット時にOpenAIで翻訳して保存するか
      * @return string 表示用テキスト
      */
-    public static function getTranslatedThreadTitle(int $threadId, string $title, string $targetLang, string $sourceLang): string
+    public static function getTranslatedThreadTitle(int $threadId, string $title, string $targetLang, string $sourceLang, bool $allowLiveTranslation = true): string
     {
         $title = trim($title);
         $targetLang = self::normalizeLang($targetLang);
@@ -196,6 +200,7 @@ class TranslationService
         }
 
         $cached = TranslationCache::where('thread_id', $threadId)
+            ->whereNull('response_id')
             ->where('target_lang', $targetLang)
             ->first();
 
@@ -204,6 +209,10 @@ class TranslationService
         }
 
         if (!self::shouldTranslate($sourceLang, $targetLang)) {
+            return $title;
+        }
+
+        if (!$allowLiveTranslation) {
             return $title;
         }
 
@@ -229,16 +238,17 @@ class TranslationService
     }
 
     /**
-     * リプライ本文の表示用テキストを取得（DBキャッシュ優先、1年で期限切れなら再翻訳）
+     * リプライ本文の表示用テキストを取得（DBキャッシュ優先。キャッシュは1年で失効し得る。$allowLiveTranslation が false なら未キャッシュ・失効時はAPIを呼ばず原文を返す）
      *
      * @param int $responseId レスポンスID
      * @param string $body 元の本文
      * @param string $targetLang 表示言語（JA / EN）
      * @param string|null $parentBody 親リプライ本文（返信の場合）
      * @param string $sourceLang 送信時の表示言語（responses.source_lang。翻訳要否の判別にのみ使用）
+     * @param bool $allowLiveTranslation キャッシュ未ヒット時にOpenAIで翻訳して保存するか
      * @return string 表示用テキスト
      */
-    public static function getTranslatedResponseBody(int $responseId, string $body, string $targetLang, ?string $parentBody, string $sourceLang): string
+    public static function getTranslatedResponseBody(int $responseId, string $body, string $targetLang, ?string $parentBody, string $sourceLang, bool $allowLiveTranslation = true): string
     {
         $body = trim($body);
         $targetLang = self::normalizeLang($targetLang);
@@ -256,6 +266,10 @@ class TranslationService
         }
 
         if (!self::shouldTranslate($sourceLang, $targetLang)) {
+            return $body;
+        }
+
+        if (!$allowLiveTranslation) {
             return $body;
         }
 

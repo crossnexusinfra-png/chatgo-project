@@ -770,7 +770,7 @@ class AdminController extends Controller
         }
         $target = $this->getUserLanguageCode($userId);
         $source = TranslationService::normalizeLang((string) ($thread->source_lang ?? ($thread->user->language ?? 'JA')));
-        return TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $target, $source);
+        return TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $target, $source, false);
     }
 
     private function responseSnippetByRule(Response $response, int $userId, bool $useOriginal): string
@@ -801,7 +801,7 @@ class AdminController extends Controller
 
         $target = $this->getUserLanguageCode($userId);
         $source = TranslationService::normalizeLang((string) ($response->source_lang ?? ($response->user->language ?? 'JA')));
-        $translated = TranslationService::getTranslatedResponseBody((int) $response->response_id, $body, $target, null, $source);
+        $translated = TranslationService::getTranslatedResponseBody((int) $response->response_id, $body, $target, null, $source, false);
         return mb_substr(strip_tags($translated), 0, 2000);
     }
 

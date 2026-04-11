@@ -608,7 +608,7 @@ class NotificationsController extends Controller
             $isEn = strtoupper((string) ($user?->language ?? 'JA')) === 'EN';
             $targetLang = $isEn ? 'EN' : 'JA';
             $sourceLang = \App\Services\TranslationService::normalizeLang((string) ($thread->source_lang ?? ($thread->user->language ?? 'JA')));
-            $threadTitle = \App\Services\TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $targetLang, $sourceLang);
+            $threadTitle = \App\Services\TranslationService::getTranslatedThreadTitle((int) $thread->thread_id, (string) $thread->title, $targetLang, $sourceLang, false);
             AdminMessage::create([
                 'title' => $isEn ? 'Update on Your Report' : '通報内容の対応について',
                 'body' => $isEn

@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * 翻訳キャッシュ（ルーム名・リプライ本文）
- * 1年経過した翻訳は表示時に再翻訳される
+ * - ルーム名: 投稿時に保存した行は期限なし（再翻訳しない）
+ * - リプライ: 精度向上のため translated_at から1年で無効化し、表示時に再翻訳し得る
  */
 class TranslationCache extends Model
 {
-    const EXPIRY_YEARS = 1;
+    /** リプライ翻訳の有効年数（経過後は isValid=false で再翻訳対象） */
+    public const REPLY_TRANSLATION_TTL_YEARS = 1;
 
     protected $table = 'translation_caches';
 
@@ -39,10 +41,25 @@ class TranslationCache extends Model
     }
 
     /**
-     * 有効期限内か（translated_at から1年以内か）
+     * キャッシュ行として利用可能か
      */
     public function isValid(): bool
     {
-        return $this->translated_at->addYears(self::EXPIRY_YEARS)->isFuture();
+        if (trim((string) $this->translated_text) === '') {
+            return false;
+        }
+
+        if ($this->response_id !== null) {
+            if ($this->translated_at === null) {
+                return false;
+            }
+            return $this->translated_at
+                ->copy()
+                ->addYears(self::REPLY_TRANSLATION_TTL_YEARS)
+                ->isFuture();
+        }
+
+        // ルーム名（response_id が null の行）: 期限なし
+        return true;
     }
 }
