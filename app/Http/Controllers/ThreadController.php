@@ -17,6 +17,7 @@ use App\Services\SafeBrowsingService;
 use App\Models\Report;
 use App\Models\AdminMessage;
 use App\Models\TranslationCache;
+use App\Models\Response;
 
 /**
  * 掲示板のスレッドに関連するリクエストを処理するコントローラー
@@ -1581,7 +1582,7 @@ class ThreadController extends Controller
             }
         }
         
-        // HTMLを生成（返信・送信POSTとは別。未キャッシュの新着はここで初回翻訳しキャッシュへ。キャッシュヒット時はAPIなし）
+        // HTMLを生成（未キャッシュは translation_pending。フロントが最新リプライから順に翻訳 POST）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $this->applyTranslationsForResponses($responses, $lang, $users, true);
         $html = '';
@@ -1612,6 +1613,79 @@ class ThreadController extends Controller
             })->toArray(),
             'latest_response_id' => $latestResponseId,
         ]);
+    }
+
+    /**
+     * 1 件のリプライ本文を翻訳してキャッシュする（チャット画面の非同期キュー用）
+     */
+    public function translateResponse(Thread $thread, Response $response, Request $request)
+    {
+        if (! $request->ajax() && ! $request->wantsJson()) {
+            abort(404);
+        }
+
+        $currentUser = auth()->user();
+        if (! Gate::forUser($currentUser)->allows('view', $thread)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return response()->json([
+                'success' => false,
+                'error' => 'forbidden',
+                'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
+            ], 403);
+        }
+
+        if ((int) $response->thread_id !== (int) $thread->thread_id) {
+            abort(404);
+        }
+
+        $response->loadMissing(['parentResponse.user', 'user']);
+        $users = $this->buildUserMapByUserIds($this->userIdsForResponsesWithParents(collect([$response])));
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $targetLang = \App\Services\TranslationService::normalizeLang($lang);
+        $childSourceLang = $this->resolveResponseSourceLang($response, $users);
+
+        $parent = $response->parentResponse;
+        $parentForApi = null;
+        if ($parent && trim((string) ($parent->body ?? '')) !== ''
+            && \App\Services\TranslationService::shouldTranslate($childSourceLang, $targetLang)) {
+            $aligned = \App\Services\TranslationService::getParentBodyForReplyTranslationContext(
+                (int) $parent->response_id,
+                (string) ($parent->body ?? ''),
+                $this->resolveResponseSourceLang($parent, $users),
+                $childSourceLang,
+                true
+            );
+            if (trim($aligned) !== '') {
+                $parentForApi = $aligned;
+            }
+        }
+
+        $result = \App\Services\TranslationService::translateResponseBodyLiveForUi(
+            (int) $response->response_id,
+            (string) ($response->body ?? ''),
+            $targetLang,
+            $parentForApi,
+            $childSourceLang
+        );
+
+        $displayText = $result['display_text'];
+        $payload = [
+            'success' => $result['success'],
+            'display_body' => $displayText,
+            'display_body_html' => \linkify_urls($displayText),
+            'has_translation' => $result['has_translation'],
+            'original_body_html' => \linkify_urls((string) ($response->body ?? '')),
+        ];
+
+        if (! $result['success']) {
+            $payload['error'] = $result['error'];
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_error_during', $lang);
+            $payload['error_reload_hint'] = \App\Services\LanguageService::trans('translation_reload_later_hint', $lang);
+        }
+
+        return response()->json($payload);
     }
 
     /**
@@ -2672,10 +2746,10 @@ class ThreadController extends Controller
      * @param \Illuminate\Support\Collection $responses
      * @param string $lang 表示言語（JA / EN）
      * @param \Illuminate\Support\Collection $users user_id => User のマップ
-     * @param bool $allowLiveTranslation false のとき未キャッシュ・期限切れは原文のまま（ポーリング用。APIはスレッド表示・スクロール読み込みで実行）
+     * @param bool $deferClientSideTranslation true のとき OpenAI は呼ばず、未キャッシュは translation_pending（フロントが最新リプライから順に POST で取得）
      * @return void
      */
-    private function applyTranslationsForResponses($responses, $lang, $users, bool $allowLiveTranslation = true)
+    private function applyTranslationsForResponses($responses, $lang, $users, bool $deferClientSideTranslation = false)
     {
         if ($responses === null || $responses->isEmpty()) {
             return;
@@ -2684,6 +2758,8 @@ class ThreadController extends Controller
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
         /** @var array<int, string> $resolvedDisplayBody response_id => 表示用本文 */
         $resolvedDisplayBody = [];
+
+        $liveInRequest = ! $deferClientSideTranslation;
 
         foreach ($responses as $response) {
             $rid = (int) $response->response_id;
@@ -2705,7 +2781,7 @@ class ThreadController extends Controller
                         $targetLang,
                         null,
                         $this->resolveResponseSourceLang($parent, $users),
-                        $allowLiveTranslation
+                        $liveInRequest
                     );
                 }
                 $parent->display_body = $resolvedDisplayBody[$pid];
@@ -2723,15 +2799,23 @@ class ThreadController extends Controller
                 }
             }
 
+            if ($deferClientSideTranslation && $body !== ''
+                && \App\Services\TranslationService::shouldTranslate($childSourceLang, $targetLang)) {
+                $response->translation_pending = true;
+                $resolvedDisplayBody[$rid] = trim($body);
+
+                continue;
+            }
+
             $parentForApi = null;
-            if ($allowLiveTranslation && $parent !== null && $pid !== null && trim($parentBodyRaw) !== ''
+            if ($liveInRequest && $parent !== null && $pid !== null && trim($parentBodyRaw) !== ''
                 && \App\Services\TranslationService::shouldTranslate($childSourceLang, $targetLang)) {
                 $aligned = \App\Services\TranslationService::getParentBodyForReplyTranslationContext(
                     $pid,
                     $parentBodyRaw,
                     $this->resolveResponseSourceLang($parent, $users),
                     $childSourceLang,
-                    $allowLiveTranslation
+                    true
                 );
                 if (trim($aligned) !== '') {
                     $parentForApi = $aligned;
@@ -2744,7 +2828,7 @@ class ThreadController extends Controller
                 $targetLang,
                 $parentForApi,
                 $childSourceLang,
-                $allowLiveTranslation
+                $liveInRequest
             );
             $response->display_body = $resolvedDisplayBody[$rid];
         }

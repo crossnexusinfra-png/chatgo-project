@@ -1276,3 +1276,60 @@ body {
     50% { transform: scale(1.02); }
     100% { transform: scale(1); }
 }
+
+/* 非同期翻訳キュー（原文表示＋ステータス） */
+.response-body-translation-pending {
+    position: relative;
+    margin: 0.35rem 0;
+}
+
+.response-body-translation-pending .response-body-pending-original {
+    opacity: 0.92;
+}
+
+.response-translation-overlay {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.response-translation-overlay--queued {
+    background: rgba(0, 0, 0, 0.05);
+    color: #555;
+}
+
+.response-translation-overlay--loading {
+    background: rgba(33, 150, 243, 0.12);
+    color: #1565c0;
+}
+
+.response-translation-overlay--loading .response-translation-status-msg::before {
+    content: '';
+    display: inline-block;
+    width: 0.85em;
+    height: 0.85em;
+    margin-right: 0.4em;
+    border: 2px solid rgba(21, 101, 192, 0.35);
+    border-top-color: #1565c0;
+    border-radius: 50%;
+    animation: thread-translate-spin 0.7s linear infinite;
+    vertical-align: -0.1em;
+}
+
+@keyframes thread-translate-spin {
+    to { transform: rotate(360deg); }
+}
+
+.response-translation-overlay--error {
+    background: rgba(211, 47, 47, 0.1);
+    color: #b71c1c;
+    border: 1px solid rgba(211, 47, 47, 0.25);
+}
+
+.response-translation-overlay .response-translation-status-msg div + div {
+    margin-top: 0.35rem;
+    font-size: 0.9em;
+    opacity: 0.95;
+}

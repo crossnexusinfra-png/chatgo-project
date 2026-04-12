@@ -102,7 +102,7 @@
         </div>
     </article>
 @else
-<article class="response-item {{ $isMyResponse ? 'my-response' : '' }} {{ $shouldBeHidden ? 'reported-response' : '' }}" data-search-text="{{ strtolower($response->body) }}" data-user="{{ strtolower($username) }}" data-response-id="{{ $response->response_id }}">
+<article class="response-item {{ $isMyResponse ? 'my-response' : '' }} {{ $shouldBeHidden ? 'reported-response' : '' }}" data-search-text="{{ strtolower($response->body) }}" data-user="{{ strtolower($username) }}" data-response-id="{{ $response->response_id }}"@if(!empty($response->translation_pending)) data-translation-pending="1"@endif>
     <!-- 返信元のリプライ簡略表示 -->
     @if($response->parentResponse)
         @php
@@ -276,7 +276,14 @@
         @endif
     </div>
     
-    @if(!empty($response->body))
+    @if(!empty($response->translation_pending))
+        <div class="response-body-translation-pending">
+            <div class="response-body response-body-pending-original">{!! linkify_urls($response->body) !!}</div>
+            <div class="response-translation-overlay response-translation-overlay--queued" role="status" aria-live="polite">
+                <span class="response-translation-status-msg">{{ \App\Services\LanguageService::trans('translation_queued', $lang) }}</span>
+            </div>
+        </div>
+    @elseif(!empty($response->body))
         @php
             $hasTranslatedBody = $response->display_body !== null
                 && trim((string) $response->display_body) !== trim((string) $response->body);
@@ -400,7 +407,7 @@
     <div class="response-actions">
         <div class="response-time" data-utc-datetime="{{ $response->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $response->created_at->format('Y-m-d H:i') }}</div>
         <div class="response-actions-buttons">
-            <button class="reply-btn" data-response-id="{{ $response->response_id }}" data-user-name="{{ $username }}" data-response-body="{{ $response->display_body ?? $response->body }}">
+            <button class="reply-btn" data-response-id="{{ $response->response_id }}" data-user-name="{{ $username }}" data-response-body="{{ !empty($response->translation_pending) ? $response->body : ($response->display_body ?? $response->body) }}">
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
             @auth

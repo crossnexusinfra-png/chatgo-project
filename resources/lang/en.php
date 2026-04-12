@@ -774,6 +774,10 @@ return [
     'thread_completed' => 'Completed',
     'show_original' => 'Original',
     'show_translation' => 'Translation',
+    'translation_queued' => 'Waiting to translate',
+    'translation_in_progress' => 'Translating…',
+    'translation_error_during' => 'An error occurred while translating.',
+    'translation_reload_later_hint' => 'Please wait a while, then reload the page.',
 
     // Coin Feature
     'coins' => 'Coins',

@@ -89,6 +89,8 @@ class CheckUserFrozen
                     // 閲覧専用の継続のため、警告/R18確認の了承は許可
                     'threads.acknowledge',
                     'responses.acknowledge',
+                    // ルーム閲覧時の非同期翻訳（表示のみ）
+                    'threads.responses.translate',
                     // 凍結中の異議申し立て（1凍結期間につき1回）
                     'freeze-appeals.store',
                     // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
@@ -120,6 +122,8 @@ class CheckUserFrozen
                         // 閲覧専用の継続のため、警告/R18確認の了承は許可
                         'threads.acknowledge',
                         'responses.acknowledge',
+                        // ルーム閲覧時の非同期翻訳（表示のみ）
+                        'threads.responses.translate',
                         // 凍結中の異議申し立て（1凍結期間につき1回）
                         'freeze-appeals.store',
                         // 一時凍結中は通知からのコイン受け取りを許可

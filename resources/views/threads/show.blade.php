@@ -452,7 +452,9 @@
             'watchAdRoute' => route('coins.watch-ad'),
             'responsesRoute' => route('api.threads.responses', $thread),
             'responsesNewRoute' => route('api.threads.responses.new', $thread),
-            'responsesSearchRoute' => route('api.threads.responses.search', $thread)
+            'responsesSearchRoute' => route('api.threads.responses.search', $thread),
+            'translateResponseUrlPrefix' => '/threads/'.$thread->thread_id.'/responses/',
+            'translateResponseUrlSuffix' => '/translate',
         ],
         'translations' => [
             'loading' => \App\Services\LanguageService::trans('loading', $lang),
@@ -497,7 +499,11 @@
             'responseLoadFailed' => \App\Services\LanguageService::trans('responseLoadFailed', $lang),
             'searchError' => \App\Services\LanguageService::trans('searchError', $lang),
             'show_original' => \App\Services\LanguageService::trans('show_original', $lang),
-            'show_translation' => \App\Services\LanguageService::trans('show_translation', $lang)
+            'show_translation' => \App\Services\LanguageService::trans('show_translation', $lang),
+            'translationQueued' => \App\Services\LanguageService::trans('translation_queued', $lang),
+            'translationInProgress' => \App\Services\LanguageService::trans('translation_in_progress', $lang),
+            'translationErrorDuring' => \App\Services\LanguageService::trans('translation_error_during', $lang),
+            'translationReloadHint' => \App\Services\LanguageService::trans('translation_reload_later_hint', $lang),
         ]
     ]) }}">
     <script nonce="{{ $csp_nonce ?? '' }}">

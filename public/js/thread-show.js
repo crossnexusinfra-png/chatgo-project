@@ -23,6 +23,13 @@
         'X-Requested-With': 'XMLHttpRequest'
     };
 
+    const postJsonHeaders = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken,
+    };
+
     // 無限スクロール用の変数
     let isLoadingResponses = false;
     let isLoadingForSearch = false;
@@ -59,6 +66,129 @@
         const responsesContainer = document.getElementById('responsesContainer');
         if (responsesContainer) {
             responsesContainer.scrollTop = responsesContainer.scrollHeight;
+        }
+    }
+
+    function pickNextPendingTranslationArticle() {
+        const items = Array.from(document.querySelectorAll('.response-item[data-translation-pending="1"]'))
+            .filter(function(el) {
+                const st = el.getAttribute('data-translation-state');
+                return st !== 'error' && st !== 'loading';
+            })
+            .sort(function(a, b) {
+                return parseInt(b.getAttribute('data-response-id'), 10) - parseInt(a.getAttribute('data-response-id'), 10);
+            });
+        return items[0] || null;
+    }
+
+    function applyDeferredTranslationHost(article, data) {
+        const host = article.querySelector('.response-body-translation-pending');
+        if (!host || !host.parentNode) return;
+
+        const showOrig = translations.show_original || '';
+        const rid = article.getAttribute('data-response-id') || '';
+
+        if (data.has_translation) {
+            const wrap = document.createElement('div');
+            wrap.className = 'response-body-wrapper';
+            wrap.innerHTML =
+                '<div class="response-body response-body-display response-body-visible">' + data.display_body_html + '</div>' +
+                '<div class="response-body response-body-original response-body-hidden">' + data.original_body_html + '</div>' +
+                '<button type="button" class="show-original-response-btn" data-response-id="' + escapeHtml(rid) + '" title="' + escapeHtml(showOrig) + '">' + escapeHtml(showOrig) + '</button>';
+            host.parentNode.replaceChild(wrap, host);
+        } else {
+            const div = document.createElement('div');
+            div.className = 'response-body';
+            div.innerHTML = data.display_body_html;
+            host.parentNode.replaceChild(div, host);
+        }
+    }
+
+    function setTranslationErrorOverlay(article, data) {
+        const overlay = article.querySelector('.response-translation-overlay');
+        const msg = overlay && overlay.querySelector('.response-translation-status-msg');
+        article.setAttribute('data-translation-state', 'error');
+        if (overlay) {
+            overlay.classList.remove('response-translation-overlay--queued', 'response-translation-overlay--loading');
+            overlay.classList.add('response-translation-overlay--error');
+        }
+        if (msg) {
+            msg.textContent = '';
+            const line1 = document.createElement('div');
+            line1.textContent = (data && data.error_message) || translations.translationErrorDuring || '';
+            const line2 = document.createElement('div');
+            line2.textContent = (data && data.error_reload_hint) || translations.translationReloadHint || '';
+            msg.appendChild(line1);
+            msg.appendChild(line2);
+        }
+    }
+
+    async function translateOneDeferred(article) {
+        const id = article.getAttribute('data-response-id');
+        if (!id) return;
+
+        const overlay = article.querySelector('.response-translation-overlay');
+        const msg = overlay && overlay.querySelector('.response-translation-status-msg');
+
+        article.setAttribute('data-translation-state', 'loading');
+        if (overlay) {
+            overlay.classList.remove('response-translation-overlay--queued', 'response-translation-overlay--error');
+            overlay.classList.add('response-translation-overlay--loading');
+        }
+        if (msg) {
+            msg.textContent = '';
+            msg.appendChild(document.createTextNode(translations.translationInProgress || ''));
+        }
+
+        const prefix = routes.translateResponseUrlPrefix || ('/threads/' + threadId + '/responses/');
+        const suffix = routes.translateResponseUrlSuffix || '/translate';
+        const url = prefix + id + suffix;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: postJsonHeaders,
+                credentials: 'same-origin',
+                body: '{}',
+            });
+            const data = await res.json().catch(function() { return {}; });
+
+            if (!res.ok || !data.success) {
+                setTranslationErrorOverlay(article, data);
+                return;
+            }
+
+            applyDeferredTranslationHost(article, data);
+            article.removeAttribute('data-translation-pending');
+            article.removeAttribute('data-translation-state');
+
+            const rb = article.querySelector('.reply-btn');
+            if (rb && data.display_body != null) {
+                rb.dataset.responseBody = data.display_body;
+            }
+        } catch (err) {
+            console.error('translateOneDeferred', err);
+            setTranslationErrorOverlay(article, {});
+        }
+    }
+
+    let deferredTranslationChain = Promise.resolve();
+
+    function enqueueDeferredTranslations() {
+        deferredTranslationChain = deferredTranslationChain
+            .then(function() {
+                return drainDeferredTranslationQueue();
+            })
+            .catch(function(e) {
+                console.error('enqueueDeferredTranslations', e);
+            });
+    }
+
+    async function drainDeferredTranslationQueue() {
+        while (true) {
+            const el = pickNextPendingTranslationArticle();
+            if (!el) break;
+            await translateOneDeferred(el);
         }
     }
 
@@ -137,6 +267,9 @@
 
                 if (typeof initReplyButtons === 'function') {
                     initReplyButtons();
+                }
+                if (typeof enqueueDeferredTranslations === 'function') {
+                    enqueueDeferredTranslations();
                 }
             } else {
                 console.log(translations.responseLoadEmpty || 'Response HTML is empty. Stopping load.');
@@ -1213,6 +1346,9 @@
                 if (typeof initReplyButtons === 'function') {
                     initReplyButtons();
                 }
+                if (typeof enqueueDeferredTranslations === 'function') {
+                    enqueueDeferredTranslations();
+                }
 
                 // 動画サムネイルの生成
                 const newVideoThumbnails = responsesContainer.querySelectorAll('.media-video-thumbnail');
@@ -1537,6 +1673,10 @@
 
         // リアルタイム更新のポーリングを開始
         startPolling();
+
+        if (typeof enqueueDeferredTranslations === 'function') {
+            enqueueDeferredTranslations();
+        }
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', runWhenReady);

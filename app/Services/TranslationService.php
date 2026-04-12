@@ -68,6 +68,21 @@ class TranslationService
             return '';
         }
 
+        $raw = self::translateStandaloneRaw($originalText, $targetLang);
+
+        return $raw !== null ? $raw : $originalText;
+    }
+
+    /**
+     * 単体翻訳の API 呼び出し。失敗時は null（原文フォールバックは呼び出し側）
+     */
+    private static function translateStandaloneRaw(string $originalText, string $targetLang): ?string
+    {
+        $originalText = trim($originalText);
+        if ($originalText === '') {
+            return '';
+        }
+
         $targetLanguage = self::langNameForPrompt($targetLang);
         $prompt = "Translate the following text into {target_language}.\n\n"
             . "Rules:\n"
@@ -90,14 +105,29 @@ class TranslationService
             $prompt
         );
 
-        $result = self::callChatCompletion($prompt);
-        return $result !== null ? $result : $originalText;
+        return self::callChatCompletion($prompt);
     }
 
     /**
      * 返信元あり：API翻訳依頼文（{target_language} / {parent_text} / {reply_text} を置換して送信）
      */
     public static function translateReply(string $replyText, string $parentText, string $targetLang): string
+    {
+        $replyText = trim($replyText);
+        if ($replyText === '') {
+            return '';
+        }
+        $parentText = trim($parentText);
+
+        $raw = self::translateReplyRaw($replyText, $parentText, $targetLang);
+
+        return $raw !== null ? $raw : $replyText;
+    }
+
+    /**
+     * 返信文脈付き翻訳の API 呼び出し。失敗時は null
+     */
+    private static function translateReplyRaw(string $replyText, string $parentText, string $targetLang): ?string
     {
         $replyText = trim($replyText);
         if ($replyText === '') {
@@ -131,8 +161,7 @@ class TranslationService
             $prompt
         );
 
-        $result = self::callChatCompletion($prompt);
-        return $result !== null ? $result : $replyText;
+        return self::callChatCompletion($prompt);
     }
 
     /**
@@ -337,6 +366,81 @@ class TranslationService
         );
 
         return $out;
+    }
+
+    /**
+     * チャット画面用：1 リプライをライブ翻訳しキャッシュする。API 失敗時は DB に保存せず success=false。
+     *
+     * @return array{success: bool, display_text: string, has_translation: bool, error: ?string}
+     */
+    public static function translateResponseBodyLiveForUi(
+        int $responseId,
+        string $body,
+        string $targetLang,
+        ?string $parentBodyForApi,
+        string $sourceLang
+    ): array {
+        $body = trim($body);
+        $targetLang = self::normalizeLang($targetLang);
+        $sourceLang = self::normalizeLang($sourceLang);
+        if ($body === '') {
+            return ['success' => true, 'display_text' => '', 'has_translation' => false, 'error' => null];
+        }
+
+        $cached = TranslationCache::where('response_id', $responseId)
+            ->where('target_lang', $targetLang)
+            ->first();
+
+        if ($cached && $cached->isValid()) {
+            $t = $cached->translated_text;
+            $has = trim((string) $t) !== '' && trim((string) $t) !== $body;
+
+            return ['success' => true, 'display_text' => $t, 'has_translation' => $has, 'error' => null];
+        }
+
+        if (! self::shouldTranslate($sourceLang, $targetLang)) {
+            return ['success' => true, 'display_text' => $body, 'has_translation' => false, 'error' => null];
+        }
+
+        $raw = $parentBodyForApi !== null && trim($parentBodyForApi) !== ''
+            ? self::translateReplyRaw($body, $parentBodyForApi, $targetLang)
+            : self::translateStandaloneRaw($body, $targetLang);
+
+        if ($raw === null) {
+            return [
+                'success' => false,
+                'display_text' => $body,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+            ];
+        }
+
+        $out = trim((string) $raw);
+        if ($out === '') {
+            return [
+                'success' => false,
+                'display_text' => $body,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+            ];
+        }
+
+        TranslationCache::updateOrCreate(
+            [
+                'response_id' => $responseId,
+                'target_lang' => $targetLang,
+            ],
+            [
+                'thread_id' => null,
+                'source_lang' => $sourceLang,
+                'translated_text' => $out,
+                'translated_at' => now(),
+            ]
+        );
+
+        $hasTranslation = $out !== $body;
+
+        return ['success' => true, 'display_text' => $out, 'has_translation' => $hasTranslation, 'error' => null];
     }
 
     /**

@@ -106,6 +106,9 @@ Route::get('/threads/{thread}/responses/new', [ThreadController::class, 'getNewR
 Route::get('/threads/{thread}/responses', [ThreadController::class, 'getResponses'])
     ->middleware('throttle:api')
     ->name('api.threads.responses');
+Route::post('/threads/{thread}/responses/{response}/translate', [ThreadController::class, 'translateResponse'])
+    ->middleware('throttle:api')
+    ->name('threads.responses.translate');
 
 // スレッドの個別表示
 Route::get('/threads/{thread}', [ThreadController::class, 'show'])->name('threads.show');

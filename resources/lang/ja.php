@@ -775,6 +775,10 @@ return [
     'thread_completed' => '完結済み',
     'show_original' => '原文',
     'show_translation' => '訳文',
+    'translation_queued' => '翻訳待ち',
+    'translation_in_progress' => '翻訳中…',
+    'translation_error_during' => '翻訳中にエラーが発生しました。',
+    'translation_reload_later_hint' => 'しばらく時間をおいてからページを再読み込みしてください。',
 
     // コイン機能
     'coins' => 'コイン',
