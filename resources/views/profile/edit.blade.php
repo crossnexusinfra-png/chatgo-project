@@ -262,13 +262,14 @@
                     <label for="language">{{ \App\Services\LanguageService::trans('language', $lang) }} <span class="required">*</span></label>
                     <select id="language" name="language" required>
                         @php
-                            $currentLanguage = old('language', $user->settings['language'] ?? 'JA');
-                            // 既存データとの互換性：小文字の場合は大文字に変換
-                            if ($currentLanguage === 'ja') $currentLanguage = 'JA';
-                            if ($currentLanguage === 'en') $currentLanguage = 'EN';
+                            $rawLang = old('language');
+                            if ($rawLang === null || $rawLang === '') {
+                                $rawLang = $user->language ?? 'JA';
+                            }
+                            $currentLanguage = \App\Services\TranslationService::normalizeLang((string) $rawLang);
                         @endphp
-                        <option value="JA" {{ $currentLanguage == 'JA' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_ja', $lang) }}</option>
-                        <option value="EN" {{ $currentLanguage == 'EN' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_en', $lang) }}</option>
+                        <option value="JA" {{ $currentLanguage === 'JA' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_ja', $lang) }}</option>
+                        <option value="EN" {{ $currentLanguage === 'EN' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_en', $lang) }}</option>
                     </select>
                     <p class="help-text">{{ \App\Services\LanguageService::trans('language_help', $lang) }}</p>
                 </div>

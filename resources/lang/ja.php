@@ -705,7 +705,7 @@ return [
     'report_cancel_button' => 'キャンセル',
     
     // 言語名
-    'language_ja' => '日本語',
+    'language_ja' => 'Japanese',
     'language_en' => 'English',
     
     // プロフィール画像
