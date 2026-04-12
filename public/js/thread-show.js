@@ -104,6 +104,15 @@
         }
     }
 
+    function showTranslationApiFailureAlert(data) {
+        const line1 = (data && data.error_message) || translations.translationErrorDuring || '';
+        const line2 = (data && data.error_reload_hint) || '';
+        const msg = line2 ? (line1 + '\n\n' + line2) : line1;
+        if (msg) {
+            alert(msg);
+        }
+    }
+
     function setTranslationErrorOverlay(article, data) {
         const overlay = article.querySelector('.response-translation-overlay');
         const msg = overlay && overlay.querySelector('.response-translation-status-msg');
@@ -116,10 +125,13 @@
             msg.textContent = '';
             const line1 = document.createElement('div');
             line1.textContent = (data && data.error_message) || translations.translationErrorDuring || '';
-            const line2 = document.createElement('div');
-            line2.textContent = (data && data.error_reload_hint) || translations.translationReloadHint || '';
             msg.appendChild(line1);
-            msg.appendChild(line2);
+            const hint = (data && data.error_reload_hint) || '';
+            if (hint) {
+                const line2 = document.createElement('div');
+                line2.textContent = hint;
+                msg.appendChild(line2);
+            }
         }
     }
 
@@ -153,8 +165,29 @@
             });
             const data = await res.json().catch(function() { return {}; });
 
+            // 翻訳ルートの throttle:api（スパム・過負荷防止）— コントローラ未到達のためクライアントでリトライ可能扱いの文言に揃える
+            if (res.status === 429) {
+                const retryPayload = {
+                    error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                    error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+                };
+                setTranslationErrorOverlay(article, retryPayload);
+                showTranslationApiFailureAlert(retryPayload);
+                return;
+            }
+
             if (!res.ok || !data.success) {
-                setTranslationErrorOverlay(article, data);
+                if (!data.error_message) {
+                    const fallbackPayload = {
+                        error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                        error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+                    };
+                    setTranslationErrorOverlay(article, fallbackPayload);
+                    showTranslationApiFailureAlert(fallbackPayload);
+                } else {
+                    setTranslationErrorOverlay(article, data);
+                    showTranslationApiFailureAlert(data);
+                }
                 return;
             }
 
@@ -168,14 +201,90 @@
             }
         } catch (err) {
             console.error('translateOneDeferred', err);
-            setTranslationErrorOverlay(article, {});
+            const fallbackPayload = {
+                error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+            };
+            setTranslationErrorOverlay(article, fallbackPayload);
+            showTranslationApiFailureAlert(fallbackPayload);
         }
     }
 
     let deferredTranslationChain = Promise.resolve();
 
+    async function translateThreadTitleIfPending() {
+        const h1 = document.querySelector('h1.thread-title[data-title-translation-pending="1"]');
+        if (!h1) {
+            return;
+        }
+        const url = routes.translateThreadTitleUrl;
+        if (!url) {
+            h1.removeAttribute('data-title-translation-pending');
+            return;
+        }
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: postJsonHeaders,
+                credentials: 'same-origin',
+                body: '{}',
+            });
+            const data = await res.json().catch(function() { return {}; });
+            h1.removeAttribute('data-title-translation-pending');
+
+            if (res.status === 429) {
+                showTranslationApiFailureAlert({
+                    error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                    error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+                });
+                return;
+            }
+
+            if (!res.ok || !data.success) {
+                if (!data.error_message) {
+                    showTranslationApiFailureAlert({
+                        error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                        error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+                    });
+                } else {
+                    showTranslationApiFailureAlert(data);
+                }
+                return;
+            }
+            const titleText = h1.querySelector('.thread-title-text');
+            if (titleText) {
+                titleText.textContent = data.display_title || '';
+            }
+            if (data.has_translation) {
+                const prev = h1.querySelector('.show-original-title-btn');
+                if (prev) {
+                    prev.remove();
+                }
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'show-original-title-btn';
+                btn.setAttribute('data-display-title', data.display_title || '');
+                btn.setAttribute('data-original-title', data.original_title || '');
+                const showOrig = translations.show_original || '';
+                btn.setAttribute('title', showOrig);
+                btn.textContent = showOrig;
+                h1.appendChild(btn);
+            }
+        } catch (err) {
+            console.error('translateThreadTitleIfPending', err);
+            h1.removeAttribute('data-title-translation-pending');
+            showTranslationApiFailureAlert({
+                error_message: translations.translationUiRetryLine1 || translations.translationErrorDuring || '',
+                error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
+            });
+        }
+    }
+
     function enqueueDeferredTranslations() {
         deferredTranslationChain = deferredTranslationChain
+            .then(function() {
+                return translateThreadTitleIfPending();
+            })
             .then(function() {
                 return drainDeferredTranslationQueue();
             })
@@ -1588,25 +1697,33 @@
             initReplyButtons();
         }
 
-        // ルーム名の原文/訳文トグル
-        const titleBtn = document.querySelector('.show-original-title-btn');
-        if (titleBtn) {
-            const titleText = document.querySelector('.thread-title-text');
+        // ルーム名の原文/訳文トグル（非同期翻訳後にボタンが挿入されるため委譲）
+        document.addEventListener('click', function(e) {
+            const titleBtn = e.target.closest('.show-original-title-btn');
+            if (!titleBtn) {
+                return;
+            }
+            const h1 = titleBtn.closest('h1.thread-title');
+            if (!h1) {
+                return;
+            }
+            const titleText = h1.querySelector('.thread-title-text');
             const displayTitle = titleBtn.getAttribute('data-display-title');
             const originalTitle = titleBtn.getAttribute('data-original-title');
-            if (titleText && displayTitle !== null && originalTitle !== null) {
-                titleBtn.addEventListener('click', function() {
-                    const showingOriginal = titleBtn.textContent === translations.show_translation;
-                    if (showingOriginal) {
-                        titleText.textContent = displayTitle;
-                        titleBtn.textContent = translations.show_original;
-                    } else {
-                        titleText.textContent = originalTitle;
-                        titleBtn.textContent = translations.show_translation;
-                    }
-                });
+            if (!titleText || displayTitle === null || originalTitle === null) {
+                return;
             }
-        }
+            const showOrig = translations.show_original || '';
+            const showTrans = translations.show_translation || '';
+            const showingOriginal = titleBtn.textContent === showTrans;
+            if (showingOriginal) {
+                titleText.textContent = displayTitle;
+                titleBtn.textContent = showOrig;
+            } else {
+                titleText.textContent = originalTitle;
+                titleBtn.textContent = showTrans;
+            }
+        });
 
         // リプライ本文の原文/訳文トグル（イベント委譲で動的追加リプライにも対応）
         document.addEventListener('click', function(e) {

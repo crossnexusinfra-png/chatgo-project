@@ -8,6 +8,35 @@ use Illuminate\Support\Facades\Cache;
 
 class SecureHttpClientService
 {
+    /** 送信前バリデーション: URL 不正（設定・実装の見直しが必要） */
+    public const FAILURE_INVALID_URL = 'invalid_url';
+
+    /** ドメインがホワイトリスト外（設定の問題） */
+    public const FAILURE_DOMAIN_NOT_ALLOWED = 'domain_not_allowed';
+
+    /** 解決先がプライベート IP（SSRF 防止。設定・環境の問題） */
+    public const FAILURE_PRIVATE_IP = 'private_ip';
+
+    /** HTTP メソッド非対応（実装ミス） */
+    public const FAILURE_METHOD_UNSUPPORTED = 'method_unsupported';
+
+    /** Content-Length または実ボディが上限超過（多くは一時的・サーバ異常もありうる） */
+    public const FAILURE_RESPONSE_TOO_LARGE = 'response_too_large';
+
+    /** 事前 DNS 解決でホスト名が解決できない（時間経過で改善しうる） */
+    public const FAILURE_DNS_UNRESOLVED = 'dns_unresolved';
+
+    /** 接続・DNS・TLS 等（例外メッセージで細分化。いずれも多くは時間経過で改善しうる） */
+    public const FAILURE_TRANSPORT = 'transport_error';
+
+    public const FAILURE_TRANSPORT_TIMEOUT = 'transport_timeout';
+
+    public const FAILURE_TRANSPORT_DNS = 'transport_dns';
+
+    public const FAILURE_TRANSPORT_TLS = 'transport_tls';
+
+    public const FAILURE_TRANSPORT_UNKNOWN = 'transport_unknown';
+
     /**
      * 許可されたドメインのホワイトリスト（デフォルト）
      */
@@ -81,7 +110,20 @@ class SecureHttpClientService
     public static function post(string $url, array $data = [], array $options = []): ?\Illuminate\Http\Client\Response
     {
         $options['data'] = $data;
-        return self::request('POST', $url, $options);
+
+        return self::requestWithOutcome('POST', $url, $options)['response'];
+    }
+
+    /**
+     * POST の結果と失敗理由コード（翻訳 UI 区分用）。成功時は failure_code は null。
+     *
+     * @return array{response: ?\Illuminate\Http\Client\Response, failure_code: ?string}
+     */
+    public static function postWithFailureCode(string $url, array $data = [], array $options = []): array
+    {
+        $options['data'] = $data;
+
+        return self::requestWithOutcome('POST', $url, $options);
     }
 
     /**
@@ -94,11 +136,20 @@ class SecureHttpClientService
      */
     private static function request(string $method, string $url, array $options = []): ?\Illuminate\Http\Client\Response
     {
+        return self::requestWithOutcome($method, $url, $options)['response'];
+    }
+
+    /**
+     * @return array{response: ?\Illuminate\Http\Client\Response, failure_code: ?string}
+     */
+    private static function requestWithOutcome(string $method, string $url, array $options = []): array
+    {
         try {
             // URLの検証
             if (!self::validateUrl($url)) {
                 Log::warning('SecureHttpClientService: Invalid URL', ['url' => $url]);
-                return null;
+
+                return ['response' => null, 'failure_code' => self::FAILURE_INVALID_URL];
             }
 
             // ドメインホワイトリストチェック
@@ -108,18 +159,28 @@ class SecureHttpClientService
                     'url' => $url,
                     'domain' => $domain,
                 ]);
-                return null;
+
+                return ['response' => null, 'failure_code' => self::FAILURE_DOMAIN_NOT_ALLOWED];
             }
 
             // DNS解決と内部IPチェック
             $ip = self::resolveDomainToIp($domain);
-            if ($ip && self::isPrivateIp($ip)) {
+            if ($ip === null || $ip === '') {
+                Log::warning('SecureHttpClientService: DNS resolution failed (pre-flight)', [
+                    'url' => $url,
+                    'domain' => $domain,
+                ]);
+
+                return ['response' => null, 'failure_code' => self::FAILURE_DNS_UNRESOLVED];
+            }
+            if (self::isPrivateIp($ip)) {
                 Log::warning('SecureHttpClientService: Private IP detected', [
                     'url' => $url,
                     'domain' => $domain,
                     'ip' => $ip,
                 ]);
-                return null;
+
+                return ['response' => null, 'failure_code' => self::FAILURE_PRIVATE_IP];
             }
 
             // オプションの設定
@@ -165,7 +226,7 @@ class SecureHttpClientService
             };
 
             if (!$response) {
-                return null;
+                return ['response' => null, 'failure_code' => self::FAILURE_METHOD_UNSUPPORTED];
             }
 
             // レスポンスサイズのチェック
@@ -176,7 +237,8 @@ class SecureHttpClientService
                     'content_length' => $contentLength,
                     'max_size' => $maxResponseSize,
                 ]);
-                return null;
+
+                return ['response' => null, 'failure_code' => self::FAILURE_RESPONSE_TOO_LARGE];
             }
 
             // 実際のレスポンスボディサイズをチェック
@@ -190,20 +252,54 @@ class SecureHttpClientService
                     'body_size' => $bodySize,
                     'max_size' => $maxResponseSize,
                 ]);
-                return null;
+
+                return ['response' => null, 'failure_code' => self::FAILURE_RESPONSE_TOO_LARGE];
             }
 
-            return $response;
+            return ['response' => $response, 'failure_code' => null];
 
         } catch (\Exception $e) {
+            $transportCode = self::classifyTransportException($e);
             Log::error('SecureHttpClientService: Request failed', [
                 'url' => $url,
                 'method' => $method,
                 'error' => $e->getMessage(),
+                'failure_code' => $transportCode,
                 'trace' => $e->getTraceAsString(),
             ]);
-            return null;
+
+            return ['response' => null, 'failure_code' => $transportCode];
         }
+    }
+
+    /**
+     * Guzzle / cURL 系の例外から transport 系 failure_code を推定する。
+     */
+    private static function classifyTransportException(\Throwable $e): string
+    {
+        $m = strtolower($e->getMessage());
+        if (str_contains($m, 'timed out')
+            || str_contains($m, 'timeout')
+            || str_contains($m, 'operation timed out')
+            || str_contains($m, 'curl error 28')) {
+            return self::FAILURE_TRANSPORT_TIMEOUT;
+        }
+        if (str_contains($m, 'could not resolve host')
+            || str_contains($m, 'could not resolve')
+            || str_contains($m, 'getaddrinfo')
+            || str_contains($m, 'name or service not known')
+            || str_contains($m, 'nodename nor servname')
+            || str_contains($m, 'temporary failure in name resolution')) {
+            return self::FAILURE_TRANSPORT_DNS;
+        }
+        if (str_contains($m, 'ssl')
+            || str_contains($m, 'certificate')
+            || str_contains($m, 'tls')
+            || str_contains($m, 'handshake')) {
+            return self::FAILURE_TRANSPORT_TLS;
+        }
+
+        return self::FAILURE_TRANSPORT_UNKNOWN;
     }
 
     /**
@@ -283,6 +379,11 @@ class SecureHttpClientService
      */
     private static function resolveDomainToIp(string $domain): ?string
     {
+        // ホストが既に IP リテラルのとき gethostbyname は不正確になり得るためそのまま返す
+        if (filter_var($domain, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6)) {
+            return $domain;
+        }
+
         // キャッシュをチェック（5分間キャッシュ）
         $cacheKey = 'dns_resolve_' . md5($domain);
         $cachedIp = Cache::get($cacheKey);
@@ -296,14 +397,6 @@ class SecureHttpClientService
         // 解決に失敗した場合（ドメイン名がそのまま返される）
         if ($ip === $domain) {
             return null;
-        }
-
-        // IPv6の場合は別の方法で解決
-        if (filter_var($domain, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            $records = dns_get_record($domain, DNS_AAAA);
-            if (!empty($records) && isset($records[0]['ipv6'])) {
-                $ip = $records[0]['ipv6'];
-            }
         }
 
         // キャッシュに保存（5分間）

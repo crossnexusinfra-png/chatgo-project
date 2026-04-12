@@ -779,6 +779,14 @@ return [
     'translation_in_progress' => '翻訳中…',
     'translation_error_during' => '翻訳中にエラーが発生しました。',
     'translation_reload_later_hint' => 'しばらく時間をおいてからページを再読み込みしてください。',
+    'translation_ui_admin_line1' => '翻訳を表示できませんでした。',
+    'translation_ui_admin_line2' => '管理者の対応が必要です。しばらくお待ちください。',
+    'translation_ui_retry_line1' => '翻訳でエラーが発生しました。',
+    'translation_ui_retry_line2' => 'しばらく時間をおいてから、再度お試しください。',
+    'translation_ui_fatal' => '翻訳できませんでした。',
+    'translation_ui_body_too_long' => '内容が長すぎるため翻訳できませんでした。',
+    'translation_ui_response_attempts_exhausted' => 'このリプライへの翻訳は試行回数の上限に達したため、これ以上リクエストできません。',
+    'translation_ui_thread_title_attempts_exhausted' => 'このルーム名への翻訳は試行回数の上限に達したため、これ以上リクエストできません。',
 
     // コイン機能
     'coins' => 'コイン',

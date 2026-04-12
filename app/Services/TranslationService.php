@@ -4,14 +4,13 @@ namespace App\Services;
 
 use App\Models\TranslationCache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * GPT-4o mini を用いたルーム名・リプライ本文の翻訳サービス
  *
  * - ルーム名: 投稿時に保存した translation_caches の行は無期限で利用（1年経過でも再翻訳しない）。
  * - リプライ: 保存から TranslationCache::REPLY_TRANSLATION_TTL_YEARS 年でキャッシュ無効となり、表示時に再翻訳し得る。
- * - ルーム名の表示: 一覧・スレッド詳細・通知等はキャッシュのみ（$allowLiveTranslation=false）。APIは主に作成時の他言語キャッシュと、リプライのライブ翻訳経路。
+ * - ルーム名の表示: 一覧・通知等はキャッシュのみ（$allowLiveTranslation=false）。スレッド詳細は未キャッシュ時にフロントが POST で translateThreadTitleLiveForUi（リプライの deferred 翻訳と同様の試行上限・失敗区分）。
  * - 元言語（source_lang）は「表示言語と比較して翻訳が必要か」の判別にのみ利用する。APIには送らない。
  * - 元言語は送信時の表示言語（threads.source_lang / responses.source_lang）を優先。送信者削除後も正しく判定可能。
  * - 返信の translateReply では、返信元・返信本文ともに「返信先（子）リプライの source_lang」のテキストを渡す（親が別言語なら getParentBodyForReplyTranslationContext で揃える）。
@@ -21,6 +20,27 @@ class TranslationService
 {
     private const API_URL = 'https://api.openai.com/v1/chat/completions';
     private const MODEL = 'gpt-4o-mini';
+
+    /** 送信 JSON がこれを超える場合はリプライ本文過大など利用者側要因としてリトライ不可扱い（目安。モデル上限より余裕を見る） */
+    private const OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES = 450000;
+
+    /**
+     * ライブ翻訳 API：同一リプライ（ユーザーまたは IP × response_id）あたり 1 日最大試行回数（滑動 24 時間）。
+     * 成功・失敗どちらも 1 回としてカウント。スパム用の分間制限はライブ翻訳 POST の throttle:api（60/分・ユーザー、100/分・IP）に任せる。
+     */
+    public const LIVE_TRANSLATE_PER_RESPONSE_MAX_ATTEMPTS = 5;
+
+    /** 上記のウィンドウ長（秒）。= 1 日相当の滑動窓。 */
+    public const LIVE_TRANSLATE_PER_RESPONSE_DECAY_SECONDS = 86400;
+
+    /** 翻訳不可（APIキー未設定・セキュア HTTP の設定不備など）。利用者には管理者対応待ちの文言を出す。 */
+    public const TRANSLATION_UI_TIER_ADMIN_REQUIRED = 'admin_required';
+
+    /** しばらく待てば再試行しうる（通信失敗・429/5xx・ルート throttle:api 等）。 */
+    public const TRANSLATION_UI_TIER_RETRY_LATER = 'retry_later';
+
+    /** 再試行しても同様の失敗が予想される（4xx 構造エラー・200 だが本文不正など）。 */
+    public const TRANSLATION_UI_TIER_NO_RETRY = 'no_retry';
 
     /**
      * APIキーを取得
@@ -68,6 +88,20 @@ class TranslationService
         $s = preg_replace('/\s+/u', ' ', $s);
 
         return $s;
+    }
+
+    /**
+     * 表示用テキストが原文と実質的に異なるか（原文表示トグル用）
+     */
+    public static function translatedDisplayDiffersFromOriginal(string $display, string $original): bool
+    {
+        $d = trim((string) $display);
+        $o = trim((string) $original);
+        if ($d === '' || $o === '') {
+            return false;
+        }
+
+        return self::normalizeTextForIdenticalCompare($d) !== self::normalizeTextForIdenticalCompare($o);
     }
 
     /**
@@ -152,9 +186,19 @@ class TranslationService
      */
     private static function translateStandaloneRaw(string $originalText, string $targetLang): ?string
     {
+        $meta = self::translateStandaloneRawWithMeta($originalText, $targetLang);
+
+        return $meta['content'];
+    }
+
+    /**
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     */
+    private static function translateStandaloneRawWithMeta(string $originalText, string $targetLang): array
+    {
         $originalText = trim($originalText);
         if ($originalText === '') {
-            return '';
+            return ['content' => '', 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
 
         $targetLanguage = self::langNameForPrompt($targetLang);
@@ -179,7 +223,16 @@ class TranslationService
             $prompt
         );
 
-        return self::callChatCompletion($prompt);
+        $r = self::callChatCompletionResult($prompt);
+        if ($r['content'] !== null) {
+            return ['content' => $r['content'], 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        return [
+            'content' => null,
+            'translation_ui_tier' => $r['translation_ui_tier'] ?? self::TRANSLATION_UI_TIER_NO_RETRY,
+            'translation_user_message_key' => $r['translation_user_message_key'] ?? null,
+        ];
     }
 
     /**
@@ -203,9 +256,19 @@ class TranslationService
      */
     private static function translateReplyRaw(string $replyText, string $parentText, string $targetLang): ?string
     {
+        $meta = self::translateReplyRawWithMeta($replyText, $parentText, $targetLang);
+
+        return $meta['content'];
+    }
+
+    /**
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     */
+    private static function translateReplyRawWithMeta(string $replyText, string $parentText, string $targetLang): array
+    {
         $replyText = trim($replyText);
         if ($replyText === '') {
-            return '';
+            return ['content' => '', 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
         $parentText = trim($parentText);
 
@@ -235,7 +298,16 @@ class TranslationService
             $prompt
         );
 
-        return self::callChatCompletion($prompt);
+        $r = self::callChatCompletionResult($prompt);
+        if ($r['content'] !== null) {
+            return ['content' => $r['content'], 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        return [
+            'content' => null,
+            'translation_ui_tier' => $r['translation_ui_tier'] ?? self::TRANSLATION_UI_TIER_NO_RETRY,
+            'translation_user_message_key' => $r['translation_user_message_key'] ?? null,
+        ];
     }
 
     /**
@@ -357,11 +429,18 @@ class TranslationService
             return $title;
         }
 
-        $translated = self::translateStandalone($title, $targetLang);
-        $out = trim((string) $translated);
-        if ($out === '') {
-            $out = $title;
+        $meta = self::translateStandaloneRawWithMeta($title, $targetLang);
+        $raw = $meta['content'];
+        if ($raw === null) {
+            return $title;
         }
+
+        $out = trim((string) $raw);
+        if ($out === '') {
+            return $title;
+        }
+
+        $out = self::resolveIdenticalApiTranslationOutput($title, $out, $sourceLang);
 
         TranslationCache::updateOrCreate(
             [
@@ -447,7 +526,7 @@ class TranslationService
     /**
      * チャット画面用：1 リプライをライブ翻訳しキャッシュする。API 失敗時は DB に保存せず success=false。
      *
-     * @return array{success: bool, display_text: string, has_translation: bool, error: ?string}
+     * @return array{success: bool, display_text: string, has_translation: bool, error: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
      */
     public static function translateResponseBodyLiveForUi(
         int $responseId,
@@ -460,7 +539,7 @@ class TranslationService
         $targetLang = self::normalizeLang($targetLang);
         $sourceLang = self::normalizeLang($sourceLang);
         if ($body === '') {
-            return ['success' => true, 'display_text' => '', 'has_translation' => false, 'error' => null];
+            return ['success' => true, 'display_text' => '', 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
 
         $cached = TranslationCache::where('response_id', $responseId)
@@ -472,16 +551,20 @@ class TranslationService
             $has = trim((string) $t) !== ''
                 && self::normalizeTextForIdenticalCompare((string) $t) !== self::normalizeTextForIdenticalCompare($body);
 
-            return ['success' => true, 'display_text' => $t, 'has_translation' => $has, 'error' => null];
+            return ['success' => true, 'display_text' => $t, 'has_translation' => $has, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
 
         if (! self::shouldTranslate($sourceLang, $targetLang)) {
-            return ['success' => true, 'display_text' => $body, 'has_translation' => false, 'error' => null];
+            return ['success' => true, 'display_text' => $body, 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
 
-        $raw = $parentBodyForApi !== null && trim($parentBodyForApi) !== ''
-            ? self::translateReplyRaw($body, $parentBodyForApi, $targetLang)
-            : self::translateStandaloneRaw($body, $targetLang);
+        $meta = $parentBodyForApi !== null && trim($parentBodyForApi) !== ''
+            ? self::translateReplyRawWithMeta($body, $parentBodyForApi, $targetLang)
+            : self::translateStandaloneRawWithMeta($body, $targetLang);
+
+        $raw = $meta['content'];
+        $failTier = $meta['translation_ui_tier'];
+        $userMsgKey = $meta['translation_user_message_key'] ?? null;
 
         if ($raw === null) {
             return [
@@ -489,6 +572,8 @@ class TranslationService
                 'display_text' => $body,
                 'has_translation' => false,
                 'error' => 'translation_api_failed',
+                'translation_ui_tier' => $failTier ?? self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => $userMsgKey,
             ];
         }
 
@@ -499,6 +584,8 @@ class TranslationService
                 'display_text' => $body,
                 'has_translation' => false,
                 'error' => 'translation_api_failed',
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => null,
             ];
         }
 
@@ -519,7 +606,106 @@ class TranslationService
 
         $hasTranslation = self::normalizeTextForIdenticalCompare($out) !== self::normalizeTextForIdenticalCompare($body);
 
-        return ['success' => true, 'display_text' => $out, 'has_translation' => $hasTranslation, 'error' => null];
+        return ['success' => true, 'display_text' => $out, 'has_translation' => $hasTranslation, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+    }
+
+    /**
+     * チャット画面用：ルーム名をライブ翻訳しキャッシュする。API 失敗時は DB に保存せず success=false。
+     *
+     * @return array{success: bool, display_text: string, has_translation: bool, error: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     */
+    public static function translateThreadTitleLiveForUi(
+        int $threadId,
+        string $title,
+        string $targetLang,
+        string $sourceLang
+    ): array {
+        $title = trim($title);
+        $targetLang = self::normalizeLang($targetLang);
+        $sourceLang = self::normalizeLang($sourceLang);
+        if ($title === '') {
+            return ['success' => true, 'display_text' => '', 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        $cached = TranslationCache::where('thread_id', $threadId)
+            ->whereNull('response_id')
+            ->where('target_lang', $targetLang)
+            ->first();
+
+        if ($cached && $cached->isValid()) {
+            $t = $cached->translated_text;
+            $has = self::translatedDisplayDiffersFromOriginal((string) $t, $title);
+
+            return ['success' => true, 'display_text' => $t, 'has_translation' => $has, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        if (! self::shouldTranslate($sourceLang, $targetLang)) {
+            return ['success' => true, 'display_text' => $title, 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        $meta = self::translateStandaloneRawWithMeta($title, $targetLang);
+        $raw = $meta['content'];
+        $failTier = $meta['translation_ui_tier'];
+        $userMsgKey = $meta['translation_user_message_key'] ?? null;
+
+        if ($raw === null) {
+            return [
+                'success' => false,
+                'display_text' => $title,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+                'translation_ui_tier' => $failTier ?? self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => $userMsgKey,
+            ];
+        }
+
+        $out = trim((string) $raw);
+        if ($out === '') {
+            return [
+                'success' => false,
+                'display_text' => $title,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => null,
+            ];
+        }
+
+        $out = self::resolveIdenticalApiTranslationOutput($title, $out, $sourceLang);
+
+        TranslationCache::updateOrCreate(
+            [
+                'thread_id' => $threadId,
+                'target_lang' => $targetLang,
+            ],
+            [
+                'response_id' => null,
+                'source_lang' => $sourceLang,
+                'translated_text' => $out,
+                'translated_at' => now(),
+            ]
+        );
+
+        $hasTranslation = self::normalizeTextForIdenticalCompare($out) !== self::normalizeTextForIdenticalCompare($title);
+
+        return ['success' => true, 'display_text' => $out, 'has_translation' => $hasTranslation, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+    }
+
+    /**
+     * 翻訳デバッグ用のセッションフラッシュを載せるか。
+     * fetch/AJAX ではレイアウトが描画されず、flash が次の無関係なフルページで遅延アラートになるため記録しない。
+     */
+    private static function shouldStoreTranslationDebugAlertInSession(): bool
+    {
+        $req = request();
+        if (! $req->hasSession()) {
+            return false;
+        }
+        if ($req->ajax() || $req->wantsJson() || $req->expectsJson()) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -527,26 +713,36 @@ class TranslationService
      */
     private static function callChatCompletion(string $userPrompt): ?string
     {
+        $r = self::callChatCompletionResult($userPrompt);
+
+        return $r['content'];
+    }
+
+    /** リプライ・親文脈が長すぎて送信 JSON が上限を超える場合の利用者向け文言キー */
+    public const TRANSLATION_USER_MESSAGE_BODY_TOO_LONG = 'translation_ui_body_too_long';
+
+    /** 同一リプライへの翻訳試行上限に達したときの利用者向け文言キー */
+    public const TRANSLATION_USER_MESSAGE_RESPONSE_ATTEMPTS_EXHAUSTED = 'translation_ui_response_attempts_exhausted';
+
+    /** 同一スレッドのルーム名への翻訳試行上限に達したときの利用者向け文言キー */
+    public const TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED = 'translation_ui_thread_title_attempts_exhausted';
+
+    /**
+     * OpenAI 呼び出し結果と、チャット画面用の利用者向けメッセージ区分を返す。
+     *
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     */
+    private static function callChatCompletionResult(string $userPrompt): array
+    {
         $apiKey = self::getApiKey();
         if ($apiKey === '') {
             Log::warning('TranslationService: OpenAI API key not configured');
-            return null;
-        }
 
-        // レート制限: 10req/min per user_id（TrustCloudflareProxies + TrustProxies により request()->ip() でクライアントIP取得）
-        $clientIp = request()->ip();
-        $uid = auth()->id();
-        $rateLimitKey = 'openai:' . ($uid ? "user:{$uid}" : "ip:{$clientIp}");
-        if (RateLimiter::tooManyAttempts($rateLimitKey, 10)) {
-            Log::warning('TranslationService: OpenAI rate limit exceeded (10/min)', ['key' => $rateLimitKey]);
-            return null;
-        }
-        RateLimiter::hit($rateLimitKey, 60);
-
-        if (config('app.external_api_debug_alert')) {
-            ExternalApiAlertService::record('翻訳API (OpenAI)');
-        } elseif (config('services.openai.translation_debug_alert')) {
-            session()->flash('translation_api_called', true);
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_ADMIN_REQUIRED,
+                'translation_user_message_key' => null,
+            ];
         }
 
         $payload = [
@@ -558,31 +754,118 @@ class TranslationService
             'max_tokens' => 2048,
         ];
 
-        $response = SecureHttpClientService::post(self::API_URL, $payload, [
+        $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($payloadJson === false) {
+            Log::warning('TranslationService: OpenAI payload json_encode failed');
+
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+            ];
+        }
+        if (strlen($payloadJson) > self::OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES) {
+            Log::warning('TranslationService: OpenAI payload exceeds size limit', ['bytes' => strlen($payloadJson)]);
+
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+            ];
+        }
+
+        if (self::shouldStoreTranslationDebugAlertInSession()) {
+            if (config('app.external_api_debug_alert')) {
+                ExternalApiAlertService::record('翻訳API (OpenAI)');
+            } elseif (config('services.openai.translation_debug_alert')) {
+                session()->flash('translation_api_called', true);
+            }
+        }
+
+        $outcome = SecureHttpClientService::postWithFailureCode(self::API_URL, $payload, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $apiKey,
                 'Content-Type' => 'application/json',
             ],
             'json' => true,
         ]);
+        $response = $outcome['response'];
+        $failureCode = $outcome['failure_code'];
 
-        if ($response === null || !$response->successful()) {
+        if ($response === null) {
+            Log::warning('TranslationService: OpenAI API request failed (no response)', ['failure_code' => $failureCode]);
+
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::mapSecureHttpFailureCodeToUiTier($failureCode),
+                'translation_user_message_key' => null,
+            ];
+        }
+
+        if (! $response->successful()) {
+            $status = $response->status();
             Log::warning('TranslationService: OpenAI API request failed', [
-                'status' => $response ? $response->status() : null,
-                'body' => $response ? $response->body() : null,
+                'status' => $status,
+                'body' => $response->body(),
             ]);
-            return null;
+            if ($status === 429 || $status === 408 || $status >= 500) {
+                return [
+                    'content' => null,
+                    'translation_ui_tier' => self::TRANSLATION_UI_TIER_RETRY_LATER,
+                    'translation_user_message_key' => null,
+                ];
+            }
+
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => null,
+            ];
         }
 
         $json = $response->json();
         $content = $json['choices'][0]['message']['content'] ?? null;
         if ($content === null || $content === '') {
             Log::warning('TranslationService: Empty or missing content in OpenAI response', ['json' => $json]);
-            return null;
+
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => null,
+            ];
         }
 
         $content = self::normalizeTranslatedContent(trim($content));
-        return $content !== '' ? $content : null;
+        if ($content === '') {
+            return [
+                'content' => null,
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => null,
+            ];
+        }
+
+        return ['content' => $content, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+    }
+
+    /**
+     * SecureHttpClientService::postWithFailureCode の failure_code をチャット UI 区分に写像する。
+     */
+    private static function mapSecureHttpFailureCodeToUiTier(?string $failureCode): string
+    {
+        return match ($failureCode) {
+            SecureHttpClientService::FAILURE_INVALID_URL,
+            SecureHttpClientService::FAILURE_DOMAIN_NOT_ALLOWED,
+            SecureHttpClientService::FAILURE_PRIVATE_IP,
+            SecureHttpClientService::FAILURE_METHOD_UNSUPPORTED => self::TRANSLATION_UI_TIER_ADMIN_REQUIRED,
+            SecureHttpClientService::FAILURE_DNS_UNRESOLVED,
+            SecureHttpClientService::FAILURE_RESPONSE_TOO_LARGE,
+            SecureHttpClientService::FAILURE_TRANSPORT,
+            SecureHttpClientService::FAILURE_TRANSPORT_TIMEOUT,
+            SecureHttpClientService::FAILURE_TRANSPORT_DNS,
+            SecureHttpClientService::FAILURE_TRANSPORT_TLS,
+            SecureHttpClientService::FAILURE_TRANSPORT_UNKNOWN => self::TRANSLATION_UI_TIER_RETRY_LATER,
+            default => self::TRANSLATION_UI_TIER_RETRY_LATER,
+        };
     }
 
     /**

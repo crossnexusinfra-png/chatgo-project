@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Intervention\Image\Laravel\Facades\Image;
 use App\Models\ThreadFavorite;
 use App\Models\ResidenceHistory;
@@ -1646,6 +1647,22 @@ class ThreadController extends Controller
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
         $childSourceLang = $this->resolveResponseSourceLang($response, $users);
 
+        $identity = auth()->id() ? 'user:' . auth()->id() : 'ip:' . $request->ip();
+        $perResponseKey = 'translate_live_same_response:' . $identity . ':response:' . $response->response_id;
+        if (RateLimiter::tooManyAttempts($perResponseKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_MAX_ATTEMPTS)) {
+            $result = [
+                'success' => false,
+                'display_text' => (string) ($response->body ?? ''),
+                'has_translation' => false,
+                'error' => 'translation_same_response_attempts_exhausted',
+                'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_RESPONSE_ATTEMPTS_EXHAUSTED,
+            ];
+
+            return response()->json($this->translateLiveResponseJsonPayload($response, $result, $lang));
+        }
+        RateLimiter::hit($perResponseKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_DECAY_SECONDS);
+
         $parent = $response->parentResponse;
         $parentForApi = null;
         if ($parent && trim((string) ($parent->body ?? '')) !== ''
@@ -1670,6 +1687,99 @@ class ThreadController extends Controller
             $childSourceLang
         );
 
+        return response()->json($this->translateLiveResponseJsonPayload($response, $result, $lang));
+    }
+
+    /**
+     * スレッドルーム名を翻訳してキャッシュする（チャット画面の非同期用。リプライ translate と同様の試行上限・失敗区分）
+     */
+    public function translateThreadTitle(Thread $thread, Request $request)
+    {
+        if (! $request->ajax() && ! $request->wantsJson()) {
+            abort(404);
+        }
+
+        $currentUser = auth()->user();
+        if (! Gate::forUser($currentUser)->allows('view', $thread)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return response()->json([
+                'success' => false,
+                'error' => 'forbidden',
+                'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
+            ], 403);
+        }
+
+        $thread->loadMissing('user');
+
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $targetLang = \App\Services\TranslationService::normalizeLang($lang);
+        $threadSourceLang = $thread->source_lang !== null && $thread->source_lang !== ''
+            ? \App\Services\TranslationService::normalizeLang($thread->source_lang)
+            : ($thread->user ? \App\Services\TranslationService::normalizeLang($thread->user->language ?? 'EN') : 'EN');
+
+        $identity = auth()->id() ? 'user:' . auth()->id() : 'ip:' . $request->ip();
+        $perThreadKey = 'translate_live_same_thread:' . $identity . ':thread:' . $thread->thread_id;
+        if (RateLimiter::tooManyAttempts($perThreadKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_MAX_ATTEMPTS)) {
+            $result = [
+                'success' => false,
+                'display_text' => $thread->getCleanTitle(),
+                'has_translation' => false,
+                'error' => 'translation_same_thread_title_attempts_exhausted',
+                'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED,
+            ];
+
+            return response()->json($this->translateLiveThreadTitleJsonPayload($thread, $result, $lang));
+        }
+        RateLimiter::hit($perThreadKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_DECAY_SECONDS);
+
+        $result = \App\Services\TranslationService::translateThreadTitleLiveForUi(
+            (int) $thread->thread_id,
+            $thread->getCleanTitle(),
+            $targetLang,
+            $threadSourceLang
+        );
+
+        return response()->json($this->translateLiveThreadTitleJsonPayload($thread, $result, $lang));
+    }
+
+    /**
+     * @param  array{success: bool, display_text: string, has_translation: bool, error?: ?string, translation_ui_tier?: ?string, translation_user_message_key?: ?string}  $result
+     */
+    private function mergeLiveTranslationFailureIntoPayload(array &$payload, array $result, string $lang): void
+    {
+        $payload['error'] = $result['error'] ?? 'translation_api_failed';
+        $tier = $result['translation_ui_tier'] ?? \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY;
+        $payload['translation_ui_tier'] = $tier;
+        $userMsgKey = $result['translation_user_message_key'] ?? null;
+        if ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_body_too_long', $lang);
+            $payload['error_reload_hint'] = '';
+        } elseif ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_RESPONSE_ATTEMPTS_EXHAUSTED) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_response_attempts_exhausted', $lang);
+            $payload['error_reload_hint'] = '';
+        } elseif ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_thread_title_attempts_exhausted', $lang);
+            $payload['error_reload_hint'] = '';
+        } elseif ($tier === \App\Services\TranslationService::TRANSLATION_UI_TIER_ADMIN_REQUIRED) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_admin_line1', $lang);
+            $payload['error_reload_hint'] = \App\Services\LanguageService::trans('translation_ui_admin_line2', $lang);
+        } elseif ($tier === \App\Services\TranslationService::TRANSLATION_UI_TIER_RETRY_LATER) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_retry_line1', $lang);
+            $payload['error_reload_hint'] = \App\Services\LanguageService::trans('translation_ui_retry_line2', $lang);
+        } else {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_fatal', $lang);
+            $payload['error_reload_hint'] = '';
+        }
+    }
+
+    /**
+     * @param  array{success: bool, display_text: string, has_translation: bool, error?: ?string, translation_ui_tier?: ?string, translation_user_message_key?: ?string}  $result
+     * @return array<string, mixed>
+     */
+    private function translateLiveResponseJsonPayload(Response $response, array $result, string $lang): array
+    {
         $displayText = $result['display_text'];
         $payload = [
             'success' => $result['success'],
@@ -1680,12 +1790,32 @@ class ThreadController extends Controller
         ];
 
         if (! $result['success']) {
-            $payload['error'] = $result['error'];
-            $payload['error_message'] = \App\Services\LanguageService::trans('translation_error_during', $lang);
-            $payload['error_reload_hint'] = \App\Services\LanguageService::trans('translation_reload_later_hint', $lang);
+            $this->mergeLiveTranslationFailureIntoPayload($payload, $result, $lang);
         }
 
-        return response()->json($payload);
+        return $payload;
+    }
+
+    /**
+     * @param  array{success: bool, display_text: string, has_translation: bool, error?: ?string, translation_ui_tier?: ?string, translation_user_message_key?: ?string}  $result
+     * @return array<string, mixed>
+     */
+    private function translateLiveThreadTitleJsonPayload(Thread $thread, array $result, string $lang): array
+    {
+        $displayText = $result['display_text'];
+        $payload = [
+            'success' => $result['success'],
+            'display_title' => $displayText,
+            'display_title_html' => \linkify_urls($displayText),
+            'has_translation' => $result['has_translation'],
+            'original_title' => $thread->getCleanTitle(),
+        ];
+
+        if (! $result['success']) {
+            $this->mergeLiveTranslationFailureIntoPayload($payload, $result, $lang);
+        }
+
+        return $payload;
     }
 
     /**
@@ -2694,8 +2824,8 @@ class ThreadController extends Controller
 
     /**
      * スレッド詳細表示用：表示ユーザーの言語に合わせてルーム名・リプライ本文を翻訳し display_title / display_body にセット
-     * ルーム名は一覧と同様、作成時に保存した translation_caches のみ参照（詳細表示では OpenAI を呼ばない）。
-     * リプライ本文はキャッシュ優先。未キャッシュ・失効時はライブ翻訳し得る。
+     * ルーム名はキャッシュ優先。未キャッシュで翻訳が必要なときは原文を表示し title_translation_pending を立てる（OpenAI はフロントの POST へ委譲）。
+     * リプライ本文はキャッシュ優先。未キャッシュ・失効時は deferred 時はフロント POST、それ以外はライブ翻訳し得る。
      *
      * @param Thread $thread
      * @param string $lang 表示言語（JA / EN）
@@ -2709,13 +2839,30 @@ class ThreadController extends Controller
         $threadSourceLang = $thread->source_lang !== null && $thread->source_lang !== ''
             ? \App\Services\TranslationService::normalizeLang($thread->source_lang)
             : ($thread->user ? \App\Services\TranslationService::normalizeLang($thread->user->language ?? 'EN') : 'EN');
-        $thread->display_title = \App\Services\TranslationService::getTranslatedThreadTitle(
-            $thread->thread_id,
-            $thread->getCleanTitle(),
-            $targetLang,
-            $threadSourceLang,
-            false
-        );
+
+        $cleanTitle = $thread->getCleanTitle();
+        $titleCache = \App\Models\TranslationCache::where('thread_id', $thread->thread_id)
+            ->whereNull('response_id')
+            ->where('target_lang', $targetLang)
+            ->first();
+
+        if ($titleCache && $titleCache->isValid()) {
+            $thread->display_title = $titleCache->translated_text;
+            $thread->title_translation_pending = false;
+        } elseif (! \App\Services\TranslationService::shouldTranslate($threadSourceLang, $targetLang)) {
+            $thread->display_title = $cleanTitle;
+            $thread->title_translation_pending = false;
+        } else {
+            $thread->display_title = $cleanTitle;
+            $thread->title_translation_pending = true;
+        }
+
+        $thread->title_show_original_btn = empty($thread->title_translation_pending)
+            && \App\Services\TranslationService::shouldTranslate($threadSourceLang, $targetLang)
+            && \App\Services\TranslationService::translatedDisplayDiffersFromOriginal(
+                (string) ($thread->display_title ?? ''),
+                $cleanTitle
+            );
 
         $responses = $thread->responses ?? collect();
         $users = $users ?? collect();

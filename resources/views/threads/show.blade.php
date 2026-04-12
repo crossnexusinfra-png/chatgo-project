@@ -39,9 +39,9 @@
             </div>
             
             <div class="thread-title-header-flex">
-                <h1 class="thread-title thread-title-main-flex">
+                <h1 class="thread-title thread-title-main-flex"@if(!empty($thread->title_translation_pending)) data-title-translation-pending="1"@endif>
                     <span class="thread-title-text">{{ $thread->display_title ?? $thread->getCleanTitle() }}</span>
-                    @if($thread->display_title)
+                    @if(!empty($thread->title_show_original_btn))
                     <button type="button" class="show-original-title-btn" data-display-title="{{ $thread->display_title }}" data-original-title="{{ $thread->getCleanTitle() }}" title="{{ \App\Services\LanguageService::trans('show_original', $lang) }}">{{ \App\Services\LanguageService::trans('show_original', $lang) }}</button>
                     @endif
                 </h1>
@@ -455,6 +455,7 @@
             'responsesSearchRoute' => route('api.threads.responses.search', $thread),
             'translateResponseUrlPrefix' => '/threads/'.$thread->thread_id.'/responses/',
             'translateResponseUrlSuffix' => '/translate',
+            'translateThreadTitleUrl' => route('threads.translate-title', $thread),
         ],
         'translations' => [
             'loading' => \App\Services\LanguageService::trans('loading', $lang),
@@ -504,6 +505,11 @@
             'translationInProgress' => \App\Services\LanguageService::trans('translation_in_progress', $lang),
             'translationErrorDuring' => \App\Services\LanguageService::trans('translation_error_during', $lang),
             'translationReloadHint' => \App\Services\LanguageService::trans('translation_reload_later_hint', $lang),
+            'translationUiAdminLine1' => \App\Services\LanguageService::trans('translation_ui_admin_line1', $lang),
+            'translationUiAdminLine2' => \App\Services\LanguageService::trans('translation_ui_admin_line2', $lang),
+            'translationUiRetryLine1' => \App\Services\LanguageService::trans('translation_ui_retry_line1', $lang),
+            'translationUiRetryLine2' => \App\Services\LanguageService::trans('translation_ui_retry_line2', $lang),
+            'translationUiFatal' => \App\Services\LanguageService::trans('translation_ui_fatal', $lang),
         ]
     ]) }}">
     <script nonce="{{ $csp_nonce ?? '' }}">

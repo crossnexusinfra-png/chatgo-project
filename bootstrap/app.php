@@ -113,11 +113,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 ];
             });
 
-            // OpenAI 翻訳（サービス内で手動チェック）: 10/分 user_id
+            // OpenAI 翻訳: ライブ翻訳 POST は throttle:api（60/分・ユーザー、100/分・IP）。将来 throttle:openai を付ける場合用に api と同じ二重枠
             RateLimiter::for('openai', function (Request $request) {
-                $uid = $request->user()?->id;
                 $ip = $request->ip();
-                return Limit::perMinute(10)->by($uid ? "user:{$uid}" : "ip:{$ip}");
+                $uid = $request->user()?->id;
+
+                return [
+                    Limit::perMinute(60)->by($uid ? "user:{$uid}" : "ip:{$ip}"),
+                    Limit::perMinute(100)->by("ip:{$ip}"),
+                ];
             });
 
             // 広告API（今後実装予定）: 5/分 user_id

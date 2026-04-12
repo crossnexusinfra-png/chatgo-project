@@ -778,6 +778,14 @@ return [
     'translation_in_progress' => 'Translating…',
     'translation_error_during' => 'An error occurred while translating.',
     'translation_reload_later_hint' => 'Please wait a while, then reload the page.',
+    'translation_ui_admin_line1' => 'Translation could not be shown.',
+    'translation_ui_admin_line2' => 'An administrator needs to resolve this. Please check back later.',
+    'translation_ui_retry_line1' => 'A translation error occurred.',
+    'translation_ui_retry_line2' => 'Please wait a while and try again.',
+    'translation_ui_fatal' => 'Translation was not available.',
+    'translation_ui_body_too_long' => 'This content is too long to translate.',
+    'translation_ui_response_attempts_exhausted' => 'Translation for this reply has reached the maximum number of attempts. No further requests can be made.',
+    'translation_ui_thread_title_attempts_exhausted' => 'Translation for this thread title has reached the maximum number of attempts. No further requests can be made.',
 
     // Coin Feature
     'coins' => 'Coins',
