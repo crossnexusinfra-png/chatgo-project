@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\RateLimiter;
  * - 元言語（source_lang）は「表示言語と比較して翻訳が必要か」の判別にのみ利用する。APIには送らない。
  * - 元言語は送信時の表示言語（threads.source_lang / responses.source_lang）を優先。送信者削除後も正しく判定可能。
  * - 返信の translateReply では、返信元・返信本文ともに「返信先（子）リプライの source_lang」のテキストを渡す（親が別言語なら getParentBodyForReplyTranslationContext で揃える）。
+ * - API が trim・空白正規化後に原文と同一文字列を返した場合: 元言語 EN はそのまま、JA は ext-intl の Transliterator でラテン表記に差し替え（未導入・失敗時は同一のまま保存）。
  */
 class TranslationService
 {
@@ -56,6 +57,79 @@ class TranslationService
     {
         $lang = strtoupper(trim($lang));
         return in_array($lang, ['JA', 'EN'], true) ? $lang : 'EN';
+    }
+
+    /**
+     * API 戻り値と原文が「同一」とみなす比較用（trim・連続空白の圧縮）
+     */
+    private static function normalizeTextForIdenticalCompare(string $s): string
+    {
+        $s = trim($s);
+        $s = preg_replace('/\s+/u', ' ', $s);
+
+        return $s;
+    }
+
+    /**
+     * 翻訳 API が正規化後も原文と同じ文字列を返したときの表示用フォールバック。
+     * - 元言語 EN: そのまま
+     * - 元言語 JA: ICU でラテン表記（ローマ字系）へ（失敗時は $out のまま）
+     */
+    private static function resolveIdenticalApiTranslationOutput(string $body, string $out, string $sourceLang): string
+    {
+        $sourceLang = self::normalizeLang($sourceLang);
+        if (self::normalizeTextForIdenticalCompare($out) !== self::normalizeTextForIdenticalCompare($body)) {
+            return $out;
+        }
+        if ($sourceLang === 'EN') {
+            return $out;
+        }
+        if ($sourceLang === 'JA') {
+            $latin = self::japaneseBodyToLatinRomaji($body);
+
+            return trim($latin) !== '' ? trim($latin) : $out;
+        }
+
+        return $out;
+    }
+
+    /**
+     * 日本語本文をラテン文字表記へ（intl Transliterator。未利用可能時は原文を返す）
+     */
+    private static function japaneseBodyToLatinRomaji(string $text): string
+    {
+        if (trim($text) === '') {
+            return $text;
+        }
+        if (! class_exists(\Transliterator::class)) {
+            Log::debug('TranslationService: ext-intl Transliterator not available; romaji fallback skipped');
+
+            return $text;
+        }
+
+        $rules = [
+            'Japanese-Latin; Latin-ASCII',
+            'Any-Latin; Latin-ASCII',
+        ];
+
+        foreach ($rules as $id) {
+            $tr = \Transliterator::create($id);
+            if ($tr === null) {
+                continue;
+            }
+            try {
+                $converted = $tr->transliterate($text);
+            } catch (\Throwable $e) {
+                Log::debug('TranslationService: transliteration failed', ['id' => $id, 'message' => $e->getMessage()]);
+
+                continue;
+            }
+            if (is_string($converted) && trim($converted) !== '') {
+                return trim($converted);
+            }
+        }
+
+        return $text;
     }
 
     /**
@@ -350,6 +424,8 @@ class TranslationService
             $out = $body;
         }
 
+        $out = self::resolveIdenticalApiTranslationOutput($body, $out, $sourceLang);
+
         // 原文と同一でも保存する。API 失敗・レート制限で原文フォールバックした場合に未保存だと
         // isValid なキャッシュが永遠に無く、毎リクエスト API が走り続ける。
         TranslationCache::updateOrCreate(
@@ -393,7 +469,8 @@ class TranslationService
 
         if ($cached && $cached->isValid()) {
             $t = $cached->translated_text;
-            $has = trim((string) $t) !== '' && trim((string) $t) !== $body;
+            $has = trim((string) $t) !== ''
+                && self::normalizeTextForIdenticalCompare((string) $t) !== self::normalizeTextForIdenticalCompare($body);
 
             return ['success' => true, 'display_text' => $t, 'has_translation' => $has, 'error' => null];
         }
@@ -425,6 +502,8 @@ class TranslationService
             ];
         }
 
+        $out = self::resolveIdenticalApiTranslationOutput($body, $out, $sourceLang);
+
         TranslationCache::updateOrCreate(
             [
                 'response_id' => $responseId,
@@ -438,7 +517,7 @@ class TranslationService
             ]
         );
 
-        $hasTranslation = $out !== $body;
+        $hasTranslation = self::normalizeTextForIdenticalCompare($out) !== self::normalizeTextForIdenticalCompare($body);
 
         return ['success' => true, 'display_text' => $out, 'has_translation' => $hasTranslation, 'error' => null];
     }
