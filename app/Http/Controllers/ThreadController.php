@@ -1632,6 +1632,8 @@ class ThreadController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'forbidden',
+                'translation_ui_tier' => 'http_forbidden',
+                'translation_user_message_key' => null,
                 'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
             ], 403);
         }
@@ -1706,6 +1708,8 @@ class ThreadController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'forbidden',
+                'translation_ui_tier' => 'http_forbidden',
+                'translation_user_message_key' => null,
                 'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
             ], 403);
         }
@@ -1753,6 +1757,7 @@ class ThreadController extends Controller
         $tier = $result['translation_ui_tier'] ?? \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY;
         $payload['translation_ui_tier'] = $tier;
         $userMsgKey = $result['translation_user_message_key'] ?? null;
+        $payload['translation_user_message_key'] = $userMsgKey;
         if ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG) {
             $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_body_too_long', $lang);
             $payload['error_reload_hint'] = '';
