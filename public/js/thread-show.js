@@ -117,14 +117,33 @@
         const titleJa = kind === 'title' ? 'ルーム名の翻訳' : 'リプライ本文の翻訳';
         const lines = [];
         lines.push('【' + titleJa + '】翻訳APIでエラーが発生しました。');
-        lines.push('（テスト用：原因の特定用の詳細です）');
+        lines.push('（テスト用：どの経路で失敗したかの詳細です）');
         lines.push('');
-        if (res != null && typeof res.status === 'number') {
-            lines.push('HTTPステータス: ' + res.status);
+        lines.push('■ サーバーが付与した原因（日本語・要約）');
+        if (data.translation_debug_detail_ja) {
+            lines.push(String(data.translation_debug_detail_ja));
         } else {
-            lines.push('HTTPステータス: （不明・レスポンス未取得の可能性）');
+            lines.push('（translation_debug_detail_ja なし）');
         }
-        lines.push('エラーコード（error）: ' + (data.error != null && data.error !== '' ? String(data.error) : '（レスポンスに含まれず）'));
+        lines.push('');
+        lines.push('■ 内部コード（translation_debug_code）');
+        lines.push(data.translation_debug_code != null && data.translation_debug_code !== '' ? String(data.translation_debug_code) : '（なし）');
+        lines.push('');
+        lines.push('■ OpenAI が返した HTTP ステータス（到達した場合のみ）');
+        lines.push(data.openai_http_status != null ? String(data.openai_http_status) : '（なし・OpenAI 未到達または未取得）');
+        lines.push('');
+        lines.push('■ SecureHttp 失敗コード（OpenAI への送信前・送信中）');
+        lines.push(data.secure_http_failure_code != null && data.secure_http_failure_code !== '' ? String(data.secure_http_failure_code) : '（なし）');
+        lines.push('');
+        lines.push('■ この fetch の HTTP ステータス（あなたのサイトのルート）');
+        if (res != null && typeof res.status === 'number') {
+            lines.push(String(res.status));
+        } else {
+            lines.push('（不明・レスポンス未取得）');
+        }
+        lines.push('');
+        lines.push('■ その他フィールド');
+        lines.push('エラーコード（error）: ' + (data.error != null && data.error !== '' ? String(data.error) : '（なし）'));
         lines.push('表示区分（translation_ui_tier）: ' + (data.translation_ui_tier != null && data.translation_ui_tier !== '' ? String(data.translation_ui_tier) : '（なし）'));
         lines.push('メッセージキー（translation_user_message_key）: ' + (data.translation_user_message_key != null && data.translation_user_message_key !== '' ? String(data.translation_user_message_key) : '（なし）'));
         lines.push('');
@@ -210,6 +229,10 @@
                     error: 'http_429_too_many_requests',
                     translation_ui_tier: 'retry_later',
                     translation_user_message_key: null,
+                    translation_debug_code: 'laravel_route_throttle_429',
+                    translation_debug_detail_ja: 'Laravel のルート middleware（throttle:api）が HTTP 429 を返しました。翻訳コントローラや OpenAI に到達していない可能性が高いです。',
+                    openai_http_status: null,
+                    secure_http_failure_code: null,
                     error_message: 'HTTP 429：短時間のアクセスが多すぎます（ルートの throttle:api などによる制限の可能性があります）。',
                     error_reload_hint: '数十秒〜数分待ってからページを再読み込みするか、再度お試しください。',
                 }, res, 'reply');
@@ -224,6 +247,8 @@
                     };
                     setTranslationErrorOverlay(article, overlayPayload);
                     showTranslationApiFailureAlert(Object.assign({
+                        translation_debug_code: 'response_missing_error_message',
+                        translation_debug_detail_ja: 'レスポンスに error_message がありません。JSON でない本文・プロキシエラー・別ルートの応答の可能性があります。',
                         error_message: 'サーバーは失敗を返しましたが、利用者向けメッセージ（error_message）がありませんでした。',
                         error_reload_hint: 'HTTPステータス・error・translation_ui_tier を確認してください。',
                     }, data), res, 'reply');
@@ -253,6 +278,10 @@
                 error: 'client_fetch_or_script_error',
                 translation_ui_tier: 'client_exception',
                 translation_user_message_key: null,
+                translation_debug_code: 'client_fetch_exception',
+                translation_debug_detail_ja: 'ブラウザで fetch を実行した際に例外がスローされました（ネットワーク切断・CORS・その他）。サーバーまたは OpenAI の応答は取得できていない可能性があります。',
+                openai_http_status: null,
+                secure_http_failure_code: null,
                 error_message: 'ブラウザ側で fetch の実行中に例外が発生しました。',
                 error_reload_hint: 'ネットワーク切断やCORS、スクリプトエラーの可能性があります。コンソールのログを確認してください。',
             }, null, 'reply', err && err.message ? err.message : String(err));
@@ -286,6 +315,10 @@
                     error: 'http_429_too_many_requests',
                     translation_ui_tier: 'retry_later',
                     translation_user_message_key: null,
+                    translation_debug_code: 'laravel_route_throttle_429',
+                    translation_debug_detail_ja: 'Laravel のルート middleware（throttle:api）が HTTP 429 を返しました。翻訳コントローラや OpenAI に到達していない可能性が高いです。',
+                    openai_http_status: null,
+                    secure_http_failure_code: null,
                     error_message: 'HTTP 429：短時間のアクセスが多すぎます（ルートの throttle:api などによる制限の可能性があります）。',
                     error_reload_hint: '数十秒〜数分待ってからページを再読み込みするか、再度お試しください。',
                 }, res, 'title');
@@ -295,6 +328,8 @@
             if (!res.ok || !data.success) {
                 if (!data.error_message) {
                     showTranslationApiFailureAlert(Object.assign({
+                        translation_debug_code: 'response_missing_error_message',
+                        translation_debug_detail_ja: 'レスポンスに error_message がありません。JSON でない本文・プロキシエラー・別ルートの応答の可能性があります。',
                         error_message: 'サーバーは失敗を返しましたが、利用者向けメッセージ（error_message）がありませんでした。',
                         error_reload_hint: 'HTTPステータス・error・translation_ui_tier を確認してください。',
                     }, data), res, 'title');
@@ -329,6 +364,10 @@
                 error: 'client_fetch_or_script_error',
                 translation_ui_tier: 'client_exception',
                 translation_user_message_key: null,
+                translation_debug_code: 'client_fetch_exception',
+                translation_debug_detail_ja: 'ブラウザで fetch を実行した際に例外がスローされました（ネットワーク切断・CORS・その他）。サーバーまたは OpenAI の応答は取得できていない可能性があります。',
+                openai_http_status: null,
+                secure_http_failure_code: null,
                 error_message: 'ブラウザ側で fetch の実行中に例外が発生しました。',
                 error_reload_hint: 'ネットワーク切断やCORS、スクリプトエラーの可能性があります。コンソールのログを確認してください。',
             }, null, 'title', err && err.message ? err.message : String(err));

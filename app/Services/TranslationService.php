@@ -192,13 +192,21 @@ class TranslationService
     }
 
     /**
-     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string, translation_debug_code: ?string, translation_debug_detail_ja: ?string, openai_http_status: ?int, secure_http_failure_code: ?string}
      */
     private static function translateStandaloneRawWithMeta(string $originalText, string $targetLang): array
     {
         $originalText = trim($originalText);
         if ($originalText === '') {
-            return ['content' => '', 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+            return [
+                'content' => '',
+                'translation_ui_tier' => null,
+                'translation_user_message_key' => null,
+                'translation_debug_code' => null,
+                'translation_debug_detail_ja' => null,
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
         }
 
         $targetLanguage = self::langNameForPrompt($targetLang);
@@ -225,13 +233,25 @@ class TranslationService
 
         $r = self::callChatCompletionResult($prompt);
         if ($r['content'] !== null) {
-            return ['content' => $r['content'], 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+            return [
+                'content' => $r['content'],
+                'translation_ui_tier' => null,
+                'translation_user_message_key' => null,
+                'translation_debug_code' => null,
+                'translation_debug_detail_ja' => null,
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
         }
 
         return [
             'content' => null,
             'translation_ui_tier' => $r['translation_ui_tier'] ?? self::TRANSLATION_UI_TIER_NO_RETRY,
             'translation_user_message_key' => $r['translation_user_message_key'] ?? null,
+            'translation_debug_code' => $r['translation_debug_code'] ?? 'openai_unknown',
+            'translation_debug_detail_ja' => $r['translation_debug_detail_ja'] ?? 'OpenAI 呼び出しが失敗しました（詳細コードが付与されていません）。',
+            'openai_http_status' => $r['openai_http_status'] ?? null,
+            'secure_http_failure_code' => $r['secure_http_failure_code'] ?? null,
         ];
     }
 
@@ -262,13 +282,21 @@ class TranslationService
     }
 
     /**
-     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string, translation_debug_code: ?string, translation_debug_detail_ja: ?string, openai_http_status: ?int, secure_http_failure_code: ?string}
      */
     private static function translateReplyRawWithMeta(string $replyText, string $parentText, string $targetLang): array
     {
         $replyText = trim($replyText);
         if ($replyText === '') {
-            return ['content' => '', 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+            return [
+                'content' => '',
+                'translation_ui_tier' => null,
+                'translation_user_message_key' => null,
+                'translation_debug_code' => null,
+                'translation_debug_detail_ja' => null,
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
         }
         $parentText = trim($parentText);
 
@@ -300,13 +328,25 @@ class TranslationService
 
         $r = self::callChatCompletionResult($prompt);
         if ($r['content'] !== null) {
-            return ['content' => $r['content'], 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+            return [
+                'content' => $r['content'],
+                'translation_ui_tier' => null,
+                'translation_user_message_key' => null,
+                'translation_debug_code' => null,
+                'translation_debug_detail_ja' => null,
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
         }
 
         return [
             'content' => null,
             'translation_ui_tier' => $r['translation_ui_tier'] ?? self::TRANSLATION_UI_TIER_NO_RETRY,
             'translation_user_message_key' => $r['translation_user_message_key'] ?? null,
+            'translation_debug_code' => $r['translation_debug_code'] ?? 'openai_unknown',
+            'translation_debug_detail_ja' => $r['translation_debug_detail_ja'] ?? 'OpenAI 呼び出しが失敗しました（詳細コードが付与されていません）。',
+            'openai_http_status' => $r['openai_http_status'] ?? null,
+            'secure_http_failure_code' => $r['secure_http_failure_code'] ?? null,
         ];
     }
 
@@ -574,6 +614,10 @@ class TranslationService
                 'error' => 'translation_api_failed',
                 'translation_ui_tier' => $failTier ?? self::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => $userMsgKey,
+                'translation_debug_code' => $meta['translation_debug_code'] ?? 'translation_unknown',
+                'translation_debug_detail_ja' => $meta['translation_debug_detail_ja'] ?? 'OpenAI 経路で利用できる翻訳テキストを取得できませんでした。',
+                'openai_http_status' => $meta['openai_http_status'] ?? null,
+                'secure_http_failure_code' => $meta['secure_http_failure_code'] ?? null,
             ];
         }
 
@@ -586,6 +630,10 @@ class TranslationService
                 'error' => 'translation_api_failed',
                 'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => null,
+                'translation_debug_code' => 'openai_raw_whitespace_only',
+                'translation_debug_detail_ja' => 'API から返った文字列を trim した結果が空でした（ホワイトスペースのみ等）。',
+                'openai_http_status' => $meta['openai_http_status'] ?? null,
+                'secure_http_failure_code' => $meta['secure_http_failure_code'] ?? null,
             ];
         }
 
@@ -656,6 +704,10 @@ class TranslationService
                 'error' => 'translation_api_failed',
                 'translation_ui_tier' => $failTier ?? self::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => $userMsgKey,
+                'translation_debug_code' => $meta['translation_debug_code'] ?? 'translation_unknown',
+                'translation_debug_detail_ja' => $meta['translation_debug_detail_ja'] ?? 'OpenAI 経路で利用できる翻訳テキストを取得できませんでした。',
+                'openai_http_status' => $meta['openai_http_status'] ?? null,
+                'secure_http_failure_code' => $meta['secure_http_failure_code'] ?? null,
             ];
         }
 
@@ -668,6 +720,10 @@ class TranslationService
                 'error' => 'translation_api_failed',
                 'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => null,
+                'translation_debug_code' => 'openai_raw_whitespace_only',
+                'translation_debug_detail_ja' => 'API から返った文字列を trim した結果が空でした（ホワイトスペースのみ等）。',
+                'openai_http_status' => $meta['openai_http_status'] ?? null,
+                'secure_http_failure_code' => $meta['secure_http_failure_code'] ?? null,
             ];
         }
 
@@ -728,21 +784,79 @@ class TranslationService
     public const TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED = 'translation_ui_thread_title_attempts_exhausted';
 
     /**
+     * OpenAI 呼び出し失敗時のデバッグ用1件を組み立てる（アラート・JSON 用）
+     *
+     * @return array{content: null, translation_ui_tier: string, translation_user_message_key: ?string, translation_debug_code: string, translation_debug_detail_ja: string, openai_http_status: ?int, secure_http_failure_code: ?string}
+     */
+    private static function translationOpenAiFailure(
+        string $tier,
+        ?string $userMsgKey,
+        string $debugCode,
+        string $detailJa,
+        ?int $openaiHttpStatus = null,
+        ?string $secureHttpFailureCode = null
+    ): array {
+        return [
+            'content' => null,
+            'translation_ui_tier' => $tier,
+            'translation_user_message_key' => $userMsgKey,
+            'translation_debug_code' => $debugCode,
+            'translation_debug_detail_ja' => $detailJa,
+            'openai_http_status' => $openaiHttpStatus,
+            'secure_http_failure_code' => $secureHttpFailureCode,
+        ];
+    }
+
+    /**
+     * SecureHttpClient の failure_code を日本語1行で説明（テスト用アラート向け）
+     */
+    private static function secureHttpFailureDetailJa(?string $failureCode): string
+    {
+        return match ($failureCode) {
+            SecureHttpClientService::FAILURE_INVALID_URL => '送信前検証: URL が不正です（invalid_url）。設定を確認してください。',
+            SecureHttpClientService::FAILURE_DOMAIN_NOT_ALLOWED => '送信前検証: ドメインがホワイトリスト外です（domain_not_allowed）。api.openai.com が許可されているか確認してください。',
+            SecureHttpClientService::FAILURE_PRIVATE_IP => '送信前検証: 解決先がプライベート IP です（private_ip）。SSRF 防止のためブロックされています。',
+            SecureHttpClientService::FAILURE_METHOD_UNSUPPORTED => 'HTTP メソッドが非対応です（method_unsupported）。実装の見直しが必要です。',
+            SecureHttpClientService::FAILURE_RESPONSE_TOO_LARGE => 'レスポンスボディが上限を超えました（response_too_large）。',
+            SecureHttpClientService::FAILURE_DNS_UNRESOLVED => '事前 DNS でホスト名を解決できませんでした（dns_unresolved）。',
+            SecureHttpClientService::FAILURE_TRANSPORT => '接続・送受信の途中でエラーになりました（transport_error）。',
+            SecureHttpClientService::FAILURE_TRANSPORT_TIMEOUT => '接続または読み取りがタイムアウトしました（transport_timeout）。',
+            SecureHttpClientService::FAILURE_TRANSPORT_DNS => '接続時の DNS 解決に失敗しました（transport_dns）。',
+            SecureHttpClientService::FAILURE_TRANSPORT_TLS => 'TLS ハンドシェイク等で失敗しました（transport_tls）。',
+            SecureHttpClientService::FAILURE_TRANSPORT_UNKNOWN => '通信層で不明なエラーが発生しました（transport_unknown）。',
+            default => 'OpenAI へ HTTP 応答が返る前に失敗しました（SecureHttp failure_code: ' . ($failureCode ?? 'null') . '）。',
+        };
+    }
+
+    /**
      * OpenAI 呼び出し結果と、チャット画面用の利用者向けメッセージ区分を返す。
      *
-     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string}
+     * @return array{content: ?string, translation_ui_tier: ?string, translation_user_message_key: ?string, translation_debug_code: ?string, translation_debug_detail_ja: ?string, openai_http_status: ?int, secure_http_failure_code: ?string}
      */
     private static function callChatCompletionResult(string $userPrompt): array
     {
+        $nullOk = [
+            'content' => null,
+            'translation_ui_tier' => null,
+            'translation_user_message_key' => null,
+            'translation_debug_code' => null,
+            'translation_debug_detail_ja' => null,
+            'openai_http_status' => null,
+            'secure_http_failure_code' => null,
+        ];
+
         $apiKey = self::getApiKey();
         if ($apiKey === '') {
             Log::warning('TranslationService: OpenAI API key not configured');
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_ADMIN_REQUIRED,
-                'translation_user_message_key' => null,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_ADMIN_REQUIRED,
+                null,
+                'openai_api_key_missing',
+                'OpenAI API キーが未設定です（config/services.openai）。OpenAI にはリクエストしていません。',
+                null,
+                null
+            );
         }
 
         $payload = [
@@ -758,20 +872,26 @@ class TranslationService
         if ($payloadJson === false) {
             Log::warning('TranslationService: OpenAI payload json_encode failed');
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
-                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+                'openai_payload_json_encode_failed',
+                '翻訳リクエスト用の JSON を PHP 側で組み立てられませんでした（json_encode 失敗・不正な UTF-8 など）。OpenAI には送っていません。',
+                null,
+                null
+            );
         }
         if (strlen($payloadJson) > self::OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES) {
             Log::warning('TranslationService: OpenAI payload exceeds size limit', ['bytes' => strlen($payloadJson)]);
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
-                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+                'openai_payload_too_large',
+                '送信 JSON がアプリ側の上限（約 ' . self::OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES . ' バイト）を超えました。本文・親文脈が長すぎる可能性があります。OpenAI には送っていません。',
+                null,
+                null
+            );
         }
 
         if (self::shouldStoreTranslationDebugAlertInSession()) {
@@ -794,12 +914,16 @@ class TranslationService
 
         if ($response === null) {
             Log::warning('TranslationService: OpenAI API request failed (no response)', ['failure_code' => $failureCode]);
+            $tier = self::mapSecureHttpFailureCodeToUiTier($failureCode);
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::mapSecureHttpFailureCodeToUiTier($failureCode),
-                'translation_user_message_key' => null,
-            ];
+            return self::translationOpenAiFailure(
+                $tier,
+                null,
+                'openai_no_http_response',
+                self::secureHttpFailureDetailJa($failureCode),
+                null,
+                $failureCode
+            );
         }
 
         if (! $response->successful()) {
@@ -808,43 +932,111 @@ class TranslationService
                 'status' => $status,
                 'body' => $response->body(),
             ]);
-            if ($status === 429 || $status === 408 || $status >= 500) {
-                return [
-                    'content' => null,
-                    'translation_ui_tier' => self::TRANSLATION_UI_TIER_RETRY_LATER,
-                    'translation_user_message_key' => null,
-                ];
+            if ($status === 429) {
+                return self::translationOpenAiFailure(
+                    self::TRANSLATION_UI_TIER_RETRY_LATER,
+                    null,
+                    'openai_http_429',
+                    'OpenAI API が HTTP 429（レート制限）を返しました。時間をおいて再試行してください。',
+                    429,
+                    null
+                );
+            }
+            if ($status === 408) {
+                return self::translationOpenAiFailure(
+                    self::TRANSLATION_UI_TIER_RETRY_LATER,
+                    null,
+                    'openai_http_408',
+                    'OpenAI API が HTTP 408（リクエストタイムアウト）を返しました。',
+                    408,
+                    null
+                );
+            }
+            if ($status >= 500) {
+                return self::translationOpenAiFailure(
+                    self::TRANSLATION_UI_TIER_RETRY_LATER,
+                    null,
+                    'openai_http_5xx',
+                    'OpenAI API がサーバーエラー（HTTP ' . $status . '）を返しました。OpenAI 側の一時障害の可能性があります。',
+                    $status,
+                    null
+                );
+            }
+            if ($status === 401) {
+                return self::translationOpenAiFailure(
+                    self::TRANSLATION_UI_TIER_NO_RETRY,
+                    null,
+                    'openai_http_401',
+                    'OpenAI API が HTTP 401 を返しました。API キーが無効・期限切れの可能性があります。',
+                    401,
+                    null
+                );
+            }
+            if ($status === 403) {
+                return self::translationOpenAiFailure(
+                    self::TRANSLATION_UI_TIER_NO_RETRY,
+                    null,
+                    'openai_http_403',
+                    'OpenAI API が HTTP 403 を返しました。利用権限やリージョン制限を確認してください。',
+                    403,
+                    null
+                );
             }
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
-                'translation_user_message_key' => null,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                null,
+                'openai_http_4xx_other',
+                'OpenAI API がクライアントエラー（HTTP ' . $status . '）を返しました。',
+                $status,
+                null
+            );
         }
 
-        $json = $response->json();
+        $body = $response->body();
+        $json = json_decode($body, true);
+        if (! is_array($json)) {
+            Log::warning('TranslationService: OpenAI response body is not valid JSON', ['bytes' => strlen($body)]);
+
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                null,
+                'openai_response_json_invalid',
+                'OpenAI は HTTP ' . $response->status() . ' を返しましたが、本文を JSON として解釈できませんでした（本文バイト長: ' . strlen($body) . '）。',
+                $response->status(),
+                null
+            );
+        }
+
         $content = $json['choices'][0]['message']['content'] ?? null;
         if ($content === null || $content === '') {
             Log::warning('TranslationService: Empty or missing content in OpenAI response', ['json' => $json]);
 
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
-                'translation_user_message_key' => null,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                null,
+                'openai_choices_content_missing',
+                'OpenAI の JSON に choices[0].message.content が無いか空です（HTTP ' . $response->status() . '）。モデル出力形式やエラーペイロードをログで確認してください。',
+                $response->status(),
+                null
+            );
         }
 
-        $content = self::normalizeTranslatedContent(trim($content));
+        $content = self::normalizeTranslatedContent(trim((string) $content));
         if ($content === '') {
-            return [
-                'content' => null,
-                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
-                'translation_user_message_key' => null,
-            ];
+            return self::translationOpenAiFailure(
+                self::TRANSLATION_UI_TIER_NO_RETRY,
+                null,
+                'openai_content_empty_after_normalize',
+                'OpenAI からは本文が返りましたが、正規化（トリム・引用符除去等）の結果が空になりました。',
+                $response->status(),
+                null
+            );
         }
 
-        return ['content' => $content, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        return array_merge($nullOk, [
+            'content' => $content,
+        ]);
     }
 
     /**

@@ -1634,6 +1634,10 @@ class ThreadController extends Controller
                 'error' => 'forbidden',
                 'translation_ui_tier' => 'http_forbidden',
                 'translation_user_message_key' => null,
+                'translation_debug_code' => 'thread_gate_forbidden',
+                'translation_debug_detail_ja' => 'スレッド閲覧権限がありません（R18 等）。翻訳処理・OpenAI は実行されていません。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
                 'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
             ], 403);
         }
@@ -1659,6 +1663,10 @@ class ThreadController extends Controller
                 'error' => 'translation_same_response_attempts_exhausted',
                 'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_RESPONSE_ATTEMPTS_EXHAUSTED,
+                'translation_debug_code' => 'rate_limit_translate_live_same_response',
+                'translation_debug_detail_ja' => '同一リプライへのライブ翻訳は 24 時間あたりの試行上限（RateLimiter）に達しました。OpenAI は呼ばれていません。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
             ];
 
             return response()->json($this->translateLiveResponseJsonPayload($response, $result, $lang));
@@ -1710,6 +1718,10 @@ class ThreadController extends Controller
                 'error' => 'forbidden',
                 'translation_ui_tier' => 'http_forbidden',
                 'translation_user_message_key' => null,
+                'translation_debug_code' => 'thread_gate_forbidden',
+                'translation_debug_detail_ja' => 'スレッド閲覧権限がありません（R18 等）。翻訳処理・OpenAI は実行されていません。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
                 'error_message' => \App\Services\LanguageService::trans('r18_thread_adult_only_view', $lang),
             ], 403);
         }
@@ -1732,6 +1744,10 @@ class ThreadController extends Controller
                 'error' => 'translation_same_thread_title_attempts_exhausted',
                 'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
                 'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED,
+                'translation_debug_code' => 'rate_limit_translate_live_same_thread_title',
+                'translation_debug_detail_ja' => '同一スレッドのルーム名へのライブ翻訳は 24 時間あたりの試行上限（RateLimiter）に達しました。OpenAI は呼ばれていません。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
             ];
 
             return response()->json($this->translateLiveThreadTitleJsonPayload($thread, $result, $lang));
@@ -1777,6 +1793,11 @@ class ThreadController extends Controller
             $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_fatal', $lang);
             $payload['error_reload_hint'] = '';
         }
+
+        $payload['translation_debug_code'] = $result['translation_debug_code'] ?? null;
+        $payload['translation_debug_detail_ja'] = $result['translation_debug_detail_ja'] ?? null;
+        $payload['openai_http_status'] = $result['openai_http_status'] ?? null;
+        $payload['secure_http_failure_code'] = $result['secure_http_failure_code'] ?? null;
     }
 
     /**
