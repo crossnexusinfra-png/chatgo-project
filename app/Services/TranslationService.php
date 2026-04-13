@@ -24,6 +24,15 @@ class TranslationService
     /** 送信 JSON がこれを超える場合はリプライ本文過大など利用者側要因としてリトライ不可扱い（目安。モデル上限より余裕を見る） */
     private const OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES = 450000;
 
+    /** 翻訳専用のHTTPタイムアウト（秒）。未設定時は 20 秒。 */
+    private const DEFAULT_OPENAI_TRANSLATION_TIMEOUT_SECONDS = 20;
+
+    /** ルーム名のライブ翻訳対象とする最大文字数（安全側）。 */
+    private const LIVE_TRANSLATE_TITLE_MAX_CHARS = 150;
+
+    /** リプライ本文のライブ翻訳対象とする最大文字数（安全側）。 */
+    private const LIVE_TRANSLATE_REPLY_MAX_CHARS = 800;
+
     /**
      * ライブ翻訳 API：同一リプライ（ユーザーまたは IP × response_id）あたり 1 日最大試行回数（滑動 24 時間）。
      * 成功・失敗どちらも 1 回としてカウント。スパム用の分間制限はライブ翻訳 POST の throttle:api（60/分・ユーザー、100/分・IP）に任せる。
@@ -48,6 +57,26 @@ class TranslationService
     private static function getApiKey(): string
     {
         return (string) config('services.openai.api_key', '');
+    }
+
+    /**
+     * 翻訳専用の OpenAI タイムアウト秒数を取得
+     */
+    private static function getOpenAiTranslationTimeoutSeconds(): int
+    {
+        return max(1, (int) config('services.openai.translation_timeout_seconds', self::DEFAULT_OPENAI_TRANSLATION_TIMEOUT_SECONDS));
+    }
+
+    /**
+     * 文字数を取得（mbstring が無い環境では strlen を使用）
+     */
+    private static function textLength(string $text): int
+    {
+        if (function_exists('mb_strlen')) {
+            return mb_strlen($text, 'UTF-8');
+        }
+
+        return strlen($text);
     }
 
     /**
@@ -598,6 +627,21 @@ class TranslationService
             return ['success' => true, 'display_text' => $body, 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
         }
 
+        if (self::textLength($body) > self::LIVE_TRANSLATE_REPLY_MAX_CHARS) {
+            return [
+                'success' => false,
+                'display_text' => $body,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+                'translation_debug_code' => 'reply_text_too_long_guard',
+                'translation_debug_detail_ja' => 'リプライ本文が上限 ' . self::LIVE_TRANSLATE_REPLY_MAX_CHARS . ' 文字を超えたため、タイムアウト回避のため翻訳を実行しませんでした。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
+        }
+
         $meta = $parentBodyForApi !== null && trim($parentBodyForApi) !== ''
             ? self::translateReplyRawWithMeta($body, $parentBodyForApi, $targetLang)
             : self::translateStandaloneRawWithMeta($body, $targetLang);
@@ -689,6 +733,21 @@ class TranslationService
 
         if (! self::shouldTranslate($sourceLang, $targetLang)) {
             return ['success' => true, 'display_text' => $title, 'has_translation' => false, 'error' => null, 'translation_ui_tier' => null, 'translation_user_message_key' => null];
+        }
+
+        if (self::textLength($title) > self::LIVE_TRANSLATE_TITLE_MAX_CHARS) {
+            return [
+                'success' => false,
+                'display_text' => $title,
+                'has_translation' => false,
+                'error' => 'translation_api_failed',
+                'translation_ui_tier' => self::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => self::TRANSLATION_USER_MESSAGE_BODY_TOO_LONG,
+                'translation_debug_code' => 'thread_title_too_long_guard',
+                'translation_debug_detail_ja' => 'ルーム名が上限 ' . self::LIVE_TRANSLATE_TITLE_MAX_CHARS . ' 文字を超えたため、タイムアウト回避のため翻訳を実行しませんでした。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
         }
 
         $meta = self::translateStandaloneRawWithMeta($title, $targetLang);
@@ -908,6 +967,7 @@ class TranslationService
                 'Content-Type' => 'application/json',
             ],
             'json' => true,
+            'timeout' => self::getOpenAiTranslationTimeoutSeconds(),
         ]);
         $response = $outcome['response'];
         $failureCode = $outcome['failure_code'];

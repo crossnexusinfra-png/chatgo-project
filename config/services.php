@@ -55,6 +55,8 @@ return [
         'api_key' => env('OPENAI_API_KEY'),
         // テスト用: 翻訳API呼び出し時にブラウザでアラートを出す（true のときのみ）
         'translation_debug_alert' => env('TRANSLATION_DEBUG_ALERT', false),
+        // 翻訳API（OpenAI）専用タイムアウト秒数。未設定時は 20 秒。
+        'translation_timeout_seconds' => env('OPENAI_TRANSLATION_TIMEOUT_SECONDS', 20),
     ],
 
 ];
