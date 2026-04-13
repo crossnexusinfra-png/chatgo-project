@@ -25,6 +25,12 @@ use App\Models\Response;
  */
 class ThreadController extends Controller
 {
+    /** 同一翻訳対象で日次上限到達を記録する日数。3日で恒久ブロック。 */
+    private const LIVE_TRANSLATE_EXHAUSTED_DAYS_MAX = 3;
+
+    /** 日次上限到達カウントの保持期間（日）。 */
+    private const LIVE_TRANSLATE_EXHAUSTED_DAYS_TTL_DAYS = 120;
+
     /**
      * スレッドの一覧を表示する
      *
@@ -1653,9 +1659,26 @@ class ThreadController extends Controller
         $targetLang = \App\Services\TranslationService::normalizeLang($lang);
         $childSourceLang = $this->resolveResponseSourceLang($response, $users);
 
-        $identity = auth()->id() ? 'user:' . auth()->id() : 'ip:' . $request->ip();
-        $perResponseKey = 'translate_live_same_response:' . $identity . ':response:' . $response->response_id;
+        // 翻訳対象（response_id）単位の全体共通上限。ユーザー/IPごとではなく対象ごとにカウントする。
+        $perResponseKey = 'translate_live_same_response:global:response:' . $response->response_id;
+        if ($this->isLiveTranslatePermanentlyBlocked($perResponseKey)) {
+            $result = [
+                'success' => false,
+                'display_text' => (string) ($response->body ?? ''),
+                'has_translation' => false,
+                'error' => 'translation_same_response_permanently_blocked',
+                'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_LIVE_TRANSLATE_PERMANENTLY_BLOCKED,
+                'translation_debug_code' => 'rate_limit_translate_live_same_response_permanent_block',
+                'translation_debug_detail_ja' => '同一リプライで日次上限到達が 3 日分に達したため、恒久的に再リクエスト不可です。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
+
+            return response()->json($this->translateLiveResponseJsonPayload($response, $result, $lang));
+        }
         if (RateLimiter::tooManyAttempts($perResponseKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_MAX_ATTEMPTS)) {
+            $this->markLiveTranslateDailyExhaustion($perResponseKey);
             $result = [
                 'success' => false,
                 'display_text' => (string) ($response->body ?? ''),
@@ -1734,9 +1757,26 @@ class ThreadController extends Controller
             ? \App\Services\TranslationService::normalizeLang($thread->source_lang)
             : ($thread->user ? \App\Services\TranslationService::normalizeLang($thread->user->language ?? 'EN') : 'EN');
 
-        $identity = auth()->id() ? 'user:' . auth()->id() : 'ip:' . $request->ip();
-        $perThreadKey = 'translate_live_same_thread:' . $identity . ':thread:' . $thread->thread_id;
+        // 翻訳対象（thread title）単位の全体共通上限。ユーザー/IPごとではなく対象ごとにカウントする。
+        $perThreadKey = 'translate_live_same_thread:global:thread:' . $thread->thread_id;
+        if ($this->isLiveTranslatePermanentlyBlocked($perThreadKey)) {
+            $result = [
+                'success' => false,
+                'display_text' => $thread->getCleanTitle(),
+                'has_translation' => false,
+                'error' => 'translation_same_thread_title_permanently_blocked',
+                'translation_ui_tier' => \App\Services\TranslationService::TRANSLATION_UI_TIER_NO_RETRY,
+                'translation_user_message_key' => \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_LIVE_TRANSLATE_PERMANENTLY_BLOCKED,
+                'translation_debug_code' => 'rate_limit_translate_live_same_thread_title_permanent_block',
+                'translation_debug_detail_ja' => '同一ルーム名で日次上限到達が 3 日分に達したため、恒久的に再リクエスト不可です。',
+                'openai_http_status' => null,
+                'secure_http_failure_code' => null,
+            ];
+
+            return response()->json($this->translateLiveThreadTitleJsonPayload($thread, $result, $lang));
+        }
         if (RateLimiter::tooManyAttempts($perThreadKey, \App\Services\TranslationService::LIVE_TRANSLATE_PER_RESPONSE_MAX_ATTEMPTS)) {
+            $this->markLiveTranslateDailyExhaustion($perThreadKey);
             $result = [
                 'success' => false,
                 'display_text' => $thread->getCleanTitle(),
@@ -1783,6 +1823,9 @@ class ThreadController extends Controller
         } elseif ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED) {
             $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_thread_title_attempts_exhausted', $lang);
             $payload['error_reload_hint'] = '';
+        } elseif ($userMsgKey === \App\Services\TranslationService::TRANSLATION_USER_MESSAGE_LIVE_TRANSLATE_PERMANENTLY_BLOCKED) {
+            $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_live_translate_permanently_blocked', $lang);
+            $payload['error_reload_hint'] = '';
         } elseif ($tier === \App\Services\TranslationService::TRANSLATION_UI_TIER_ADMIN_REQUIRED) {
             $payload['error_message'] = \App\Services\LanguageService::trans('translation_ui_admin_line1', $lang);
             $payload['error_reload_hint'] = \App\Services\LanguageService::trans('translation_ui_admin_line2', $lang);
@@ -1798,6 +1841,36 @@ class ThreadController extends Controller
         $payload['translation_debug_detail_ja'] = $result['translation_debug_detail_ja'] ?? null;
         $payload['openai_http_status'] = $result['openai_http_status'] ?? null;
         $payload['secure_http_failure_code'] = $result['secure_http_failure_code'] ?? null;
+    }
+
+    /**
+     * 同一翻訳対象で「日次上限到達の発生日数」を 1 日 1 回だけ加算する。
+     */
+    private function markLiveTranslateDailyExhaustion(string $baseKey): int
+    {
+        $today = now()->format('Ymd');
+        $todayMarkerKey = $baseKey . ':daily_exhausted_marker:' . $today;
+        $daysCountKey = $baseKey . ':daily_exhausted_days_count';
+
+        // 同日の重複加算を防ぐ（最初の1回のみ true）
+        $added = Cache::add($todayMarkerKey, 1, now()->addDays(2));
+        if ($added) {
+            Cache::add($daysCountKey, 0, now()->addDays(self::LIVE_TRANSLATE_EXHAUSTED_DAYS_TTL_DAYS));
+            Cache::increment($daysCountKey);
+            Cache::put($daysCountKey, (int) Cache::get($daysCountKey, 0), now()->addDays(self::LIVE_TRANSLATE_EXHAUSTED_DAYS_TTL_DAYS));
+        }
+
+        return (int) Cache::get($daysCountKey, 0);
+    }
+
+    /**
+     * 同一翻訳対象で日次上限到達が既に 3 日分に達しているか。
+     */
+    private function isLiveTranslatePermanentlyBlocked(string $baseKey): bool
+    {
+        $daysCountKey = $baseKey . ':daily_exhausted_days_count';
+
+        return (int) Cache::get($daysCountKey, 0) >= self::LIVE_TRANSLATE_EXHAUSTED_DAYS_MAX;
     }
 
     /**

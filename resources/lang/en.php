@@ -786,6 +786,7 @@ return [
     'translation_ui_body_too_long' => 'This content is too long to translate.',
     'translation_ui_response_attempts_exhausted' => 'Translation for this reply has reached the maximum number of attempts. No further requests can be made.',
     'translation_ui_thread_title_attempts_exhausted' => 'Translation for this thread title has reached the maximum number of attempts. No further requests can be made.',
+    'translation_ui_live_translate_permanently_blocked' => 'This translation target has reached the daily cap on 3 days and can no longer be requested.',
 
     // Coin Feature
     'coins' => 'Coins',

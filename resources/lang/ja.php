@@ -787,6 +787,7 @@ return [
     'translation_ui_body_too_long' => '内容が長すぎるため翻訳できませんでした。',
     'translation_ui_response_attempts_exhausted' => 'このリプライへの翻訳は試行回数の上限に達したため、これ以上リクエストできません。',
     'translation_ui_thread_title_attempts_exhausted' => 'このルーム名への翻訳は試行回数の上限に達したため、これ以上リクエストできません。',
+    'translation_ui_live_translate_permanently_blocked' => 'この翻訳対象は日次上限到達が3日分に達したため、これ以上リクエストできません。',
 
     // コイン機能
     'coins' => 'コイン',

@@ -24,8 +24,8 @@ class TranslationService
     /** 送信 JSON がこれを超える場合はリプライ本文過大など利用者側要因としてリトライ不可扱い（目安。モデル上限より余裕を見る） */
     private const OPENAI_CHAT_COMPLETION_MAX_JSON_BYTES = 450000;
 
-    /** 翻訳専用のHTTPタイムアウト（秒）。未設定時は 20 秒。 */
-    private const DEFAULT_OPENAI_TRANSLATION_TIMEOUT_SECONDS = 20;
+    /** 翻訳専用のHTTPタイムアウト（秒）。未設定時は 15 秒。 */
+    private const DEFAULT_OPENAI_TRANSLATION_TIMEOUT_SECONDS = 15;
 
     /** ルーム名のライブ翻訳対象とする最大文字数（投稿バリデーションに合わせる）。 */
     private const LIVE_TRANSLATE_TITLE_MAX_CHARS = 50;
@@ -841,6 +841,9 @@ class TranslationService
 
     /** 同一スレッドのルーム名への翻訳試行上限に達したときの利用者向け文言キー */
     public const TRANSLATION_USER_MESSAGE_THREAD_TITLE_ATTEMPTS_EXHAUSTED = 'translation_ui_thread_title_attempts_exhausted';
+
+    /** 同一対象で 3 日分の上限到達により恒久ブロックしたときの利用者向け文言キー */
+    public const TRANSLATION_USER_MESSAGE_LIVE_TRANSLATE_PERMANENTLY_BLOCKED = 'translation_ui_live_translate_permanently_blocked';
 
     /**
      * OpenAI 呼び出し失敗時のデバッグ用1件を組み立てる（アラート・JSON 用）
