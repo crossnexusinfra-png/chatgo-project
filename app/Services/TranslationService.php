@@ -27,11 +27,11 @@ class TranslationService
     /** 翻訳専用のHTTPタイムアウト（秒）。未設定時は 20 秒。 */
     private const DEFAULT_OPENAI_TRANSLATION_TIMEOUT_SECONDS = 20;
 
-    /** ルーム名のライブ翻訳対象とする最大文字数（安全側）。 */
-    private const LIVE_TRANSLATE_TITLE_MAX_CHARS = 150;
+    /** ルーム名のライブ翻訳対象とする最大文字数（投稿バリデーションに合わせる）。 */
+    private const LIVE_TRANSLATE_TITLE_MAX_CHARS = 50;
 
-    /** リプライ本文のライブ翻訳対象とする最大文字数（安全側）。 */
-    private const LIVE_TRANSLATE_REPLY_MAX_CHARS = 800;
+    /** リプライ本文のライブ翻訳対象とする最大文字数。 */
+    private const LIVE_TRANSLATE_REPLY_MAX_CHARS = 500;
 
     /**
      * ライブ翻訳 API：同一リプライ（ユーザーまたは IP × response_id）あたり 1 日最大試行回数（滑動 24 時間）。

@@ -199,7 +199,7 @@ return [
 
 | 対策項目 | ルーム（タイトル・本文） | リプライ（本文） | 通報理由（自由入力） | 改善要望 | お知らせ返信 |
 |----------|---------------------------|------------------------|------------------------|----------|--------------|
-| **バリデーション（長さ・必須）** | ○ title max:50, body max:1000 | ○ body nullable（ファイル時は不要） | ○ description nullable, max:300 | ○ message required, max:1000 | ○ body required, max:2000 |
+| **バリデーション（長さ・必須）** | ○ title max:50, body max:500 | ○ body nullable（ファイル時は不要） | ○ description nullable, max:300 | ○ message required, max:1000 | ○ body required, max:2000 |
 | **保存時の strip_tags** | なし（表示でエスケープ） | なし（表示でエスケープ） | ○ 実装済み | ○ 実装済み | ○ 実装済み |
 | **表示時のエスケープ** | ○ `{{ }}` / `linkify_urls(e())` | ○ `linkify_urls(e())` | ○ `{{ }}`（管理画面） | ○ `{{ }}`（管理画面） | ○ JS: `renderMessageBodySafe()` / 管理: `{{ }}` |
 | **URL チェック（Safe Browsing）** | ○ 本文中のURLをチェック | ○ 本文中のURLをチェック | × 不要（補足説明用） | × 不要 | × 不要 |
@@ -1300,8 +1300,8 @@ curl -X POST https://あなたのサイト/login \
 |------|------|------|
 | ルーム作成数/日 | ✅ 実装済み | `ThreadController::store` で 1 日 2 件まで |
 | 1 ルームあたりリプライ数 | ✅ 実装済み | `config('performance.thread.max_responses')` = 500、`ResponseController` でチェック |
-| リプライ本文の文字数 | ✅ 対応済み | `ResponseController::store` で `body` に `max:1000` を追加（コインは「100文字ごとに1」のため、本文上限がないとコストが無制限になり得た） |
-| 返信（reply）本文の文字数 | ✅ 対応済み | `ResponseController::reply` で `body` に `max:1000` を追加（同上） |
+| リプライ本文の文字数 | ✅ 対応済み | `ResponseController::store` で `body` に `max:500` を適用（コインは「100文字ごとに1」のため、本文上限がないとコストが無制限になり得た） |
+| 返信（reply）本文の文字数 | ✅ 対応済み | `ResponseController::reply` で `body` に `max:500` を適用（同上） |
 | 返信（reply）のメディアファイルサイズ | ✅ 対応済み | `ResponseController::reply` で `media_file` に `max:10240`（10MB）を追加（`store` と同様） |
 | ルーム画像サイズ | ✅ 実装済み | バリデーションには `max` なしだが `MediaFileValidationService` で 1.5MB を検証 |
 | レート制限 | ✅ 実装済み | `bootstrap/app.php` の `RateLimiter::for(...)` と各ルートの `throttle` |
@@ -1310,14 +1310,14 @@ curl -X POST https://あなたのサイト/login \
 
 | 入力 | 上限 | 状態 |
 |------|------|------|
-| ルーム title / body / tag | max:50 / max:1000 / max:100 | ✅ 実装済み |
-| リプライ本文（store） | max:1000 | ✅ 対応済み |
-| 返信本文（reply） | max:1000 | ✅ 対応済み |
+| ルーム title / body / tag | max:50 / max:500 / max:100 | ✅ 実装済み |
+| リプライ本文（store） | max:500 | ✅ 対応済み |
+| 返信本文（reply） | max:500 | ✅ 対応済み |
 | ログイン email / password | max:255 | ✅ 対応済み（長大入力による DoS 軽減） |
 | 管理画面お知らせ配信 body / title / title_key / body_key | max:2000 / max:255 / max:255 / max:255 | ✅ 対応済み（DB の body 制約 2000 と一致） |
 | 通報理由・改善要望・お知らせ返信 | 既存のとおり max あり | ✅ 変更なし |
 
-- **1000 文字と DB**: `responses.body` は `text` 型（MySQL で約 65KB）。1000 文字（UTF-8 でも数 KB）は問題なく格納できる。1000 はアプリ側の入力上限であり、DB の限界ではない。
+- **500 文字と DB**: `responses.body` は `text` 型（MySQL で約 65KB）。500 文字（UTF-8 でも数 KB）は問題なく格納できる。500 はアプリ側の入力上限であり、DB の限界ではない。
 
 ### キューの実装
 
@@ -1335,7 +1335,7 @@ curl -X POST https://あなたのサイト/login \
 | **レート制限（throttle）** | 投稿系 10/分・user、30/分・IP。API 60/分・user、100/分・IP。検索 20/分。ログイン 20/分・IP など。 |
 | **1ルームあたりリプライ数上限** | 500 件で打ち切り（続きは別ルーム要望）。 |
 | **ルーム作成数上限** | 1 日 2 件まで。 |
-| **入力長の上限（max）** | 本文 max:1000、タイトル max:50 など。巨大なリクエストを早い段階で弾く。 |
+| **入力長の上限（max）** | 本文 max:500、タイトル max:50 など。巨大なリクエストを早い段階で弾く。 |
 | **HTTP クライアント制限** | 外部 API 用にタイムアウト・レスポンスサイズ上限（SecureHttpClientService）。 |
 
 重い処理（メール・Safe Browsing・翻訳）は同期的だが、上記の制限で呼び出し頻度と入力サイズが抑えられている。

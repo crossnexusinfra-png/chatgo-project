@@ -195,7 +195,7 @@ public function show(Thread $thread)
     $thread = Thread::with(['responses', 'user'])->findOrFail($thread->id);
     
     // ビジネスロジック処理
-    $isResponseLimitReached = $thread->responses_count >= 1000;
+    $isResponseLimitReached = $thread->responses_count >= 500;
     
     // Viewにデータを渡す
     return view('threads.show', [

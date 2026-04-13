@@ -535,7 +535,7 @@ class ThreadController extends Controller
         $request->validate([
             'title' => 'required|max:50',
             'tag' => 'required|max:100',
-            'body' => 'nullable|max:1000',
+            'body' => 'nullable|max:500',
             'is_r18' => 'nullable|boolean',
             'image' => 'nullable|file',
         ]);

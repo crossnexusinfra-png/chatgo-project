@@ -384,7 +384,7 @@
                                     {{ \App\Services\LanguageService::trans('media_file_upload_failed', $lang) }}
                                 </div>
                             @enderror
-                            <textarea id="body" name="body" class="js-response-body" rows="2" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}">{{ old('body') }}</textarea>
+                            <textarea id="body" name="body" class="js-response-body" rows="2" maxlength="500" placeholder="{{ \App\Services\LanguageService::trans('message_placeholder', $lang) }}">{{ old('body') }}</textarea>
                         </div>
                         <div class="media-file-container">
                             <input type="file" id="media_file" name="media_file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/webm" class="media-file-input-hidden">

@@ -105,61 +105,34 @@
     }
 
     /**
-     * 翻訳API失敗時のテスト用アラート（見出し・ラベルは日本語で統一。値はデバッグ用にそのまま表示）
+     * 翻訳API呼び出し時の計測アラート（テスト用）
      * @param {object} data レスポンスJSON（error, translation_ui_tier など）
      * @param {Response|null} res fetch の Response（無い場合は null）
      * @param {'reply'|'title'} kind
+     * @param {number} startedAtMs Date.now() 開始時刻
+     * @param {'success'|'failure'} phase
      * @param {string} [clientExtra] クライアント例外時の追記（例: Error.message）
      */
-    function showTranslationApiFailureAlert(data, res, kind, clientExtra) {
+    function showTranslationApiTimingAlert(data, res, kind, startedAtMs, phase, clientExtra) {
         kind = kind || 'reply';
         data = data && typeof data === 'object' ? data : {};
         const titleJa = kind === 'title' ? 'ルーム名の翻訳' : 'リプライ本文の翻訳';
+        const elapsedMs = Math.max(0, Date.now() - (startedAtMs || Date.now()));
         const lines = [];
-        lines.push('【' + titleJa + '】翻訳APIでエラーが発生しました。');
-        lines.push('（テスト用：どの経路で失敗したかの詳細です）');
+        lines.push('【' + titleJa + '】翻訳API計測');
+        lines.push('結果: ' + (phase === 'success' ? '成功' : '失敗'));
+        lines.push('処理時間: ' + elapsedMs + ' ms');
         lines.push('');
-        lines.push('■ サーバーが付与した原因（日本語・要約）');
-        if (data.translation_debug_detail_ja) {
-            lines.push(String(data.translation_debug_detail_ja));
-        } else {
-            lines.push('（translation_debug_detail_ja なし）');
-        }
-        lines.push('');
-        lines.push('■ 内部コード（translation_debug_code）');
-        lines.push(data.translation_debug_code != null && data.translation_debug_code !== '' ? String(data.translation_debug_code) : '（なし）');
-        lines.push('');
-        lines.push('■ OpenAI が返した HTTP ステータス（到達した場合のみ）');
-        lines.push(data.openai_http_status != null ? String(data.openai_http_status) : '（なし・OpenAI 未到達または未取得）');
-        lines.push('');
-        lines.push('■ SecureHttp 失敗コード（OpenAI への送信前・送信中）');
-        lines.push(data.secure_http_failure_code != null && data.secure_http_failure_code !== '' ? String(data.secure_http_failure_code) : '（なし）');
-        lines.push('');
-        lines.push('■ この fetch の HTTP ステータス（あなたのサイトのルート）');
+        lines.push('この fetch のHTTPステータス:');
         if (res != null && typeof res.status === 'number') {
             lines.push(String(res.status));
         } else {
             lines.push('（不明・レスポンス未取得）');
         }
-        lines.push('');
-        lines.push('■ その他フィールド');
-        lines.push('エラーコード（error）: ' + (data.error != null && data.error !== '' ? String(data.error) : '（なし）'));
-        lines.push('表示区分（translation_ui_tier）: ' + (data.translation_ui_tier != null && data.translation_ui_tier !== '' ? String(data.translation_ui_tier) : '（なし）'));
-        lines.push('メッセージキー（translation_user_message_key）: ' + (data.translation_user_message_key != null && data.translation_user_message_key !== '' ? String(data.translation_user_message_key) : '（なし）'));
-        lines.push('');
-        lines.push('---');
-        lines.push('サーバーが返した利用者向け文言（サイトの表示言語に依存・英語のことあり）:');
-        if (data.error_message) {
-            lines.push(String(data.error_message));
-        } else {
-            lines.push('（なし。JSONでない本文や空レスポンスの可能性があります）');
-        }
-        if (data.error_reload_hint) {
-            lines.push(String(data.error_reload_hint));
-        }
+        lines.push('error: ' + (data.error != null && data.error !== '' ? String(data.error) : '（なし）'));
+        lines.push('translation_ui_tier: ' + (data.translation_ui_tier != null && data.translation_ui_tier !== '' ? String(data.translation_ui_tier) : '（なし）'));
         if (clientExtra) {
             lines.push('');
-            lines.push('---');
             lines.push('クライアント側の追加情報:');
             lines.push(String(clientExtra));
         }
@@ -191,6 +164,7 @@
     async function translateOneDeferred(article) {
         const id = article.getAttribute('data-response-id');
         if (!id) return;
+        const startedAt = Date.now();
 
         const overlay = article.querySelector('.response-translation-overlay');
         const msg = overlay && overlay.querySelector('.response-translation-status-msg');
@@ -225,7 +199,7 @@
                     error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
                 };
                 setTranslationErrorOverlay(article, overlayPayload);
-                showTranslationApiFailureAlert({
+                showTranslationApiTimingAlert({
                     error: 'http_429_too_many_requests',
                     translation_ui_tier: 'retry_later',
                     translation_user_message_key: null,
@@ -235,7 +209,7 @@
                     secure_http_failure_code: null,
                     error_message: 'HTTP 429：短時間のアクセスが多すぎます（ルートの throttle:api などによる制限の可能性があります）。',
                     error_reload_hint: '数十秒〜数分待ってからページを再読み込みするか、再度お試しください。',
-                }, res, 'reply');
+                }, res, 'reply', startedAt, 'failure');
                 return;
             }
 
@@ -246,15 +220,15 @@
                         error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
                     };
                     setTranslationErrorOverlay(article, overlayPayload);
-                    showTranslationApiFailureAlert(Object.assign({
+                    showTranslationApiTimingAlert(Object.assign({
                         translation_debug_code: 'response_missing_error_message',
                         translation_debug_detail_ja: 'レスポンスに error_message がありません。JSON でない本文・プロキシエラー・別ルートの応答の可能性があります。',
                         error_message: 'サーバーは失敗を返しましたが、利用者向けメッセージ（error_message）がありませんでした。',
                         error_reload_hint: 'HTTPステータス・error・translation_ui_tier を確認してください。',
-                    }, data), res, 'reply');
+                    }, data), res, 'reply', startedAt, 'failure');
                 } else {
                     setTranslationErrorOverlay(article, data);
-                    showTranslationApiFailureAlert(data, res, 'reply');
+                    showTranslationApiTimingAlert(data, res, 'reply', startedAt, 'failure');
                 }
                 return;
             }
@@ -267,6 +241,7 @@
             if (rb && data.display_body != null) {
                 rb.dataset.responseBody = data.display_body;
             }
+            showTranslationApiTimingAlert(data, res, 'reply', startedAt, 'success');
         } catch (err) {
             console.error('translateOneDeferred', err);
             const overlayPayload = {
@@ -274,7 +249,7 @@
                 error_reload_hint: translations.translationUiRetryLine2 || translations.translationReloadHint || '',
             };
             setTranslationErrorOverlay(article, overlayPayload);
-            showTranslationApiFailureAlert({
+            showTranslationApiTimingAlert({
                 error: 'client_fetch_or_script_error',
                 translation_ui_tier: 'client_exception',
                 translation_user_message_key: null,
@@ -284,7 +259,7 @@
                 secure_http_failure_code: null,
                 error_message: 'ブラウザ側で fetch の実行中に例外が発生しました。',
                 error_reload_hint: 'ネットワーク切断やCORS、スクリプトエラーの可能性があります。コンソールのログを確認してください。',
-            }, null, 'reply', err && err.message ? err.message : String(err));
+            }, null, 'reply', startedAt, 'failure', err && err.message ? err.message : String(err));
         }
     }
 
@@ -295,6 +270,7 @@
         if (!h1) {
             return;
         }
+        const startedAt = Date.now();
         const url = routes.translateThreadTitleUrl;
         if (!url) {
             h1.removeAttribute('data-title-translation-pending');
@@ -311,7 +287,7 @@
             h1.removeAttribute('data-title-translation-pending');
 
             if (res.status === 429) {
-                showTranslationApiFailureAlert({
+                showTranslationApiTimingAlert({
                     error: 'http_429_too_many_requests',
                     translation_ui_tier: 'retry_later',
                     translation_user_message_key: null,
@@ -321,20 +297,20 @@
                     secure_http_failure_code: null,
                     error_message: 'HTTP 429：短時間のアクセスが多すぎます（ルートの throttle:api などによる制限の可能性があります）。',
                     error_reload_hint: '数十秒〜数分待ってからページを再読み込みするか、再度お試しください。',
-                }, res, 'title');
+                }, res, 'title', startedAt, 'failure');
                 return;
             }
 
             if (!res.ok || !data.success) {
                 if (!data.error_message) {
-                    showTranslationApiFailureAlert(Object.assign({
+                    showTranslationApiTimingAlert(Object.assign({
                         translation_debug_code: 'response_missing_error_message',
                         translation_debug_detail_ja: 'レスポンスに error_message がありません。JSON でない本文・プロキシエラー・別ルートの応答の可能性があります。',
                         error_message: 'サーバーは失敗を返しましたが、利用者向けメッセージ（error_message）がありませんでした。',
                         error_reload_hint: 'HTTPステータス・error・translation_ui_tier を確認してください。',
-                    }, data), res, 'title');
+                    }, data), res, 'title', startedAt, 'failure');
                 } else {
-                    showTranslationApiFailureAlert(data, res, 'title');
+                    showTranslationApiTimingAlert(data, res, 'title', startedAt, 'failure');
                 }
                 return;
             }
@@ -357,10 +333,11 @@
                 btn.textContent = showOrig;
                 h1.appendChild(btn);
             }
+            showTranslationApiTimingAlert(data, res, 'title', startedAt, 'success');
         } catch (err) {
             console.error('translateThreadTitleIfPending', err);
             h1.removeAttribute('data-title-translation-pending');
-            showTranslationApiFailureAlert({
+            showTranslationApiTimingAlert({
                 error: 'client_fetch_or_script_error',
                 translation_ui_tier: 'client_exception',
                 translation_user_message_key: null,
@@ -370,7 +347,7 @@
                 secure_http_failure_code: null,
                 error_message: 'ブラウザ側で fetch の実行中に例外が発生しました。',
                 error_reload_hint: 'ネットワーク切断やCORS、スクリプトエラーの可能性があります。コンソールのログを確認してください。',
-            }, null, 'title', err && err.message ? err.message : String(err));
+            }, null, 'title', startedAt, 'failure', err && err.message ? err.message : String(err));
         }
     }
 

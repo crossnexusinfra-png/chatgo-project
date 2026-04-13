@@ -144,7 +144,7 @@ class ResponseController extends Controller
         
         // バリデーションルールを動的に設定（ファイルが存在しない場合はfileルールを適用しない）
         $rules = [
-            'body' => 'nullable|string|max:1000',
+            'body' => 'nullable|string|max:500',
         ];
         
         if ($request->hasFile('media_file')) {
@@ -568,9 +568,9 @@ class ResponseController extends Controller
         }
 
         // フォームから送信されたリクエストデータを検証します。
-        // bodyまたはmedia_fileのいずれかが必要。本文はスレッド本文と同様に1000文字まで。メディアは10MBまで。
+        // bodyまたはmedia_fileのいずれかが必要。本文は500文字まで。メディアは10MBまで。
         $request->validate([
-            'body' => 'nullable|string|max:1000',
+            'body' => 'nullable|string|max:500',
             'media_file' => 'nullable|file|max:' . (10 * 1024),
         ], [
             'media_file.file' => \App\Services\LanguageService::trans('media_file_upload_failed', $lang),

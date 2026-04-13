@@ -76,8 +76,8 @@
                         </div>
                         <div class="form-group">
                             <label for="create-thread-body">{{ \App\Services\LanguageService::trans('thread_create_first_reply_label', $lang) }}:</label>
-                            <textarea id="create-thread-body" name="body" class="js-create-thread-body" rows="5" maxlength="1000" data-base-coin="{{ (new \App\Services\CoinService())->getThreadCreationCost() }}">{{ old('body') }}</textarea>
-                            <small>1000{{ \App\Services\LanguageService::trans('characters', $lang) }}以内。100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
+                            <textarea id="create-thread-body" name="body" class="js-create-thread-body" rows="5" maxlength="500" data-base-coin="{{ (new \App\Services\CoinService())->getThreadCreationCost() }}">{{ old('body') }}</textarea>
+                            <small>500{{ \App\Services\LanguageService::trans('characters', $lang) }}以内。100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
                             <p class="thread-create-coin-display" id="threadCreateCoinDisplay" data-room-label="{{ \App\Services\LanguageService::trans('thread_coin_room', $lang) }}" data-first-reply-label="{{ \App\Services\LanguageService::trans('thread_coin_first_reply', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}"></p>
                         </div>
                         @php
