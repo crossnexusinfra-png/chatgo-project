@@ -980,7 +980,7 @@ return [
     'available_friend_requests' => 'Available Friend Requests',
     'request_pending' => 'Request Pending',
     'send_request' => 'Request',
-    'confirm_reject_request' => 'Reject this friend request? Rejecting will reset the friend request conditions.',
+    'confirm_reject_request' => 'Do you want to reject this friend request?',
     'confirm_delete_friend' => 'Delete this friend?',
     'friend_deleted' => 'Friend deleted',
     'friend_delete_failed' => 'Failed to delete friend',

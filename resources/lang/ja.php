@@ -981,7 +981,7 @@ return [
     'available_friend_requests' => 'フレンド申請可能',
     'request_pending' => '申請待ち',
     'send_request' => '申請',
-    'confirm_reject_request' => 'フレンド申請を拒否しますか？拒否すると、フレンド申請条件がリセットされます。',
+    'confirm_reject_request' => 'このフレンド申請を拒否しますか？',
     'confirm_delete_friend' => 'このフレンドを削除しますか？',
     'friend_deleted' => 'フレンドを削除しました',
     'friend_delete_failed' => 'フレンドの削除に失敗しました',
