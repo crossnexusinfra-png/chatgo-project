@@ -125,6 +125,13 @@
 
     // ページ読み込み時にカウントダウンを開始
     document.addEventListener('DOMContentLoaded', function() {
+        const copyInviteButton = document.querySelector('.js-copy-invite-code');
+        if (copyInviteButton) {
+            copyInviteButton.addEventListener('click', function() {
+                window.copyInviteCode();
+            });
+        }
+
         updateWaitTimes();
         setInterval(updateWaitTimes, 1000);
 
@@ -181,6 +188,56 @@
                     submitBtn.textContent = translations.processing || '処理中';
                 }
                 setTimeout(function() { formEl.submit(); }, 50);
+            });
+        });
+
+        // フレンド申請拒否フォーム: 確認ダイアログ後に送信
+        document.querySelectorAll('.friend-reject-request-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                var submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn && submitBtn.disabled) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.setAttribute('disabled', 'disabled');
+                    submitBtn.textContent = translations.processing || '処理中';
+                }
+            });
+        });
+
+        document.querySelectorAll('.js-send-coins-btn').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                var friendId = button.getAttribute('data-friend-id');
+                if (friendId) {
+                    window.sendCoins(friendId);
+                }
+            });
+        });
+
+        document.querySelectorAll('.js-delete-friend-btn').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                var friendId = button.getAttribute('data-friend-id');
+                if (friendId) {
+                    window.deleteFriend(event, friendId);
+                }
+            });
+        });
+
+        document.querySelectorAll('.js-reject-available-btn').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                var userId = button.getAttribute('data-user-id');
+                if (userId) {
+                    window.rejectFriendRequest(event, userId);
+                }
             });
         });
     });

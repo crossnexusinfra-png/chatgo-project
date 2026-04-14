@@ -74,7 +74,7 @@
             <h2>{{ \App\Services\LanguageService::trans('invite_code', $lang) }}</h2>
             <div class="invite-code-display">
                 <input type="text" id="inviteCode" value="{{ $inviteCode }}" readonly>
-                <button onclick="copyInviteCode()" class="btn btn-primary">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                <button type="button" class="btn btn-primary js-copy-invite-code">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
             </div>
             <p class="invite-code-help">{{ \App\Services\LanguageService::trans('invite_code_help', $lang) }}</p>
         </div>
@@ -112,13 +112,14 @@
                             </div>
                             <div class="friend-actions">
                                 <button 
-                                    onclick="sendCoins({{ $friendId }})" 
-                                    class="btn btn-primary {{ !$canSend ? 'btn-disabled' : '' }}"
+                                    type="button"
+                                    class="btn btn-primary js-send-coins-btn {{ !$canSend ? 'btn-disabled' : '' }}"
+                                    data-friend-id="{{ $friendId }}"
                                     {{ !$canSend ? 'disabled' : '' }}
                                     id="send-coins-btn-{{ $friendId }}">
                                     {{ \App\Services\LanguageService::trans('send_coins', $lang) }}
                                 </button>
-                                <button onclick="deleteFriend(event, {{ $friendId }})" class="btn btn-danger">
+                                <button type="button" class="btn btn-danger js-delete-friend-btn" data-friend-id="{{ $friendId }}">
                                     {{ \App\Services\LanguageService::trans('delete', $lang) }}
                                 </button>
                             </div>
@@ -161,7 +162,7 @@
                                     <button class="btn btn-secondary" disabled>
                                         {{ \App\Services\LanguageService::trans('request_pending', $lang) }}
                                     </button>
-                                    <button onclick="rejectFriendRequest(event, {{ $available['user']->user_id }})" class="btn btn-danger">
+                                    <button type="button" class="btn btn-danger js-reject-available-btn" data-user-id="{{ $available['user']->user_id }}">
                                         {{ \App\Services\LanguageService::trans('reject', $lang) }}
                                     </button>
                                 @elseif($available['received_request'])
@@ -171,9 +172,9 @@
                                         <button type="submit" class="btn btn-success">{{ \App\Services\LanguageService::trans('accept', $lang) }}</button>
                                         </div>
                                     </form>
-                                    <form action="{{ route('friends.reject-request', $available['received_request']) }}" method="POST" class="form-inline" id="reject-form-{{ $available['received_request']->id }}">
+                                    <form action="{{ route('friends.reject-request', $available['received_request']) }}" method="POST" class="form-inline friend-reject-request-form" id="reject-form-{{ $available['received_request']->id }}">
                                         @csrf
-                                        <button type="button" onclick="confirmRejectRequest(event, {{ $available['received_request']->id }})" class="btn btn-danger">{{ \App\Services\LanguageService::trans('reject', $lang) }}</button>
+                                        <button type="submit" class="btn btn-danger">{{ \App\Services\LanguageService::trans('reject', $lang) }}</button>
                                     </form>
                                 @else
                                     <form action="{{ route('friends.send-request') }}" method="POST" class="form-inline friend-send-request-form">
@@ -185,7 +186,7 @@
                                         </button>
                                         </div>
                                     </form>
-                                    <button onclick="rejectFriendRequest(event, {{ $available['user']->user_id }})" class="btn btn-danger">
+                                    <button type="button" class="btn btn-danger js-reject-available-btn" data-user-id="{{ $available['user']->user_id }}">
                                         {{ \App\Services\LanguageService::trans('reject', $lang) }}
                                     </button>
                                 @endif
