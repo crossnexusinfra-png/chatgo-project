@@ -8,6 +8,7 @@ use App\Models\FriendRequest;
 use App\Models\CoinSend;
 use App\Models\ThreadInteraction;
 use App\Models\Response;
+use App\Models\UserInvite;
 use Illuminate\Support\Facades\DB;
 
 class FriendService
@@ -119,6 +120,13 @@ class FriendService
                 'reason' => '既に申請中です',
             ];
         }
+
+        // 招待関係がある場合は会話条件を免除
+        if ($this->hasInviteRelationship($fromUser, $toUser)) {
+            return [
+                'can_send' => true,
+            ];
+        }
         
         // スレッド内でお互いに10通以上（双方それぞれ1000文字以上）送信し合ったかチェック
         $interaction = $this->checkThreadInteraction($fromUser, $toUser);
@@ -133,6 +141,20 @@ class FriendService
         return [
             'can_send' => true,
         ];
+    }
+
+    /**
+     * 招待関係（双方向）があるかチェック
+     */
+    private function hasInviteRelationship(User $user1, User $user2): bool
+    {
+        return UserInvite::where(function ($query) use ($user1, $user2) {
+            $query->where('inviter_id', $user1->user_id)
+                ->where('invitee_id', $user2->user_id);
+        })->orWhere(function ($query) use ($user1, $user2) {
+            $query->where('inviter_id', $user2->user_id)
+                ->where('invitee_id', $user1->user_id);
+        })->exists();
     }
 
     /**
