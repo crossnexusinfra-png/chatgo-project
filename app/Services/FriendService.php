@@ -422,6 +422,18 @@ class FriendService
         $allUsers = User::where('user_id', '!=', $user->user_id)->get();
         
         foreach ($allUsers as $otherUser) {
+            // 既に申請を送信しているかチェック
+            $sentRequest = FriendRequest::where('from_user_id', $user->user_id)
+                ->where('to_user_id', $otherUser->user_id)
+                ->where('status', 'pending')
+                ->first();
+
+            // 既に申請を受け取っているかチェック
+            $receivedRequest = FriendRequest::where('from_user_id', $otherUser->user_id)
+                ->where('to_user_id', $user->user_id)
+                ->where('status', 'pending')
+                ->first();
+
             // 招待関係があるかチェック
             $invite = \App\Models\UserInvite::where(function($query) use ($user, $otherUser) {
                 $query->where('inviter_id', $user->user_id)
@@ -452,19 +464,8 @@ class FriendService
                 $canSend = $check['can_send'];
             }
             
-            if ($canSend) {
-                // 既に申請を送信しているかチェック
-                $sentRequest = FriendRequest::where('from_user_id', $user->user_id)
-                    ->where('to_user_id', $otherUser->user_id)
-                    ->where('status', 'pending')
-                    ->first();
-                
-                // 既に申請を受け取っているかチェック
-                $receivedRequest = FriendRequest::where('from_user_id', $otherUser->user_id)
-                    ->where('to_user_id', $user->user_id)
-                    ->where('status', 'pending')
-                    ->first();
-                
+            // 申請中（送信/受信）は、現在の申請可否に関わらず一覧に残して状態を表示する
+            if ($canSend || $sentRequest || $receivedRequest) {
                 $availableUsers[] = [
                     'user' => $otherUser,
                     'sent_request' => $sentRequest,
