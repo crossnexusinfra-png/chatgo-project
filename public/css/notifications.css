@@ -103,10 +103,17 @@
 .message-body {
     display: none;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid #e5e7eb;
     color: #374151;
+}
+
+.message-body .response-url-link {
+    overflow-wrap: anywhere;
+    word-break: break-all;
 }
 
 /* CSP対応: 開閉はクラスで制御（インラインスタイルを使わない） */

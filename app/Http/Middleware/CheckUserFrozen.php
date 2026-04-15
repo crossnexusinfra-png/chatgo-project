@@ -128,6 +128,8 @@ class CheckUserFrozen
                         'freeze-appeals.store',
                         // 一時凍結中は通知からのコイン受け取りを許可
                         'notifications.receive-coin',
+                        // 一時凍結中もお知らせの既読は許可
+                        'notifications.mark-as-read',
                         // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
                         'friends.delete',
                     ];

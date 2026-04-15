@@ -37,7 +37,7 @@ class AdminController extends Controller
     }
 
     /**
-     * 通報の集計一覧（同一スレッド/レスポンスをまとめ、通報数の多い順）
+     * 通報の集計一覧（同一スレッド/レスポンスをまとめ、新しい順）
      */
     public function reports()
     {
@@ -100,7 +100,7 @@ class AdminController extends Controller
                 DB::raw('BOOL_OR(approved_at IS NOT NULL AND is_approved IS FALSE) as any_rejected'),
             ])
             ->groupBy('thread_id', 'response_id')
-            ->orderByDesc('reports_count')
+            ->orderByDesc('last_reported_at')
             ->get();
         
         // 各グループに対して、一度拒否された後再通報されたかどうかを判定（N+1問題を回避）
@@ -466,8 +466,8 @@ class AdminController extends Controller
         if ($onlyFlagged) {
             $reports->where('flagged', true);
         }
-        $reports = $reports->orderBy('created_at', 'asc')->get();
-        $thread = Thread::withTrashed()->with(['responses' => function($q){ $q->orderBy('created_at','asc'); }])->find($threadId);
+        $reports = $reports->orderByDesc('created_at')->get();
+        $thread = Thread::withTrashed()->with(['responses' => function($q){ $q->orderByDesc('created_at'); }])->find($threadId);
         $groupFlagged = $reports->contains('flagged', true);
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
@@ -499,8 +499,8 @@ class AdminController extends Controller
         if ($onlyFlagged) {
             $reports->where('flagged', true);
         }
-        $reports = $reports->orderBy('created_at', 'asc')->get();
-        $response = Response::with(['thread.responses' => function($q){ $q->orderBy('created_at','asc'); }])->find($responseId);
+        $reports = $reports->orderByDesc('created_at')->get();
+        $response = Response::with(['thread.responses' => function($q){ $q->orderByDesc('created_at'); }])->find($responseId);
         $groupFlagged = $reports->contains('flagged', true);
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
@@ -1023,7 +1023,7 @@ class AdminController extends Controller
     }
 
     /**
-     * 改善要望一覧（古い順） + フィルタ（完了表示、星のみ）
+     * 改善要望一覧（新しい順） + フィルタ（完了表示、星のみ）
      */
     public function suggestions()
     {
@@ -1047,7 +1047,7 @@ class AdminController extends Controller
             $query->where('starred', true);
         }
 
-        $suggestions = $query->orderBy('created_at', 'asc')->get();
+        $suggestions = $query->orderByDesc('created_at')->get();
 
         $newSuggestionsCount = \App\Models\Suggestion::where('created_at', '>', $suggestionsSince)->count();
 
@@ -1394,7 +1394,7 @@ class AdminController extends Controller
         $appealsSince = $prevVisit?->created_at ?? now()->subYears(10);
 
         $showCompleted = request()->boolean('show_completed', false);
-        $query = FreezeAppeal::query()->with('user')->orderBy('created_at', 'asc');
+        $query = FreezeAppeal::query()->with('user')->orderByDesc('created_at');
         if (!$showCompleted) {
             $query->where('status', 'pending');
         }
