@@ -340,6 +340,10 @@
             alert(translations.loginRequiredError);
             return;
         }
+
+        if (!confirm(translations.confirmR18ChangeApprove || 'このルームをR18ルームに変更しますか？')) {
+            return;
+        }
         
         const button = event.target;
         const r18Section = button.closest('.r18-change-section');

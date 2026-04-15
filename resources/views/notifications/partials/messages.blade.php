@@ -56,7 +56,7 @@
         @elseif(isset($m->title_key) && in_array($m->title_key, ['report_restriction_review_title', 'report_restriction_ack_title']) && !($m->reply_used ?? false))
             <div class="report-restriction-ack-section" data-message-id="{{ $m->id }}">
                 <div class="report-restriction-ack-buttons">
-                    <button type="button" class="report-ack-btn" data-message-id="{{ $m->id }}">
+                    <button type="button" class="report-ack-btn {{ ($m->report_ack_disabled ?? false) ? 'is-disabled' : '' }}" data-message-id="{{ $m->id }}" {{ ($m->report_ack_disabled ?? false) ? 'disabled' : '' }}>
                         {{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}
                     </button>
                 </div>

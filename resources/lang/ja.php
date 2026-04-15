@@ -355,6 +355,7 @@ return [
     'r18_change_reject_failed' => 'R18変更の拒否に失敗しました。',
     'r18_change_approve_success' => 'ルームをR18ルームに変更しました。',
     'r18_change_reject_success' => 'R18ルームへの変更を拒否しました。',
+    'confirm_r18_change_approve' => 'このルームをR18ルームに変更しますか？',
 
     // 通報制限（審査通知・了承）
     'report_restriction_review_title' => '通報対象の審査について',
@@ -703,6 +704,7 @@ return [
     'report_description_placeholder' => '詳細があれば記入してください',
     'report_description_max' => '300文字以内',
     'report_submit_button' => '通報する',
+    'confirm_report_submit' => 'この内容で通報しますか？',
     'report_cancel_button' => 'キャンセル',
     
     // 言語名
@@ -872,7 +874,9 @@ return [
     'admin_reports_mixed' => '混在',
     'admin_reports_pending' => '未処理',
     'admin_reports_approve' => '了承',
+    'admin_reports_approve_confirm' => 'この通報を承認しますか？承認すると取り消せません。',
     'admin_reports_reject' => '拒否',
+    'admin_reports_reject_confirm' => 'この通報を拒否しますか？この操作は取り消せません。',
     'admin_reports_no_reports' => '通報はありません。',
     'admin_reports_no_matching' => '該当する通報はありません。',
     'admin_reports_thread_content' => 'ルーム内容',
@@ -937,6 +941,8 @@ return [
     'admin_freeze_appeal_report_approved_at' => '承認日時',
     'admin_freeze_appeal_approved_ok' => '承認し、アウト数を減算しました。',
     'admin_freeze_appeal_rejected_ok' => '却下しました。',
+    'admin_freeze_appeal_approve_confirm' => 'この異議申し立てを承認し、凍結を解除しますか？この操作は取り消せません。',
+    'admin_freeze_appeal_reject_confirm' => 'この異議申し立てを却下しますか？この操作は取り消せません。',
     'admin_reports_user_id' => 'ユーザーID',
     'admin_reports_reason' => '理由',
     'admin_reports_detail' => '詳細',

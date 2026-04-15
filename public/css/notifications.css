@@ -398,6 +398,15 @@
     cursor: not-allowed;
 }
 
+.notification-item .report-ack-btn.is-disabled,
+.notification-item .r18-approve-btn.is-disabled,
+.notification-item .r18-reject-btn.is-disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .coin-received-message {
     padding: 8px;
     background: #d1fae5;

@@ -78,7 +78,7 @@
                 @elseif(isset($m->title_key) && in_array($m->title_key, ['report_restriction_review_title', 'report_restriction_ack_title']) && !($m->reply_used ?? false))
                     <div class="report-restriction-ack-section" data-message-id="{{ $m->id }}">
                         <div class="report-restriction-ack-buttons">
-                            <button type="button" class="report-ack-btn" data-message-id="{{ $m->id }}">
+                            <button type="button" class="report-ack-btn {{ ($m->report_ack_disabled ?? false) ? 'is-disabled' : '' }}" data-message-id="{{ $m->id }}" {{ ($m->report_ack_disabled ?? false) ? 'disabled' : '' }}>
                                 {{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}
                             </button>
                         </div>
@@ -125,6 +125,7 @@
             'has_received_coin' => ($m->has_received_coin ?? false),
             'title_key' => $m->title_key ?? null,
             'thread_id' => $m->thread_id ?? null,
+            'report_ack_disabled' => ($m->report_ack_disabled ?? false),
         ];
     })->values();
 @endphp
@@ -149,6 +150,7 @@
             r18ChangeApproveFailed: '{{ \App\Services\LanguageService::trans('r18_change_approve_failed', $lang) }}',
             r18ChangeApproveButton: '{{ \App\Services\LanguageService::trans('r18_change_approve_button', $lang) }}',
             r18ChangeApproveSuccess: '{{ \App\Services\LanguageService::trans('r18_change_approve_success', $lang) }}',
+            confirmR18ChangeApprove: '{{ \App\Services\LanguageService::trans('confirm_r18_change_approve', $lang) }}',
             r18ChangeRejectFailed: '{{ \App\Services\LanguageService::trans('r18_change_reject_failed', $lang) }}',
             r18ChangeRejectButton: '{{ \App\Services\LanguageService::trans('r18_change_reject_button', $lang) }}',
             r18ChangeRejectSuccess: '{{ \App\Services\LanguageService::trans('r18_change_reject_success', $lang) }}',

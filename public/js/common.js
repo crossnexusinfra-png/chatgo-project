@@ -466,6 +466,10 @@
                     e.preventDefault();
                     return false;
                 }
+                if (!confirm(translations.confirmReportSubmit || 'この内容で通報しますか？')) {
+                    e.preventDefault();
+                    return false;
+                }
                 e.preventDefault();
                 form.classList.add('form-submitting');
                 var userName = form.querySelector('.js-create-thread-user_name');

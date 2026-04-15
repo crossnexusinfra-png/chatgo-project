@@ -18,6 +18,7 @@
         'other' => \App\Services\LanguageService::trans('other', $lang),
         'noFileSelected' => \App\Services\LanguageService::trans('no_file_selected', $lang),
         'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
+        'confirmReportSubmit' => \App\Services\LanguageService::trans('confirm_report_submit', $lang),
         'creating_room' => \App\Services\LanguageService::trans('creating_room', $lang),
         'sending_request' => \App\Services\LanguageService::trans('sending_request', $lang),
         'deleting' => \App\Services\LanguageService::trans('deleting', $lang),

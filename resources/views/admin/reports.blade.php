@@ -87,11 +87,11 @@
                 </td>
                 <td>
                     @if ($g->thread_id)
-                        <form method="post" action="{{ route('admin.reports.thread.approve', $g->thread_id) }}" class="admin-form-inline">
+                        <form method="post" action="{{ route('admin.reports.thread.approve', $g->thread_id) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.reports.thread.reject', $g->thread_id) }}" class="admin-form-inline admin-button-margin">
+                        <form method="post" action="{{ route('admin.reports.thread.reject', $g->thread_id) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
                         </form>
@@ -100,11 +100,11 @@
                             <button type="submit">{{ $g->any_flagged ? \App\Services\LanguageService::trans('admin_remove_star', $lang) : \App\Services\LanguageService::trans('admin_toggle_star', $lang) }}</button>
                         </form>
                     @elseif ($g->response_id)
-                        <form method="post" action="{{ route('admin.reports.response.approve', $g->response_id) }}" class="admin-form-inline">
+                        <form method="post" action="{{ route('admin.reports.response.approve', $g->response_id) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.reports.response.reject', $g->response_id) }}" class="admin-form-inline admin-button-margin">
+                        <form method="post" action="{{ route('admin.reports.response.reject', $g->response_id) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
                         </form>

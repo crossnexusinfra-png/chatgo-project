@@ -81,7 +81,7 @@
                             $targetUser = $a->user;
                             $maxOut = $targetUser ? max(0.25, round($targetUser->calculateOutCount(), 2)) : 0.25;
                         @endphp
-                        <form method="post" action="{{ route('admin.freeze-appeals.approve', $a) }}" class="admin-form-inline">
+                        <form method="post" action="{{ route('admin.freeze-appeals.approve', $a) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_freeze_appeal_approve_confirm', $lang) }}');">
                             @csrf
                             <label class="admin-label-margin">
                                 {{ \App\Services\LanguageService::trans('admin_freeze_appeal_out_reduce', $lang) }}:
@@ -89,7 +89,7 @@
                             </label>
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.freeze-appeals.reject', $a) }}" class="admin-form-inline admin-button-margin">
+                        <form method="post" action="{{ route('admin.freeze-appeals.reject', $a) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_freeze_appeal_reject_confirm', $lang) }}');">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reject', $lang) }}</button>
                         </form>

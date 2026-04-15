@@ -355,6 +355,7 @@ return [
     'r18_change_reject_failed' => 'Failed to reject R18 change.',
     'r18_change_approve_success' => 'This room is now set to R18.',
     'r18_change_reject_success' => 'The request to change this room to R18 was declined.',
+    'confirm_r18_change_approve' => 'Change this room to R18?',
 
     // Report restriction (review notice / acknowledge)
     'report_restriction_review_title' => 'Review of Reported Content',
@@ -708,6 +709,7 @@ return [
     'report_description_placeholder' => 'Please provide details if available',
     'report_description_max' => 'Within 300 characters',
     'report_submit_button' => 'Report',
+    'confirm_report_submit' => 'Submit this report?',
     'report_cancel_button' => 'Cancel',
     
     // Language Names
@@ -871,7 +873,9 @@ return [
     'admin_reports_mixed' => 'Mixed',
     'admin_reports_pending' => 'Pending',
     'admin_reports_approve' => 'Approve',
+    'admin_reports_approve_confirm' => 'Approve this report? This action cannot be undone.',
     'admin_reports_reject' => 'Reject',
+    'admin_reports_reject_confirm' => 'Reject this report? This action cannot be undone.',
     'admin_reports_no_reports' => 'No reports.',
     'admin_reports_no_matching' => 'No matching reports.',
     'admin_reports_thread_content' => 'Room Content',
@@ -936,6 +940,8 @@ return [
     'admin_freeze_appeal_report_approved_at' => 'Approved at',
     'admin_freeze_appeal_approved_ok' => 'Approved and out count reduced.',
     'admin_freeze_appeal_rejected_ok' => 'Rejected.',
+    'admin_freeze_appeal_approve_confirm' => 'Approve this appeal and unfreeze the account? This action cannot be undone.',
+    'admin_freeze_appeal_reject_confirm' => 'Reject this appeal? This action cannot be undone.',
     'admin_reports_user_id' => 'User ID',
     'admin_reports_reason' => 'Reason',
     'admin_reports_detail' => 'Detail',

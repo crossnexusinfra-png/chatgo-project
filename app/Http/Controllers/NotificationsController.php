@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use App\Models\User;
+use App\Models\Report;
 
 class NotificationsController extends Controller
 {
@@ -76,6 +77,7 @@ class NotificationsController extends Controller
                 $message->has_received_coin = in_array($message->id, $receivedCoinMessageIds);
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
+                $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
             }
         } else {
             foreach ($messages as $message) {
@@ -83,6 +85,7 @@ class NotificationsController extends Controller
                 $message->has_received_coin = false;
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
+                $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
             }
         }
 
@@ -101,6 +104,7 @@ class NotificationsController extends Controller
                     'has_received_coin' => ($m->has_received_coin ?? false),
                     'title_key' => $m->title_key ?? null,
                     'thread_id' => $m->thread_id ?? null,
+                    'report_ack_disabled' => ($m->report_ack_disabled ?? false),
                 ];
             })->values();
             
@@ -790,6 +794,46 @@ class NotificationsController extends Controller
                 ->exists();
         }
         return false;
+    }
+
+    /**
+     * 通報了承ボタンを初期表示で無効化すべきか判定
+     */
+    private function isReportAckDisabledForMessage(AdminMessage $message): bool
+    {
+        $isReportRestrictionReview = in_array($message->title_key, ['report_restriction_review_title', 'report_restriction_ack_title'], true);
+        if (!$isReportRestrictionReview || $message->reply_used) {
+            return false;
+        }
+
+        // R18ルーム変更済みかつ成人向け理由が残っている場合は不可
+        $targetThread = null;
+        if ($message->thread_id) {
+            $targetThread = \App\Models\Thread::withTrashed()->find((int) $message->thread_id);
+        } elseif ($message->response_id) {
+            $response = \App\Models\Response::find((int) $message->response_id);
+            if ($response && $response->thread_id) {
+                $targetThread = \App\Models\Thread::withTrashed()->find((int) $response->thread_id);
+            }
+        }
+        if ($targetThread && $targetThread->is_r18 && $this->hasAdultContentReasonPendingForMessage($message)) {
+            return true;
+        }
+
+        // 管理者側で承認/拒否済み（未処理が無い）なら不可
+        $base = null;
+        if ($message->response_id) {
+            $base = Report::where('response_id', (int) $message->response_id);
+        } elseif ($message->thread_id) {
+            $base = Report::where('thread_id', (int) $message->thread_id);
+        }
+        if (!$base) {
+            return false;
+        }
+
+        $pending = (clone $base)->whereNull('approved_at')->count();
+        $processed = (clone $base)->whereNotNull('approved_at')->count();
+        return $pending === 0 && $processed > 0;
     }
 }
 

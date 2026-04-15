@@ -114,6 +114,30 @@
     color: #fff;
     border: none;
     border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.08s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.admin-page button:hover:not(:disabled) {
+    background: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.admin-page button:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.admin-page button:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+}
+
+.admin-page button:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .admin-page .btn {
@@ -125,7 +149,7 @@
     font-weight: 500;
     cursor: pointer;
     border: none;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.08s, box-shadow 0.2s, opacity 0.2s;
 }
 
 .admin-page .btn-primary {
@@ -135,6 +159,7 @@
 
 .admin-page .btn-primary:hover {
     background: #2563eb;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .admin-page .btn-danger {
@@ -144,6 +169,7 @@
 
 .admin-page .btn-danger:hover {
     background: #dc2626;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
 .admin-page .btn-secondary {
@@ -153,6 +179,23 @@
 
 .admin-page .btn-secondary:hover {
     background: #4b5563;
+    box-shadow: 0 2px 8px rgba(75, 85, 99, 0.25);
+}
+
+.admin-page .btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.admin-page .btn:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+}
+
+.admin-page .btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .admin-messages-cancel-button {

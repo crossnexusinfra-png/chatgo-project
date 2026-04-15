@@ -29,11 +29,11 @@
     </form>
 
     <div class="admin-reports-actions-container">
-        <form method="post" action="{{ route('admin.reports.thread.approve', $threadId) }}" class="admin-form-inline">
+        <form method="post" action="{{ route('admin.reports.thread.approve', $threadId) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
             @csrf
             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
         </form>
-        <form method="post" action="{{ route('admin.reports.thread.reject', $threadId) }}" class="admin-form-inline admin-button-margin">
+        <form method="post" action="{{ route('admin.reports.thread.reject', $threadId) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
             @csrf
             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
         </form>
