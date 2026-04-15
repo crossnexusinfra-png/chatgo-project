@@ -214,6 +214,12 @@ class ReportRestrictionService
                 $result['thread_id'] = $threadId;
                 $result['response_id'] = $responseId;
 
+                // 管理者側で既に承認/拒否済み（=未処理が残っていない）対象は、作成者了承を不可にする
+                $processingState = $this->getReportProcessingState($type, $threadId, $responseId);
+                if ($processingState['pending'] === 0 && $processingState['processed'] > 0) {
+                    throw new \RuntimeException('[ACK_STEP]already_moderated');
+                }
+
                 // R18ルーム変更後でも「成人向けコンテンツが含まれる」通報理由に対する了承のみ不可
                 $r18CheckThreadId = $threadId;
                 if ($r18CheckThreadId === null && $responseId) {
@@ -851,6 +857,30 @@ class ReportRestrictionService
                 ->exists();
         }
         return false;
+    }
+
+    /**
+     * 対象の通報処理状態を取得
+     *
+     * @return array{pending:int, processed:int}
+     */
+    private function getReportProcessingState(?string $type, ?int $threadId, ?int $responseId): array
+    {
+        if ($type === 'thread' && $threadId) {
+            $base = Report::where('thread_id', $threadId);
+        } elseif ($type === 'response' && $responseId) {
+            $base = Report::where('response_id', $responseId);
+        } else {
+            return ['pending' => 0, 'processed' => 0];
+        }
+
+        $pending = (clone $base)->whereNull('approved_at')->count();
+        $processed = (clone $base)->whereNotNull('approved_at')->count();
+
+        return [
+            'pending' => (int) $pending,
+            'processed' => (int) $processed,
+        ];
     }
 
     private function sendRestrictionAckMessage(array $data): AdminMessage

@@ -363,6 +363,7 @@ return [
     'report_restriction_ack_success' => '了承を受け付けました。',
     'report_restriction_ack_failed' => '了承処理に失敗しました。',
     'report_ack_disabled_after_r18_change' => 'R18ルームに変更済みのため、通報の了承（削除）はできません。',
+    'report_ack_disabled_after_admin_moderated' => 'この通報は管理者側で既に承認または拒否済みのため、了承して削除はできません。',
     
     // リプライ操作
     'thread_restricted_no_post' => 'このルームは通報により機能が制限されており、リプライの投稿はできません。閲覧のみ可能です。',

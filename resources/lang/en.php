@@ -363,6 +363,7 @@ return [
     'report_restriction_ack_success' => 'Your acceptance has been received.',
     'report_restriction_ack_failed' => 'Failed to process your acceptance.',
     'report_ack_disabled_after_r18_change' => 'This content is now treated as R18, so this delete action is no longer available.',
+    'report_ack_disabled_after_admin_moderated' => 'This report has already been approved or rejected by administrators, so accept-and-delete is not available.',
     
     // Reply Operations
     'thread_restricted_no_post' => 'This room has restricted functionality due to a report. Reply posting is not allowed. Viewing only.',

@@ -145,11 +145,19 @@
                 @endif
                 <div class="friend-requests-list">
                     @foreach($availableUsers as $available)
+                        @php
+                            $peerPermaBanned = !empty($available['user']->is_permanently_banned);
+                        @endphp
                         <div class="friend-request-item">
                             <div class="friend-request-info">
                                 <a href="{{ route('profile.show', $available['user']->user_id) }}" class="friend-link">
                                     {{ $available['user']->username . '@' . ($available['user']->user_identifier ?? $available['user']->user_id) }}
                                 </a>
+                                @if($peerPermaBanned)
+                                    <div class="friend-peer-perma-banned-notice">
+                                        {{ \App\Services\LanguageService::trans('friend_peer_permanently_banned', $lang) }}
+                                    </div>
+                                @endif
                                 @if($available['sent_request'])
                                     <span class="status-pending">{{ \App\Services\LanguageService::trans('request_pending', $lang) }}</span>
                                 @endif
@@ -181,7 +189,7 @@
                                         @csrf
                                         <input type="hidden" name="user_id" value="{{ $available['user']->user_id }}">
                                         <div class="js-friend-form-fields">
-                                        <button type="submit" class="btn btn-primary" {{ $isMaxFriendsReached ? 'disabled' : '' }}>
+                                        <button type="submit" class="btn btn-primary" {{ ($isMaxFriendsReached || $peerPermaBanned) ? 'disabled' : '' }}>
                                             {{ \App\Services\LanguageService::trans('send_request', $lang) }}
                                         </button>
                                         </div>

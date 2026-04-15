@@ -746,6 +746,11 @@ class NotificationsController extends Controller
                         'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
                     ], 403);
                 }
+                if ($step === 'already_moderated') {
+                    return response()->json([
+                        'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_admin_moderated', $lang),
+                    ], 403);
+                }
                 \Log::error('Report restriction acknowledge failed', [
                     'error_id' => $errorId,
                     'user_id' => $userId,
