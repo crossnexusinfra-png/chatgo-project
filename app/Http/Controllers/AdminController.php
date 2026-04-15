@@ -29,6 +29,14 @@ class AdminController extends Controller
     }
 
     /**
+     * 管理者ページは常に日本語で表示する。
+     */
+    private function getAdminLanguage(): string
+    {
+        return 'JA';
+    }
+
+    /**
      * 通報の集計一覧（同一スレッド/レスポンスをまとめ、通報数の多い順）
      */
     public function reports()
@@ -147,7 +155,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {}
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.reports', [
             'groups' => $groups,
@@ -240,7 +248,7 @@ class AdminController extends Controller
             ->get();
             
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         // 初回登録時お知らせテンプレート（1件のみ・カラム存在時のみ）
         $welcomeMessage = null;
@@ -257,7 +265,7 @@ class AdminController extends Controller
         if (!Schema::hasColumn('admin_messages', 'is_welcome')) {
             return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
         }
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
         request()->validate([
             'welcome_title' => 'nullable|string|max:255',
             'welcome_body' => 'required|string|max:10000',
@@ -285,7 +293,7 @@ class AdminController extends Controller
     /** お知らせ配信 */
     public function messagesStore()
     {
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         request()->validate([
             'target_type' => 'required|in:all_members,filtered,specific',
@@ -431,7 +439,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {}
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.index', [
             'lastGuest' => $lastGuest,
@@ -463,7 +471,7 @@ class AdminController extends Controller
         $groupFlagged = $reports->contains('flagged', true);
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.report_detail_thread', [
             'threadId' => $threadId,
@@ -496,7 +504,7 @@ class AdminController extends Controller
         $groupFlagged = $reports->contains('flagged', true);
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.report_detail_response', [
             'responseId' => $responseId,
@@ -1054,7 +1062,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {}
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.suggestions', [
             'suggestions' => $suggestions,
@@ -1115,7 +1123,7 @@ class AdminController extends Controller
      */
     public function logs()
     {
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
         
         // ログファイルのパスを取得（ログローテーション対応）
         $logPath = $this->getLogFilePath();
@@ -1406,7 +1414,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
         }
 
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.freeze-appeals', [
             'appeals' => $appeals,
@@ -1481,7 +1489,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
         }
 
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_freeze_appeal_approved_ok', $lang));
     }
@@ -1509,7 +1517,7 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
         }
 
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_freeze_appeal_rejected_ok', $lang));
     }
@@ -1543,7 +1551,7 @@ class AdminController extends Controller
             ->limit(500)
             ->get();
 
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
 
         return view('admin.freeze-appeal-report-history', [
             'target' => $target,
@@ -1596,7 +1604,7 @@ class AdminController extends Controller
             File::put($logPath, '');
         }
         
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $lang = $this->getAdminLanguage();
         return back()->with('success', \App\Services\LanguageService::trans('admin_logs_cleared', $lang));
     }
 }
