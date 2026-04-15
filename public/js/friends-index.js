@@ -42,7 +42,14 @@
                 friend_id: String(friendId)
             })
         })
-        .then(response => response.json())
+        .then(async response => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                return response.json();
+            }
+            const text = await response.text();
+            throw new Error('Unexpected response format: ' + text.slice(0, 120));
+        })
         .then(data => {
             if (data.success) {
                 location.reload();

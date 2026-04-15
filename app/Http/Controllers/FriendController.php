@@ -202,7 +202,11 @@ class FriendController extends Controller
         // IDOR防止: フレンドにコインを送信する権限をチェック
         $policy = new FriendRequestPolicy();
         if (!$policy->sendCoins($user, $friend)) {
-            abort(403, 'この操作を実行する権限がありません');
+            $lang = LanguageService::getCurrentLanguage();
+            return response()->json([
+                'success' => false,
+                'message' => LanguageService::trans('request_user_mismatch', $lang),
+            ], 403);
         }
 
         // 重複実行防止
