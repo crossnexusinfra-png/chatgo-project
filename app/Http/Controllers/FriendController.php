@@ -196,7 +196,8 @@ class FriendController extends Controller
             'friend_id' => 'required|exists:users,user_id',
         ]);
         
-        $friend = User::findOrFail($request->friend_id);
+        $friendId = (string) $request->input('friend_id');
+        $friend = User::where('user_id', $friendId)->firstOrFail();
         
         // IDOR防止: フレンドにコインを送信する権限をチェック
         $policy = new FriendRequestPolicy();

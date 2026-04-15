@@ -35,10 +35,11 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
             body: JSON.stringify({
-                friend_id: friendId
+                friend_id: String(friendId)
             })
         })
         .then(response => response.json())
