@@ -214,7 +214,7 @@ class ReportRestrictionService
                 $result['thread_id'] = $threadId;
                 $result['response_id'] = $responseId;
 
-                // R18ルーム変更後は作成者了承（削除）を受け付けない（ルーム通報・リプライ通報の両方）
+                // R18ルーム変更後でも「成人向けコンテンツが含まれる」通報理由に対する了承のみ不可
                 $r18CheckThreadId = $threadId;
                 if ($r18CheckThreadId === null && $responseId) {
                     try {
@@ -232,7 +232,11 @@ class ReportRestrictionService
                     } catch (\Throwable $e) {
                         $r18ProbeThread = null;
                     }
-                    if ($r18ProbeThread && $r18ProbeThread->is_r18) {
+                    if (
+                        $r18ProbeThread
+                        && $r18ProbeThread->is_r18
+                        && $this->hasAdultContentReasonPending($type, $threadId, $responseId)
+                    ) {
                         throw new \RuntimeException('[ACK_STEP]r18_ack_not_allowed');
                     }
                 }
@@ -826,6 +830,27 @@ class ReportRestrictionService
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * R18変更提案に該当する通報理由（成人向けコンテンツ）で、未処理通報が残っているか判定
+     */
+    private function hasAdultContentReasonPending(?string $type, ?int $threadId, ?int $responseId): bool
+    {
+        $reason = '成人向けコンテンツが含まれる';
+        if ($type === 'thread' && $threadId) {
+            return Report::where('thread_id', $threadId)
+                ->where('reason', $reason)
+                ->whereNull('approved_at')
+                ->exists();
+        }
+        if ($type === 'response' && $responseId) {
+            return Report::where('response_id', $responseId)
+                ->where('reason', $reason)
+                ->whereNull('approved_at')
+                ->exists();
+        }
+        return false;
     }
 
     private function sendRestrictionAckMessage(array $data): AdminMessage

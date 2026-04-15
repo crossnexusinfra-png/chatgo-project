@@ -373,23 +373,26 @@ class NotificationsController extends Controller
                     ->pluck('response_id')
                     ->toArray();
 
-                // R18切替後は通報了承（削除）を一切できない仕様のため、
-                // 当該ルーム・当該ルーム内リプライ向けの審査/了承お知らせはすべて処理済み（ボタン非表示）にする
+                // R18切替後は「成人向けコンテンツが含まれる」理由の通報了承のみ不可にする
                 try {
-                    $threadReportIds = AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
+                    $threadReportMessages = AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
                         ->where('thread_id', $threadId)
-                        ->pluck('id')
-                        ->all();
+                        ->get();
 
-                    $responseReportIds = !empty($responseIds)
+                    $responseReportMessages = !empty($responseIds)
                         ? AdminMessage::whereIn('title_key', $reportRestrictionTitleKeys)
                             ->whereIn('response_id', $responseIds)
-                            ->pluck('id')
-                            ->all()
-                        : [];
+                            ->get()
+                        : collect();
 
                     $reportMessagesToEnable = [];
-                    $reportMessagesToDisable = array_values(array_unique(array_merge($threadReportIds, $responseReportIds)));
+                    $reportMessagesToDisable = $threadReportMessages
+                        ->merge($responseReportMessages)
+                        ->filter(fn ($msg) => $this->hasAdultContentReasonPendingForMessage($msg))
+                        ->pluck('id')
+                        ->unique()
+                        ->values()
+                        ->all();
                 } catch (\Throwable $e) {
                     \Log::warning('R18 approve: report button control failed (ignored)', [
                         'user_id' => $userId,
@@ -707,7 +710,7 @@ class NotificationsController extends Controller
                 return response()->json(['error' => \App\Services\LanguageService::trans('r18_change_already_processed', $lang)], 400);
             }
 
-            // R18ルームに変更済みの場合、通報了承（削除）は不可
+            // R18ルームに変更済みでも「成人向けコンテンツが含まれる」理由の通報了承のみ不可
             $targetThread = null;
             if ($message->thread_id) {
                 $targetThread = \App\Models\Thread::withTrashed()->find((int) $message->thread_id);
@@ -718,7 +721,11 @@ class NotificationsController extends Controller
                 }
             }
 
-            if ($targetThread && $targetThread->is_r18) {
+            if (
+                $targetThread
+                && $targetThread->is_r18
+                && $this->hasAdultContentReasonPendingForMessage($message)
+            ) {
                 return response()->json([
                     'error' => \App\Services\LanguageService::trans('report_ack_disabled_after_r18_change', $lang),
                 ], 403);
@@ -757,6 +764,27 @@ class NotificationsController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * 対象メッセージに、R18変更提案に相当する未処理通報理由が残っているか判定
+     */
+    private function hasAdultContentReasonPendingForMessage(AdminMessage $message): bool
+    {
+        $reason = '成人向けコンテンツが含まれる';
+        if ($message->response_id) {
+            return \App\Models\Report::where('response_id', (int) $message->response_id)
+                ->where('reason', $reason)
+                ->whereNull('approved_at')
+                ->exists();
+        }
+        if ($message->thread_id) {
+            return \App\Models\Report::where('thread_id', (int) $message->thread_id)
+                ->where('reason', $reason)
+                ->whereNull('approved_at')
+                ->exists();
+        }
+        return false;
     }
 }
 
