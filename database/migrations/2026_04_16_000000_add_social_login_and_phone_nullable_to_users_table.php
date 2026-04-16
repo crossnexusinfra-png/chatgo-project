@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone', 20)->nullable()->unique()->change();
+            $table->string('phone', 20)->nullable()->change();
             $table->string('x_provider_id')->nullable()->unique()->after('phone');
             $table->string('google_provider_id')->nullable()->unique()->after('x_provider_id');
             $table->string('apple_provider_id')->nullable()->unique()->after('google_provider_id');
@@ -20,7 +20,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn(['x_provider_id', 'google_provider_id', 'apple_provider_id']);
-            $table->string('phone', 20)->nullable(false)->unique()->change();
+            $table->string('phone', 20)->nullable(false)->change();
         });
     }
 };
