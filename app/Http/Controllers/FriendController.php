@@ -41,7 +41,7 @@ class FriendController extends Controller
         $sentRequests = collect();
         $availableUsers = [];
         $friendCount = 0;
-        $maxFriends = 10;
+        $maxFriends = $user->maxFriendsAllowed();
         $isMaxFriendsReached = false;
         
         if ($isEnabled) {

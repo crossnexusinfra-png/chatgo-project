@@ -125,6 +125,12 @@ class ThreadContinuationController extends Controller
 
         DB::beginTransaction();
         try {
+            $parentOwner = $parentThread->user;
+            $continuationImagePath = $parentThread->image_path;
+            if ($parentOwner && $parentOwner->requiresPhoneVerificationRestrictions()) {
+                $continuationImagePath = null;
+            }
+
             // タイトルから「(続き)」を削除
             $baseTitle = $parentThread->getCleanTitle();
             
@@ -138,7 +144,7 @@ class ThreadContinuationController extends Controller
                 'responses_count' => 0,
                 'access_count' => 0,
                 'is_r18' => $parentThread->is_r18,
-                'image_path' => $parentThread->image_path,
+                'image_path' => $continuationImagePath,
                 'parent_thread_id' => $parentThread->thread_id,
             ]);
 

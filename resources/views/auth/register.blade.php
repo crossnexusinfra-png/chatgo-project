@@ -60,6 +60,7 @@
                     @enderror
                 </div>
                 
+                @if(empty($externalRegistration))
                 <div class="form-group">
                     <label for="phone_country">{{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }} <span class="required">*</span></label>
                     <x-country-select name="phone_country" id="phone_country" value="{{ old('phone_country') }}" required />
@@ -68,7 +69,9 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
+                @endif
                 
+                @if(empty($externalRegistration))
                 <div class="form-group">
                     <label for="phone_local">{{ \App\Services\LanguageService::trans('register_phone_local_label', $lang) }} <span class="required">*</span></label>
                     <div class="phone-input-container">
@@ -81,18 +84,22 @@
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
+                @endif
                 
+                @if(empty($externalRegistration))
                 <!-- 隠しフィールドで国際表記の電話番号を送信 -->
                 <input type="hidden" id="phone" name="phone" value="{{ old('phone') }}">
+                @endif
                 
                 <div class="form-group">
                     <label for="email">{{ \App\Services\LanguageService::trans('register_email_label', $lang) }} <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email">
+                    <input type="email" id="email" name="email" value="{{ old('email', $externalRegistration['email'] ?? '') }}" required autocomplete="email" {{ !empty($externalRegistration) ? 'readonly' : '' }}>
                     @error('email')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
                 
+                @if(empty($externalRegistration))
                 <div class="form-group">
                     <label for="password">{{ \App\Services\LanguageService::trans('register_password_label', $lang) }} <span class="required">*</span></label>
                     <input type="password" id="password" name="password" required autocomplete="new-password">
@@ -120,6 +127,7 @@
                     <label for="password_confirmation">{{ \App\Services\LanguageService::trans('register_password_confirmation_label', $lang) }} <span class="required">*</span></label>
                     <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password">
                 </div>
+                @endif
                 
                 <div class="form-group">
                     <label for="nationality">{{ \App\Services\LanguageService::trans('register_nationality_label', $lang) }} <span class="required">*</span></label>

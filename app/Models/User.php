@@ -48,6 +48,9 @@ class User extends Authenticatable
         'frozen_until',
         'freeze_count',
         'is_permanently_banned',
+        'x_provider_id',
+        'google_provider_id',
+        'apple_provider_id',
     ];
     
     /**
@@ -326,8 +329,26 @@ class User extends Authenticatable
             ->sum('out_count');
         
         $totalOutCount = (float)($threadOutCount ?? 0) + (float)($responseOutCount ?? 0) + (float)($profileOutCount ?? 0);
+        if ($this->requiresPhoneVerificationRestrictions()) {
+            $totalOutCount *= 2;
+        }
         
         return $totalOutCount;
+    }
+
+    public function requiresPhoneVerificationRestrictions(): bool
+    {
+        return empty($this->phone) || $this->sms_verified_at === null;
+    }
+
+    public function responseBodyMaxLength(): int
+    {
+        return $this->requiresPhoneVerificationRestrictions() ? 100 : 500;
+    }
+
+    public function maxFriendsAllowed(): int
+    {
+        return $this->requiresPhoneVerificationRestrictions() ? 5 : 10;
     }
 
     /**

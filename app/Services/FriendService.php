@@ -541,7 +541,7 @@ class FriendService
      */
     public function isMaxFriendsReached(User $user): bool
     {
-        return $this->getFriendCount($user) >= 10;
+        return $this->getFriendCount($user) >= $user->maxFriendsAllowed();
     }
 }
 

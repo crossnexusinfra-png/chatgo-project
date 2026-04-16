@@ -107,6 +107,9 @@ class ResponseController extends Controller
             return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_response_limit_reached', $lang)]);
         }
 
+        $currentUser = auth()->user();
+        $maxBodyLength = $currentUser->responseBodyMaxLength();
+
         // フォームから送信されたリクエストデータを検証します。
         // bodyまたはmedia_fileのいずれかが必要
         \Log::info('ResponseController: Before validation (store)', [
@@ -144,7 +147,7 @@ class ResponseController extends Controller
         
         // バリデーションルールを動的に設定（ファイルが存在しない場合はfileルールを適用しない）
         $rules = [
-            'body' => 'nullable|string|max:500',
+            'body' => 'nullable|string|max:' . $maxBodyLength,
         ];
         
         if ($request->hasFile('media_file')) {
@@ -230,6 +233,10 @@ class ResponseController extends Controller
             return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('media_file_required', $lang)]);
         }
 
+        if ($currentUser->requiresPhoneVerificationRestrictions() && $request->hasFile('media_file')) {
+            return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではメディア投稿は利用できません。']);
+        }
+
         // ファイルアップロードの処理
         $mediaFile = null;
         $mediaType = null;
@@ -312,6 +319,9 @@ class ResponseController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            if ($currentUser->requiresPhoneVerificationRestrictions()) {
+                return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではURL投稿は利用できません。']);
+            }
             $urlLimit = $limits->urlPostLimitPerDay((int) $userIdForLimits);
             $todayUrls = $limits->todayUrlPostCount((int) $userIdForLimits);
             if ($todayUrls >= $urlLimit) {
@@ -567,10 +577,13 @@ class ResponseController extends Controller
             return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_response_limit_reached', $lang)]);
         }
 
+        $currentUser = auth()->user();
+        $maxBodyLength = $currentUser->responseBodyMaxLength();
+
         // フォームから送信されたリクエストデータを検証します。
         // bodyまたはmedia_fileのいずれかが必要。本文は500文字まで。メディアは10MBまで。
         $request->validate([
-            'body' => 'nullable|string|max:500',
+            'body' => 'nullable|string|max:' . $maxBodyLength,
             'media_file' => 'nullable|file|max:' . (10 * 1024),
         ], [
             'media_file.file' => \App\Services\LanguageService::trans('media_file_upload_failed', $lang),
@@ -637,6 +650,10 @@ class ResponseController extends Controller
             }
             
             return back()->withInput()->withErrors(['body' => \App\Services\LanguageService::trans('media_file_required', $lang)]);
+        }
+
+        if ($currentUser->requiresPhoneVerificationRestrictions() && $request->hasFile('media_file')) {
+            return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではメディア投稿は利用できません。']);
         }
 
         // コインを消費（メディア1件ごとに1コイン、URLを除く本文は1〜100文字で1コイン・以降100文字ごとに1コイン）
@@ -737,6 +754,9 @@ class ResponseController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            if ($currentUser->requiresPhoneVerificationRestrictions()) {
+                return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではURL投稿は利用できません。']);
+            }
             $urlLimit = $limits->urlPostLimitPerDay((int) $userIdForLimits);
             $todayUrls = $limits->todayUrlPostCount((int) $userIdForLimits);
             if ($todayUrls >= $urlLimit) {

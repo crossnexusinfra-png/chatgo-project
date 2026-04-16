@@ -537,11 +537,14 @@ class ThreadController extends Controller
             'title' => preg_replace('/\R/u', ' ', (string) $request->input('title', '')),
         ]);
 
+        $user = auth()->user();
+        $maxBodyLength = $user ? $user->responseBodyMaxLength() : 500;
+
         // バリデーション
         $request->validate([
             'title' => 'required|max:50',
             'tag' => 'required|max:100',
-            'body' => 'nullable|max:500',
+            'body' => 'nullable|max:' . $maxBodyLength,
             'is_r18' => 'nullable|boolean',
             'image' => 'nullable|file',
         ]);
@@ -591,6 +594,11 @@ class ThreadController extends Controller
         if ($todayThreadCount >= $threadLimit) {
             $key = $threadLimit <= 1 ? 'thread_creation_limit_restricted_exceeded' : 'thread_creation_limit_exceeded';
             return back()->withErrors(['title' => \App\Services\LanguageService::trans($key, $lang)])
+                ->withInput();
+        }
+
+        if ($user->requiresPhoneVerificationRestrictions() && $request->hasFile('image')) {
+            return back()->withErrors(['image' => '電話番号未登録アカウントではメディア投稿は利用できません。'])
                 ->withInput();
         }
 
@@ -693,6 +701,9 @@ class ThreadController extends Controller
         $urls = $safeBrowsingService->extractUrls($body);
         
         if (!empty($urls)) {
+            if ($user->requiresPhoneVerificationRestrictions()) {
+                return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではURL投稿は利用できません。']);
+            }
             // 通報制限中: URL 1日5件まで
             $urlLimit = $limits->urlPostLimitPerDay((int) $user->user_id);
             $todayUrls = $limits->todayUrlPostCount((int) $user->user_id);

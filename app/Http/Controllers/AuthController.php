@@ -17,6 +17,7 @@ use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
 use App\Mail\PasswordResetLinkMail;
 use App\Services\ProfilePendingContactService;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -475,7 +476,9 @@ class AuthController extends Controller
      */
     public function showRegisterForm()
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'externalRegistration' => session('external_registration'),
+        ]);
     }
 
     /**
@@ -483,6 +486,11 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        $externalRegistration = session('external_registration');
+        if (is_array($externalRegistration) && !empty($externalRegistration['provider']) && !empty($externalRegistration['provider_id']) && !empty($externalRegistration['email'])) {
+            return $this->registerWithExternalAccount($request, $externalRegistration);
+        }
+
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $messages = [
             'username.required' => \App\Services\LanguageService::trans('validation_username_required', $lang),
@@ -899,6 +907,53 @@ class AuthController extends Controller
         return view('auth.choice');
     }
 
+    public function redirectToProvider(string $provider)
+    {
+        $provider = $this->normalizeProvider($provider);
+        if ($provider === null) {
+            abort(404);
+        }
+
+        return Socialite::driver($provider)->redirect();
+    }
+
+    public function handleProviderCallback(Request $request, string $provider)
+    {
+        $provider = $this->normalizeProvider($provider);
+        if ($provider === null) {
+            abort(404);
+        }
+
+        $socialUser = Socialite::driver($provider)->user();
+        $email = strtolower(trim((string) $socialUser->getEmail()));
+        $providerId = (string) $socialUser->getId();
+        if ($email === '' || $providerId === '') {
+            return redirect()->route('auth.choice')->withErrors(['email' => '外部アカウントからメール情報を取得できませんでした。']);
+        }
+
+        $providerColumn = $this->providerColumn($provider);
+        $user = User::where($providerColumn, $providerId)->orWhere('email', $email)->first();
+        if ($user) {
+            $user->{$providerColumn} = $providerId;
+            $user->save();
+            Auth::login($user);
+            $request->session()->regenerate();
+            $intendedUrl = session('intended_url', '/');
+            session()->forget('intended_url');
+            return redirect($intendedUrl);
+        }
+
+        session([
+            'external_registration' => [
+                'provider' => $provider,
+                'provider_id' => $providerId,
+                'email' => $email,
+            ],
+        ]);
+
+        return redirect()->route('register');
+    }
+
     /**
      * 既存ユーザー向けSMS認証画面を表示
      */
@@ -1219,5 +1274,68 @@ class AuthController extends Controller
         } while ($exists);
         
         return $userIdentifier;
+    }
+
+    private function normalizeProvider(string $provider): ?string
+    {
+        $provider = strtolower($provider);
+        return in_array($provider, ['google', 'apple', 'x'], true) ? $provider : null;
+    }
+
+    private function providerColumn(string $provider): string
+    {
+        return match ($provider) {
+            'google' => 'google_provider_id',
+            'apple' => 'apple_provider_id',
+            default => 'x_provider_id',
+        };
+    }
+
+    private function registerWithExternalAccount(Request $request, array $externalRegistration)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+        $request->merge(['email' => (string) $externalRegistration['email']]);
+        $request->validate([
+            'username' => 'required|string|min:5|max:10',
+            'user_identifier' => 'nullable|string|min:5|max:15|regex:/^[a-z_]+$/|unique:users,user_identifier',
+            'email' => 'required|string|email|max:255|unique:users',
+            'nationality' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
+            'residence' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
+            'birthdate' => 'required|date|before:today',
+            'invite_code' => 'nullable|string|max:20|exists:users,invite_code',
+        ]);
+
+        $userIdentifier = $request->user_identifier ?: $this->generateUniqueUserIdentifier();
+        $providerColumn = $this->providerColumn((string) $externalRegistration['provider']);
+        $language = $this->getLanguageFromNationality($request->nationality);
+
+        $user = User::create([
+            'username' => $request->username,
+            'user_identifier' => $userIdentifier,
+            'email' => $request->email,
+            'phone' => null,
+            'nationality' => $request->nationality,
+            'residence' => $request->residence,
+            'birthdate' => $request->birthdate,
+            'password' => Hash::make(Str::random(64)),
+            'is_verified' => true,
+            'email_verified_at' => now(),
+            'sms_verified_at' => null,
+            'language' => $language,
+            'coins' => 0,
+            $providerColumn => (string) $externalRegistration['provider_id'],
+        ]);
+
+        app(\App\Services\FriendService::class)->generateInviteCode($user);
+        \App\Services\WelcomeNotificationService::sendWelcomeTo($user);
+        session()->forget('external_registration');
+        Auth::login($user);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+        $intendedUrl = session('intended_url', '/');
+        session()->forget('intended_url');
+        return redirect($intendedUrl)->with('success', \App\Services\LanguageService::trans('register_success', $lang));
     }
 }
