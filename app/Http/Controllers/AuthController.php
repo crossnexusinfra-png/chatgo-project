@@ -914,7 +914,7 @@ class AuthController extends Controller
             abort(404);
         }
 
-        return Socialite::driver($provider)->redirect();
+        return Socialite::driver($this->socialiteDriver($provider))->redirect();
     }
 
     public function handleProviderCallback(Request $request, string $provider)
@@ -924,7 +924,7 @@ class AuthController extends Controller
             abort(404);
         }
 
-        $socialUser = Socialite::driver($provider)->user();
+        $socialUser = Socialite::driver($this->socialiteDriver($provider))->user();
         $email = strtolower(trim((string) $socialUser->getEmail()));
         $providerId = (string) $socialUser->getId();
         if ($email === '' || $providerId === '') {
@@ -1289,6 +1289,11 @@ class AuthController extends Controller
             'apple' => 'apple_provider_id',
             default => 'x_provider_id',
         };
+    }
+
+    private function socialiteDriver(string $provider): string
+    {
+        return $provider === 'x' ? 'twitter' : $provider;
     }
 
     private function registerWithExternalAccount(Request $request, array $externalRegistration)
