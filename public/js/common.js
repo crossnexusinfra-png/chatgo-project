@@ -466,7 +466,7 @@
                     e.preventDefault();
                     return false;
                 }
-                if (!confirm(translations.confirmReportSubmit || 'この内容で通報しますか？')) {
+                if (!confirm(translations.confirmCreateThreadSubmit || 'この内容でルームを作成しますか？')) {
                     e.preventDefault();
                     return false;
                 }

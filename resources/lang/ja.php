@@ -237,6 +237,7 @@ return [
     'sending_request' => '申請中',
     'deleting' => '削除中',
     'creating_room' => '作成中',
+    'confirm_create_thread_submit' => 'この内容でルームを作成しますか？',
     'registering' => '登録中',
     'login_required_for_comment' => 'コメントを投稿するには会員登録が必要です',
     'no_responses_yet' => 'まだリプライはありません。',

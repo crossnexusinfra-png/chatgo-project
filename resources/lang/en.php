@@ -237,6 +237,7 @@ return [
     'sending_request' => 'Sending request...',
     'deleting' => 'Deleting...',
     'creating_room' => 'Creating...',
+    'confirm_create_thread_submit' => 'Create the room with this content?',
     'registering' => 'Registering...',
     'login_required_for_comment' => 'Member registration is required to post comments',
     'no_responses_yet' => 'No replies yet.',
