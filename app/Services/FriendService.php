@@ -120,16 +120,19 @@ class FriendService
             ];
         }
 
-        // 既に申請中かチェック
-        $existingRequest = FriendRequest::where(function ($query) use ($fromUser, $toUser) {
-            $query->where('from_user_id', $fromUser->user_id)
-                ->where('to_user_id', $toUser->user_id)
-                ->where('status', 'pending');
-        })->orWhere(function ($query) use ($fromUser, $toUser) {
-            $query->where('from_user_id', $toUser->user_id)
-                ->where('to_user_id', $fromUser->user_id)
-                ->where('status', 'pending');
-        })->first();
+        // 既に申請中かチェック（pending のみ。拒否済みは再度条件達成後に申請可能）
+        $existingRequest = FriendRequest::query()
+            ->where(function ($query) use ($fromUser, $toUser) {
+                $query->where(function ($q) use ($fromUser, $toUser) {
+                    $q->where('from_user_id', $fromUser->user_id)
+                        ->where('to_user_id', $toUser->user_id);
+                })->orWhere(function ($q) use ($fromUser, $toUser) {
+                    $q->where('from_user_id', $toUser->user_id)
+                        ->where('to_user_id', $fromUser->user_id);
+                });
+            })
+            ->pending()
+            ->first();
 
         if ($existingRequest) {
             return [
@@ -238,20 +241,44 @@ class FriendService
         if (!$this->hasFriendSlotCapacityIncludingPendingOutgoing($fromUser)) {
             return false;
         }
-        
+
         $check = $this->canSendFriendRequest($fromUser, $toUser);
         if (!$check['can_send']) {
             return false;
         }
-        
-        FriendRequest::create([
-            'from_user_id' => $fromUser->user_id,
-            'to_user_id' => $toUser->user_id,
-            'status' => 'pending',
-            'requested_at' => now(),
-        ]);
-        
-        return true;
+
+        return DB::transaction(function () use ($fromUser, $toUser): bool {
+            $pair = FriendRequest::query()
+                ->where('from_user_id', $fromUser->user_id)
+                ->where('to_user_id', $toUser->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($pair && $pair->status === 'pending') {
+                return false;
+            }
+            if ($pair && $pair->status === 'accepted') {
+                return false;
+            }
+
+            if (!$this->hasFriendSlotCapacityIncludingPendingOutgoing($fromUser)) {
+                return false;
+            }
+
+            FriendRequest::query()->updateOrCreate(
+                [
+                    'from_user_id' => $fromUser->user_id,
+                    'to_user_id' => $toUser->user_id,
+                ],
+                [
+                    'status' => 'pending',
+                    'requested_at' => now(),
+                    'responded_at' => null,
+                ]
+            );
+
+            return true;
+        });
     }
 
     /**
@@ -475,15 +502,17 @@ class FriendService
             }
 
             // 既に申請を送信しているかチェック
-            $sentRequest = FriendRequest::where('from_user_id', $user->user_id)
+            $sentRequest = FriendRequest::query()
+                ->where('from_user_id', $user->user_id)
                 ->where('to_user_id', $otherUser->user_id)
-                ->where('status', 'pending')
+                ->pending()
                 ->first();
 
             // 既に申請を受け取っているかチェック
-            $receivedRequest = FriendRequest::where('from_user_id', $otherUser->user_id)
+            $receivedRequest = FriendRequest::query()
+                ->where('from_user_id', $otherUser->user_id)
                 ->where('to_user_id', $user->user_id)
-                ->where('status', 'pending')
+                ->pending()
                 ->first();
 
             // 招待関係があるかチェック
@@ -520,6 +549,42 @@ class FriendService
         }
         
         return $availableUsers;
+    }
+
+    /**
+     * 「フレンド申請可能」一覧の拒否—送信済み pending があれば取り下げ（枠を解放）、なければ会話・招待条件のみリセット
+     */
+    public function rejectAvailableFriendConnection(User $user, User $targetUser): bool
+    {
+        return DB::transaction(function () use ($user, $targetUser): bool {
+            $outgoing = FriendRequest::query()
+                ->where('from_user_id', $user->user_id)
+                ->where('to_user_id', $targetUser->user_id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if ($outgoing) {
+                $reverseRequest = FriendRequest::query()
+                    ->where('from_user_id', $targetUser->user_id)
+                    ->where('to_user_id', $user->user_id)
+                    ->where('status', 'pending')
+                    ->first();
+
+                if ($reverseRequest) {
+                    $reverseRequest->delete();
+                }
+
+                $outgoing->update([
+                    'status' => 'rejected',
+                    'responded_at' => now(),
+                ]);
+            }
+
+            $this->resetFriendRequestConditions($user, $targetUser);
+
+            return true;
+        });
     }
 
     /**
@@ -585,8 +650,9 @@ class FriendService
      */
     public function countPendingSentFriendRequests(User $user): int
     {
-        return FriendRequest::where('from_user_id', $user->user_id)
-            ->where('status', 'pending')
+        return FriendRequest::query()
+            ->where('from_user_id', $user->user_id)
+            ->pending()
             ->count();
     }
 

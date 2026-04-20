@@ -31,5 +31,13 @@ class FriendRequest extends Model
     {
         return $this->belongsTo(User::class, 'to_user_id', 'user_id');
     }
+
+    /**
+     * 申請中（pending）のみ — 拒否・承認済みは含めない
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
 }
 

@@ -80,13 +80,13 @@ class FriendController extends Controller
             
             // 受信した申請
             $receivedRequests = FriendRequest::where('to_user_id', $user->user_id)
-                ->where('status', 'pending')
+                ->pending()
                 ->with('fromUser')
                 ->get();
             
             // 送信した申請
             $sentRequests = FriendRequest::where('from_user_id', $user->user_id)
-                ->where('status', 'pending')
+                ->pending()
                 ->with('toUser')
                 ->get();
             
@@ -287,8 +287,8 @@ class FriendController extends Controller
             abort(403, 'この操作を実行する権限がありません');
         }
         
-        // フレンド申請条件をリセット
-        $this->friendService->resetFriendRequestConditions($user, $targetUser);
+        // 送信済み申請があれば取り下げて枠を解放し、会話・招待条件もリセット
+        $this->friendService->rejectAvailableFriendConnection($user, $targetUser);
         
         $lang = LanguageService::getCurrentLanguage();
         
