@@ -507,8 +507,6 @@ class FriendService
             $canSend = $eligibleIgnoringCapacity && $hasSlot;
 
             $listedDespiteNoSendSlot = $eligibleIgnoringCapacity && !$hasSlot && !$sentRequest && !$receivedRequest;
-            $blockedSlotsReservedByPending = $listedDespiteNoSendSlot
-                && $this->getFriendCount($user) < $user->maxFriendsAllowed();
 
             // 申請中（送信/受信）は常に表示。枠オーバーで除外されていた「申請要件は満たすが送信枠なし」も表示
             if ($canSend || $sentRequest || $receivedRequest || $listedDespiteNoSendSlot) {
@@ -517,7 +515,6 @@ class FriendService
                     'sent_request' => $sentRequest,
                     'received_request' => $receivedRequest,
                     'is_invite' => $invite !== null,
-                    'blocked_slots_reserved_by_pending' => $blockedSlotsReservedByPending,
                 ];
             }
         }

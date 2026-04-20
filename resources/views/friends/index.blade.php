@@ -144,7 +144,7 @@
                     </div>
                 @elseif($isMaxFriendsReached)
                     <div class="alert alert-warning">
-                        {{ \App\Services\LanguageService::trans('friend_slot_full_pending_requests_notice', $lang, ['max' => $maxFriends]) }}
+                        {{ \App\Services\LanguageService::trans('friend_slot_full_pending_requests_notice', $lang) }}
                     </div>
                 @endif
                 <div class="friend-requests-list">
@@ -160,10 +160,6 @@
                                 @if($peerPermaBanned)
                                     <div class="friend-peer-perma-banned-notice">
                                         {{ \App\Services\LanguageService::trans('friend_peer_permanently_banned', $lang) }}
-                                    </div>
-                                @elseif(!empty($available['blocked_slots_reserved_by_pending']))
-                                    <div class="friend-request-slot-notice">
-                                        {{ \App\Services\LanguageService::trans('friend_request_row_slots_reserved_by_pending', $lang, ['max' => $maxFriends]) }}
                                     </div>
                                 @endif
                                 @if($available['sent_request'])
