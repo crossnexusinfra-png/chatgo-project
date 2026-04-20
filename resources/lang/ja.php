@@ -615,6 +615,8 @@ return [
     'login_reset_new_password' => '新しいパスワードを設定してください。',
     'login_reset_success' => 'パスワードを変更しました。ログインしました。',
     'login_forgot_password_link' => 'パスワードを忘れた方はこちら',
+    'social_login_account_not_found' => 'このGoogleアカウントに紐づくアカウントが見つかりません。新規登録が必要です。',
+    'social_register_terms_required' => 'Googleで登録する前に、利用規約への同意が必要です。',
     'password_reset_email_intro' => '登録のメールアドレスに、パスワード再設定用のリンクを送ります。',
     'password_reset_send_link' => '再設定用リンクを送信',
     'password_reset_forgot_email_link' => 'メールアドレスを忘れた方はこちら（登録電話番号で再設定）',

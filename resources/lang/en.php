@@ -621,6 +621,8 @@ return [
     'login_reset_new_password' => 'Set a new password.',
     'login_reset_success' => 'Your password has been updated. You are now logged in.',
     'login_forgot_password_link' => 'Forgot your password?',
+    'social_login_account_not_found' => 'No account is linked to this Google account. Please register first.',
+    'social_register_terms_required' => 'You must agree to the terms before registering with Google.',
     'password_reset_email_intro' => 'We will send a password reset link to your registered email address.',
     'password_reset_send_link' => 'Send reset link',
     'password_reset_forgot_email_link' => 'Forgot your email? (reset with your registered phone number)',

@@ -32,6 +32,11 @@
                     <p><a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_password_reset_link', $lang) }}</a></p>
                 </div>
             @else
+                <div class="auth-buttons" style="margin-bottom: 1rem;">
+                    <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}?intent=login" class="auth-btn login-btn">
+                        <span class="btn-text">Googleでログイン</span>
+                    </a>
+                </div>
                 @if ($isLocked && $lockExpiry)
                     <div class="alert alert-warning">
                         {{ \App\Services\LanguageService::trans('login_locked', $lang, ['time' => $lockExpiry->format('Y-m-d H:i')]) }}

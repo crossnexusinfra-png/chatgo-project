@@ -32,6 +32,14 @@
                     </ul>
                 </div>
             @endif
+
+            @if(empty($externalRegistration))
+                <div class="auth-buttons" style="margin-bottom: 1rem;">
+                    <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}?intent=register" class="auth-btn login-btn">
+                        <span class="btn-text">Googleで登録</span>
+                    </a>
+                </div>
+            @endif
             
             <form method="POST" action="{{ route('register') }}" class="auth-form" id="registerForm">
                 @csrf

@@ -27,6 +27,7 @@ class AuthController extends Controller
      */
     public function showLoginForm(Request $request)
     {
+        session(['social_auth_intent' => 'login']);
         $email = $request->old('email', '');
         $failureCount = $email !== '' ? LoginFailureService::getFailureCount($email) : 0;
         $lockExpiry = $email !== '' ? LoginFailureService::getLockExpiry($email) : null;
@@ -461,6 +462,7 @@ class AuthController extends Controller
         $request->validate([
             'terms_agreed' => 'required|accepted',
         ]);
+        session(['terms_agreed_for_registration' => true]);
 
         // セッションに保存されたintended_urlを保持
         $intendedUrl = session('intended_url');
@@ -476,6 +478,7 @@ class AuthController extends Controller
      */
     public function showRegisterForm()
     {
+        session(['social_auth_intent' => 'register']);
         return view('auth.register', [
             'externalRegistration' => session('external_registration'),
         ]);
@@ -908,12 +911,23 @@ class AuthController extends Controller
         return view('auth.choice');
     }
 
-    public function redirectToProvider(string $provider)
+    public function redirectToProvider(Request $request, string $provider)
     {
         $provider = $this->normalizeProvider($provider);
         if ($provider === null) {
             abort(404);
         }
+
+        $intent = strtolower((string) $request->query('intent', session('social_auth_intent', 'login')));
+        if (!in_array($intent, ['login', 'register'], true)) {
+            $intent = 'login';
+        }
+        if ($intent === 'register' && !session('terms_agreed_for_registration')) {
+            return redirect()->route('auth.terms')->withErrors([
+                'terms_agreed' => \App\Services\LanguageService::trans('social_register_terms_required', \App\Services\LanguageService::getCurrentLanguage()),
+            ]);
+        }
+        session(['social_auth_intent' => $intent]);
 
         return Socialite::driver($this->socialiteDriver($provider))->redirect();
     }
@@ -933,6 +947,7 @@ class AuthController extends Controller
         }
 
         $providerColumn = $this->providerColumn($provider);
+        $socialIntent = session('social_auth_intent', 'login');
         $user = User::where($providerColumn, $providerId)->orWhere('email', $email)->first();
         if ($user) {
             $user->{$providerColumn} = $providerId;
@@ -942,6 +957,12 @@ class AuthController extends Controller
             $intendedUrl = session('intended_url', '/');
             session()->forget('intended_url');
             return redirect($intendedUrl);
+        }
+
+        if ($socialIntent === 'login') {
+            return redirect()->route('login')->withErrors([
+                'email' => \App\Services\LanguageService::trans('social_login_account_not_found', \App\Services\LanguageService::getCurrentLanguage()),
+            ]);
         }
 
         session([
