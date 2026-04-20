@@ -43,6 +43,7 @@ class FriendController extends Controller
         $friendCount = 0;
         $maxFriends = $user->maxFriendsAllowed();
         $isMaxFriendsReached = false;
+        $isAtMaxFriendCount = false;
         
         if ($isEnabled) {
             // フレンド一覧を取得
@@ -95,6 +96,7 @@ class FriendController extends Controller
             // 現在のフレンド数と最大フレンド数
             $friendCount = $this->friendService->getFriendCount($user);
             $isMaxFriendsReached = $this->friendService->isMaxFriendsReached($user);
+            $isAtMaxFriendCount = $friendCount >= $maxFriends;
         } else {
             $coinSendStatuses = [];
         }
@@ -108,6 +110,7 @@ class FriendController extends Controller
             'friendCount',
             'maxFriends',
             'isMaxFriendsReached',
+            'isAtMaxFriendCount',
             'conditions',
             'isEnabled',
             'lang',

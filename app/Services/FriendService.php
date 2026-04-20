@@ -75,7 +75,7 @@ class FriendService
     }
 
     /**
-     * フレンド申請可能かチェック
+     * フレンド申請可能かチェック（送信枠の上限は別）
      */
     public function canSendFriendRequest(User $fromUser, User $toUser): array
     {
@@ -88,6 +88,14 @@ class FriendService
             ];
         }
 
+        return $this->evaluateFriendRequestEligibilityWithoutCapacity($fromUser, $toUser);
+    }
+
+    /**
+     * 送信枠を除くフレンド申請要件を満たすか（一覧表示で枠オーバー時も判定するために利用）
+     */
+    public function evaluateFriendRequestEligibilityWithoutCapacity(User $fromUser, User $toUser): array
+    {
         // 自分自身には申請できない
         if ($fromUser->user_id === $toUser->user_id) {
             return [
@@ -95,34 +103,34 @@ class FriendService
                 'reason' => '自分自身には申請できません',
             ];
         }
-        
+
         // 既にフレンドかチェック
-        $friendship = Friendship::where(function($query) use ($fromUser, $toUser) {
+        $friendship = Friendship::where(function ($query) use ($fromUser, $toUser) {
             $query->where('user_id', $fromUser->user_id)
-                  ->where('friend_id', $toUser->user_id);
-        })->orWhere(function($query) use ($fromUser, $toUser) {
+                ->where('friend_id', $toUser->user_id);
+        })->orWhere(function ($query) use ($fromUser, $toUser) {
             $query->where('user_id', $toUser->user_id)
-                  ->where('friend_id', $fromUser->user_id);
+                ->where('friend_id', $fromUser->user_id);
         })->first();
-        
+
         if ($friendship) {
             return [
                 'can_send' => false,
                 'reason' => '既にフレンドです',
             ];
         }
-        
+
         // 既に申請中かチェック
-        $existingRequest = FriendRequest::where(function($query) use ($fromUser, $toUser) {
+        $existingRequest = FriendRequest::where(function ($query) use ($fromUser, $toUser) {
             $query->where('from_user_id', $fromUser->user_id)
-                  ->where('to_user_id', $toUser->user_id)
-                  ->where('status', 'pending');
-        })->orWhere(function($query) use ($fromUser, $toUser) {
+                ->where('to_user_id', $toUser->user_id)
+                ->where('status', 'pending');
+        })->orWhere(function ($query) use ($fromUser, $toUser) {
             $query->where('from_user_id', $toUser->user_id)
-                  ->where('to_user_id', $fromUser->user_id)
-                  ->where('status', 'pending');
+                ->where('to_user_id', $fromUser->user_id)
+                ->where('status', 'pending');
         })->first();
-        
+
         if ($existingRequest) {
             return [
                 'can_send' => false,
@@ -136,17 +144,17 @@ class FriendService
                 'can_send' => true,
             ];
         }
-        
+
         // スレッド内でお互いに10通以上（双方それぞれ1000文字以上）送信し合ったかチェック
         $interaction = $this->checkThreadInteraction($fromUser, $toUser);
-        
+
         if (!$interaction['can_request']) {
             return [
                 'can_send' => false,
                 'reason' => $interaction['reason'],
             ];
         }
-        
+
         return [
             'can_send' => true,
         ];
@@ -454,6 +462,18 @@ class FriendService
         $allUsers = User::where('user_id', '!=', $user->user_id)->get();
         
         foreach ($allUsers as $otherUser) {
+            $friendship = Friendship::where(function ($query) use ($user, $otherUser) {
+                $query->where('user_id', $user->user_id)
+                    ->where('friend_id', $otherUser->user_id);
+            })->orWhere(function ($query) use ($user, $otherUser) {
+                $query->where('user_id', $otherUser->user_id)
+                    ->where('friend_id', $user->user_id);
+            })->first();
+
+            if ($friendship) {
+                continue;
+            }
+
             // 既に申請を送信しているかチェック
             $sentRequest = FriendRequest::where('from_user_id', $user->user_id)
                 ->where('to_user_id', $otherUser->user_id)
@@ -467,42 +487,37 @@ class FriendService
                 ->first();
 
             // 招待関係があるかチェック
-            $invite = \App\Models\UserInvite::where(function($query) use ($user, $otherUser) {
+            $invite = \App\Models\UserInvite::where(function ($query) use ($user, $otherUser) {
                 $query->where('inviter_id', $user->user_id)
-                      ->where('invitee_id', $otherUser->user_id);
-            })->orWhere(function($query) use ($user, $otherUser) {
+                    ->where('invitee_id', $otherUser->user_id);
+            })->orWhere(function ($query) use ($user, $otherUser) {
                 $query->where('inviter_id', $otherUser->user_id)
-                      ->where('invitee_id', $user->user_id);
+                    ->where('invitee_id', $user->user_id);
             })->first();
-            
-            // 招待関係がある場合、またはフレンド申請可能な場合
-            $canSend = false;
+
+            $eligibleIgnoringCapacity = false;
             if ($invite) {
-                // 招待関係がある場合は、既にフレンドでない限り申請可能
-                $friendship = Friendship::where(function($query) use ($user, $otherUser) {
-                    $query->where('user_id', $user->user_id)
-                          ->where('friend_id', $otherUser->user_id);
-                })->orWhere(function($query) use ($user, $otherUser) {
-                    $query->where('user_id', $otherUser->user_id)
-                          ->where('friend_id', $user->user_id);
-                })->first();
-                
-                if (!$friendship) {
-                    $canSend = $this->hasFriendSlotCapacityIncludingPendingOutgoing($user);
-                }
+                $eligibleIgnoringCapacity = true;
             } else {
-                // 招待関係がない場合は、通常の条件チェック
-                $check = $this->canSendFriendRequest($user, $otherUser);
-                $canSend = $check['can_send'];
+                $check = $this->evaluateFriendRequestEligibilityWithoutCapacity($user, $otherUser);
+                $eligibleIgnoringCapacity = $check['can_send'];
             }
-            
-            // 申請中（送信/受信）は、現在の申請可否に関わらず一覧に残して状態を表示する
-            if ($canSend || $sentRequest || $receivedRequest) {
+
+            $hasSlot = $this->hasFriendSlotCapacityIncludingPendingOutgoing($user);
+            $canSend = $eligibleIgnoringCapacity && $hasSlot;
+
+            $listedDespiteNoSendSlot = $eligibleIgnoringCapacity && !$hasSlot && !$sentRequest && !$receivedRequest;
+            $blockedSlotsReservedByPending = $listedDespiteNoSendSlot
+                && $this->getFriendCount($user) < $user->maxFriendsAllowed();
+
+            // 申請中（送信/受信）は常に表示。枠オーバーで除外されていた「申請要件は満たすが送信枠なし」も表示
+            if ($canSend || $sentRequest || $receivedRequest || $listedDespiteNoSendSlot) {
                 $availableUsers[] = [
                     'user' => $otherUser,
                     'sent_request' => $sentRequest,
                     'received_request' => $receivedRequest,
                     'is_invite' => $invite !== null,
+                    'blocked_slots_reserved_by_pending' => $blockedSlotsReservedByPending,
                 ];
             }
         }
