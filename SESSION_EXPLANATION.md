@@ -137,7 +137,7 @@ session(['acknowledged_response_' . $responseId => true]);
 
 ```php
 // config/session.php
-'cookie' => env('SESSION_COOKIE', 'bbs_project_session'),
+'cookie' => env('SESSION_COOKIE', 'chatgo_project_session'),
 'lifetime' => 120, // 120分
 'http_only' => true, // JavaScriptからアクセス不可（セキュリティ）
 'secure' => false, // HTTPSのみ（本番環境ではtrue推奨）

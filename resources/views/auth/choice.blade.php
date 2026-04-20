@@ -31,9 +31,6 @@
             </div>
             
             <div class="auth-buttons">
-                <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}" class="auth-btn login-btn">
-                    <span class="btn-text">Googleで続ける</span>
-                </a>
                 <a href="{{ route('login') }}" class="auth-btn login-btn">
                     <span class="btn-icon">🔑</span>
                     <span class="btn-text">{{ \App\Services\LanguageService::trans('login_title', $lang) }}</span>

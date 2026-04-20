@@ -3,7 +3,7 @@ version: '3.8'
 services:
   redis:
     image: redis:7.4.7-alpine
-    container_name: bbs-redis
+    container_name: chatgo-redis
     ports:
       - "6379:6379"
     volumes:

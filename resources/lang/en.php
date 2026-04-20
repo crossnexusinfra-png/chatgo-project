@@ -165,7 +165,7 @@ return [
     // Tag Page
     'clear_tag_filter' => 'Clear Tag Filter',
     'clear_search' => 'Clear Search',
-    'tag_threads_title' => '{tag} Rooms - Simple BBS',
+    'tag_threads_title' => '{tag} Rooms - Chatgo',
     'tag_threads_info' => '{tag} Rooms',
     'tag_threads_with_search' => ' + Search for "{query}"',
     'tag_threads_list' => '{tag} Room List',
@@ -174,7 +174,7 @@ return [
     
     // Search Page
     'search_results' => 'Search Results',
-    'search_results_title' => 'Search Results - Simple BBS',
+    'search_results_title' => 'Search Results - Chatgo',
     'search_results_for' => 'Search results for "{query}"',
     'search_results_count' => ' results',
     'clear_search_link' => 'Clear Search',
@@ -209,7 +209,7 @@ return [
     'reply_required' => 'Please enter your reply',
     
     // Room Detail Page
-    'thread_detail_title' => ' - Simple BBS',
+    'thread_detail_title' => ' - Chatgo',
     'back_to_threads' => '← Back to Room List',
     'report' => '🚩 Report',
     'report_change' => '✏️ Change Report',
@@ -485,7 +485,7 @@ return [
     'email_verification_description' => 'Please enter the verification code sent to {email}.',
     
     // Site Title
-    'site_title' => 'Simple BBS',
+    'site_title' => 'Chatgo',
     
     // Other (fallback)
     'other' => 'Other',
@@ -643,13 +643,13 @@ return [
     'password_reset_phone_not_registered' => 'This phone number is not registered. Please check what you entered.',
 
     // Auth Choice Page
-    'auth_choice_title' => 'Login / Register - BBS',
-    'auth_choice_welcome' => 'Welcome to BBS',
+    'auth_choice_title' => 'Login / Register - Chatgo',
+    'auth_choice_welcome' => 'Welcome to Chatgo',
     'auth_choice_subtitle' => 'Please choose to login or register',
     'auth_choice_back_to_top' => '← Back to Top',
     
     // Terms Page
-    'terms_title' => 'Terms of Service & Privacy Policy - BBS',
+    'terms_title' => 'Terms of Service & Privacy Policy - Chatgo',
     'terms_header' => 'Terms of Service & Privacy Policy',
     'terms_subtitle' => 'Please review the following before using our service',
     'terms_section_title' => 'Terms of Service',

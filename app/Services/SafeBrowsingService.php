@@ -83,7 +83,7 @@ class SafeBrowsingService
             // Google Safe Browsing APIにリクエスト
             $requestData = [
                 'client' => [
-                    'clientId' => 'bbs-project',
+                    'clientId' => 'chatgo-project',
                     'clientVersion' => '1.0.0'
                 ],
                 'threatInfo' => [

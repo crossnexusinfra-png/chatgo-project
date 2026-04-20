@@ -165,7 +165,7 @@ return [
     // タグページ
     'clear_tag_filter' => 'タグフィルターをクリア',
     'clear_search' => '検索ワードをクリア',
-    'tag_threads_title' => '{tag}のルーム - シンプルな掲示板',
+    'tag_threads_title' => '{tag}のルーム - Chatgo',
     'tag_threads_info' => '{tag}のルーム',
     'tag_threads_with_search' => ' + 「{query}」で検索',
     'tag_threads_list' => '{tag}のルーム一覧',
@@ -174,7 +174,7 @@ return [
     
     // 検索ページ
     'search_results' => '検索結果',
-    'search_results_title' => '検索結果 - シンプルな掲示板',
+    'search_results_title' => '検索結果 - Chatgo',
     'search_results_for' => '「{query}」の検索結果',
     'search_results_count' => '件',
     'clear_search_link' => '検索をクリア',
@@ -209,7 +209,7 @@ return [
     'reply_required' => '返信内容を入力してください',
     
     // ルーム詳細画面
-    'thread_detail_title' => ' - シンプルな掲示板',
+    'thread_detail_title' => ' - Chatgo',
     'back_to_threads' => '← ルーム一覧に戻る',
     'report' => '🚩 通報',
     'report_change' => '✏️ 通報内容を変更',
@@ -479,7 +479,7 @@ return [
     'message_reply_no_permission' => 'このメッセージに返信する権限がありません',
     
     // サイトタイトル
-    'site_title' => 'シンプルな掲示板',
+    'site_title' => 'Chatgo',
     
     // その他（フォールバック用）
     'other' => 'その他',
@@ -637,13 +637,13 @@ return [
     'password_reset_phone_not_registered' => 'この電話番号は登録されていません。入力内容をご確認ください。',
 
     // 認証選択画面
-    'auth_choice_title' => 'ログイン / 新規登録 - BBS',
-    'auth_choice_welcome' => 'BBSへようこそ',
+    'auth_choice_title' => 'ログイン / 新規登録 - Chatgo',
+    'auth_choice_welcome' => 'Chatgoへようこそ',
     'auth_choice_subtitle' => 'ログインまたは新規登録を選択してください',
     'auth_choice_back_to_top' => '← トップページに戻る',
     
     // 利用規約画面
-    'terms_title' => '利用規約・プライバシーポリシー - BBS',
+    'terms_title' => '利用規約・プライバシーポリシー - Chatgo',
     'terms_header' => '利用規約・プライバシーポリシー',
     'terms_subtitle' => 'サービスをご利用いただく前に、以下の内容をご確認ください',
     'terms_section_title' => '利用規約',
