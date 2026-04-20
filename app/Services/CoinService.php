@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\AdWatchHistory;
 use App\Models\ConsecutiveLoginReward;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CoinService
@@ -157,64 +158,105 @@ class CoinService
 
     /**
      * 連続ログイン報酬を配布
+     * 日付・0:00境界は居住地のタイムゾーン基準。同一居住地ローカル日内の重複と、
+     * reward_local_date / 記録時刻による識別で居住地変更直後の取りこぼしも抑止する。
      */
     public function rewardConsecutiveLogin(User $user): array
     {
-        $today = now()->toDateString();
-        $lastLoginDate = $user->last_login_date;
-        
-        // 今日既に報酬を受け取っているかチェック
-        $todayReward = ConsecutiveLoginReward::where('user_id', $user->user_id)
-            ->where('reward_date', $today)
-            ->first();
-        
-        if ($todayReward) {
-            return [
-                'success' => false,
-                'message' => '今日は既に報酬を受け取りました',
-            ];
-        }
-        
-        // 連続ログイン日数を計算
-        if ($lastLoginDate) {
-            $lastLogin = \Carbon\Carbon::parse($lastLoginDate);
-            $yesterday = now()->subDay()->toDateString();
-            
-            if ($lastLogin->toDateString() == $yesterday) {
-                // 連続ログイン
-                $user->increment('consecutive_login_days');
-            } elseif ($lastLogin->toDateString() != $today) {
-                // 連続ログインが途切れた
-                $user->consecutive_login_days = 1;
+        return DB::transaction(function () use ($user) {
+            /** @var User $locked */
+            $locked = User::where('user_id', $user->user_id)->lockForUpdate()->firstOrFail();
+
+            $tz = ResidenceTimezoneService::timezoneForResidence($locked->residence);
+            $nowTz = Carbon::now($tz);
+            $todayLocal = $nowTz->toDateString();
+            $yesterdayLocal = $nowTz->copy()->subDay()->toDateString();
+
+            $dayStartUtc = $nowTz->copy()->startOfDay()->utc();
+            $nextDayStartUtc = $nowTz->copy()->addDay()->startOfDay()->utc();
+
+            // この居住地での「今日」に既に報酬があるか（UTC の当日 0:00〜翌 0:00 に記録があるか）
+            $alreadyToday = ConsecutiveLoginReward::where('user_id', $locked->user_id)
+                ->where(function ($q) use ($dayStartUtc, $nextDayStartUtc, $todayLocal) {
+                    $q->where(function ($q2) use ($dayStartUtc, $nextDayStartUtc) {
+                        $q2->where('created_at', '>=', $dayStartUtc)
+                            ->where('created_at', '<', $nextDayStartUtc);
+                    })
+                        ->orWhere(function ($q3) use ($todayLocal) {
+                            $q3->whereNotNull('reward_local_date')
+                                ->where('reward_local_date', $todayLocal);
+                        });
+                })
+                ->exists();
+
+            if ($alreadyToday) {
+                return [
+                    'success' => false,
+                    'message' => '今日は既に報酬を受け取りました',
+                ];
             }
-        } else {
-            // 初回ログイン
-            $user->consecutive_login_days = 1;
-        }
-        
-        $consecutiveDays = $user->consecutive_login_days;
-        $coins = $this->calculateConsecutiveLoginReward($consecutiveDays);
-        
-        // コインを追加
-        $this->addCoins($user, $coins);
-        
-        // 報酬記録を保存
-        ConsecutiveLoginReward::create([
-            'user_id' => $user->user_id,
-            'reward_date' => $today,
-            'coins_rewarded' => $coins,
-            'consecutive_days' => $consecutiveDays,
-        ]);
-        
-        // 最終ログイン日を更新
-        $user->last_login_date = $today;
-        $user->save();
-        
-        return [
-            'success' => true,
-            'coins' => $coins,
-            'consecutive_days' => $consecutiveDays,
-        ];
+
+            $prevReward = ConsecutiveLoginReward::where('user_id', $locked->user_id)
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($prevReward) {
+                $prevLocalDate = Carbon::parse($prevReward->created_at)->timezone($tz)->toDateString();
+
+                if ($prevLocalDate === $todayLocal) {
+                    return [
+                        'success' => false,
+                        'message' => '今日は既に報酬を受け取りました',
+                    ];
+                }
+
+                if ($prevLocalDate === $yesterdayLocal) {
+                    $locked->increment('consecutive_login_days');
+                    $locked->refresh();
+                } else {
+                    $locked->consecutive_login_days = 1;
+                    $locked->save();
+                }
+            } else {
+                // 既存ユーザーのみ reward 行が無い場合は last_login_date で連続を推定
+                $lastLoginDate = $locked->last_login_date;
+                if ($lastLoginDate && $lastLoginDate === $yesterdayLocal) {
+                    $locked->increment('consecutive_login_days');
+                    $locked->refresh();
+                } elseif (!$lastLoginDate || $lastLoginDate !== $todayLocal) {
+                    $locked->consecutive_login_days = 1;
+                    $locked->save();
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => '今日は既に報酬を受け取りました',
+                    ];
+                }
+            }
+
+            $consecutiveDays = (int) $locked->consecutive_login_days;
+            $coins = $this->calculateConsecutiveLoginReward($consecutiveDays);
+
+            $this->addCoins($locked, $coins);
+
+            ConsecutiveLoginReward::create([
+                'user_id' => $locked->user_id,
+                'reward_date' => $todayLocal,
+                'reward_local_date' => $todayLocal,
+                'residence_at_reward' => $locked->residence,
+                'coins_rewarded' => $coins,
+                'consecutive_days' => $consecutiveDays,
+            ]);
+
+            $locked->last_login_date = $todayLocal;
+            $locked->save();
+
+            return [
+                'success' => true,
+                'coins' => $coins,
+                'consecutive_days' => $consecutiveDays,
+            ];
+        });
     }
 }
 

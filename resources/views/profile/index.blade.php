@@ -122,10 +122,10 @@
                         <label>{{ \App\Services\LanguageService::trans('registration_date', $lang) }}</label>
                         <span data-utc-datetime="{{ $user->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $user->created_at->format('Y-m-d') }}</span>
                     </div>
-                    @if($lastLoginAt)
+                    @if($lastLoginDisplay)
                         <div class="detail-item">
                             <label>{{ \App\Services\LanguageService::trans('last_login', $lang) }}</label>
-                            <span data-utc-datetime="{{ $lastLoginAt->format('Y-m-d H:i:s') }}" data-format="en">{{ $lastLoginAt->format('Y-m-d H:i') }}</span>
+                            <span>{{ $lastLoginDisplay }}</span>
                         </div>
                     @endif
                     <div class="detail-item">

@@ -806,6 +806,7 @@ class AuthController extends Controller
             'password' => $registrationData['password'],
             'is_verified' => true,
             'email_verified_at' => now(),
+            'sms_verified_at' => now(), // SMS 認証はこの前段階で完了している
             'language' => $language,
             'coins' => 0, // 初期コインは0
         ]);

@@ -979,6 +979,7 @@ return [
     'friend_feature_not_enabled' => 'To use the friend feature, you need: 5+ login days, 1+ room created, and 15+ replies sent.',
     'friend_request_sent' => 'Friend request sent',
     'friend_request_failed' => 'Failed to send friend request',
+    'friend_request_capacity_full' => 'You cannot send more friend requests because your friends plus pending outgoing requests have reached the limit',
     'friend_request_accepted' => 'Friend request accepted',
     'friend_request_accept_failed' => 'Failed to accept friend request',
     'friend_request_rejected' => 'Friend request rejected',

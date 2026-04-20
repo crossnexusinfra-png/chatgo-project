@@ -980,6 +980,7 @@ return [
     'friend_feature_not_enabled' => 'フレンド機能を利用するには、総ログイン数5日、ルーム作成1個以上、リプライ送信15回以上が必要です。',
     'friend_request_sent' => 'フレンド申請を送信しました',
     'friend_request_failed' => 'フレンド申請の送信に失敗しました',
+    'friend_request_capacity_full' => 'フレンド数と未処理の送信申請の合計が上限に達しているため、これ以上フレンド申請を送れません',
     'friend_request_accepted' => 'フレンド申請を承認しました',
     'friend_request_accept_failed' => 'フレンド申請の承認に失敗しました',
     'friend_request_rejected' => 'フレンド申請を拒否しました',

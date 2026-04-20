@@ -12,12 +12,15 @@ class ConsecutiveLoginReward extends Model
     protected $fillable = [
         'user_id',
         'reward_date',
+        'reward_local_date',
+        'residence_at_reward',
         'coins_rewarded',
         'consecutive_days',
     ];
 
     protected $casts = [
         'reward_date' => 'date',
+        'reward_local_date' => 'date',
     ];
 
     public function user()

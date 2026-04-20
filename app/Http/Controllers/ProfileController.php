@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 use App\Models\User;
+use App\Services\ResidenceTimezoneService;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
 use App\Services\VeriphoneService;
@@ -108,6 +110,11 @@ class ProfileController extends Controller
         
         $lastLoginAt = $previousLogin ? $previousLogin->created_at : null;
 
+        $residenceTz = ResidenceTimezoneService::timezoneForResidence($user->residence);
+        $lastLoginDisplay = $lastLoginAt
+            ? Carbon::parse($lastLoginAt)->timezone($residenceTz)->format('Y-m-d H:i')
+            : null;
+
         // 連続ログイン日数とコイン配布テーブルの情報を取得
         $consecutiveLoginDays = $user->consecutive_login_days ?? 0;
         $coinService = new \App\Services\CoinService();
@@ -128,7 +135,7 @@ class ProfileController extends Controller
             ['day' => 200, 'coins' => $coinService->calculateConsecutiveLoginReward(200), 'isBonus' => true],
         ];
 
-        return view('profile.index', compact('user', 'threads', 'favoriteThreads', 'lang', 'totalCount', 'threadRestrictionData', 'threadImageReportScoreData', 'lastLoginAt', 'consecutiveLoginDays', 'coinRewardTable'))->with('hideSearch', true);
+        return view('profile.index', compact('user', 'threads', 'favoriteThreads', 'lang', 'totalCount', 'threadRestrictionData', 'threadImageReportScoreData', 'lastLoginDisplay', 'consecutiveLoginDays', 'coinRewardTable'))->with('hideSearch', true);
     }
 
     /**

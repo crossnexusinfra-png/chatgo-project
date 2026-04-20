@@ -79,6 +79,15 @@ class FriendService
      */
     public function canSendFriendRequest(User $fromUser, User $toUser): array
     {
+        if (!$this->hasFriendSlotCapacityIncludingPendingOutgoing($fromUser)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return [
+                'can_send' => false,
+                'reason' => \App\Services\LanguageService::trans('friend_request_capacity_full', $lang),
+            ];
+        }
+
         // 自分自身には申請できない
         if ($fromUser->user_id === $toUser->user_id) {
             return [
@@ -218,8 +227,7 @@ class FriendService
      */
     public function sendFriendRequest(User $fromUser, User $toUser): bool
     {
-        // 最大フレンド数チェック
-        if ($this->isMaxFriendsReached($fromUser)) {
+        if (!$this->hasFriendSlotCapacityIncludingPendingOutgoing($fromUser)) {
             return false;
         }
         
@@ -246,43 +254,67 @@ class FriendService
         if ($request->status !== 'pending') {
             return false;
         }
-        
-        DB::transaction(function() use ($request) {
-            // 逆方向の申請もチェック（双方が申請している場合）
-            $reverseRequest = FriendRequest::where('from_user_id', $request->to_user_id)
-                ->where('to_user_id', $request->from_user_id)
+
+        return DB::transaction(function () use ($request): bool {
+            $locked = FriendRequest::query()
+                ->lockForUpdate()
+                ->find($request->getKey());
+            if (!$locked || $locked->status !== 'pending') {
+                return false;
+            }
+
+            $fromUser = User::query()->lockForUpdate()->find($locked->from_user_id);
+            $toUser = User::query()->lockForUpdate()->find($locked->to_user_id);
+            if (!$fromUser || !$toUser) {
+                return false;
+            }
+
+            if ($this->getFriendCount($fromUser) >= $fromUser->maxFriendsAllowed()) {
+                return false;
+            }
+
+            $pendingSentByAccepter = FriendRequest::query()
+                ->where('from_user_id', $toUser->user_id)
                 ->where('status', 'pending')
+                ->lockForUpdate()
+                ->count();
+            if ($this->getFriendCount($toUser) + $pendingSentByAccepter >= $toUser->maxFriendsAllowed()) {
+                return false;
+            }
+
+            $reverseRequest = FriendRequest::query()
+                ->where('from_user_id', $locked->to_user_id)
+                ->where('to_user_id', $locked->from_user_id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
                 ->first();
-            
-            // フレンド関係を作成（双方向）
+
             Friendship::create([
-                'user_id' => $request->from_user_id,
-                'friend_id' => $request->to_user_id,
+                'user_id' => $locked->from_user_id,
+                'friend_id' => $locked->to_user_id,
                 'friendship_date' => now(),
             ]);
-            
+
             Friendship::create([
-                'user_id' => $request->to_user_id,
-                'friend_id' => $request->from_user_id,
+                'user_id' => $locked->to_user_id,
+                'friend_id' => $locked->from_user_id,
                 'friendship_date' => now(),
             ]);
-            
-            // 申請を承認済みに更新
-            $request->update([
+
+            $locked->update([
                 'status' => 'accepted',
                 'responded_at' => now(),
             ]);
-            
-            // 逆方向の申請も承認済みに更新
+
             if ($reverseRequest) {
                 $reverseRequest->update([
                     'status' => 'accepted',
                     'responded_at' => now(),
                 ]);
             }
+
+            return true;
         });
-        
-        return true;
     }
 
     /**
@@ -456,7 +488,7 @@ class FriendService
                 })->first();
                 
                 if (!$friendship) {
-                    $canSend = true;
+                    $canSend = $this->hasFriendSlotCapacityIncludingPendingOutgoing($user);
                 }
             } else {
                 // 招待関係がない場合は、通常の条件チェック
@@ -537,11 +569,29 @@ class FriendService
     }
 
     /**
-     * 最大フレンド数に達しているかチェック
+     * 送信した未処理（pending）のフレンド申請数
+     */
+    public function countPendingSentFriendRequests(User $user): int
+    {
+        return FriendRequest::where('from_user_id', $user->user_id)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * フレンド数＋自分が送った未処理申請の合計が上限未満か
+     */
+    public function hasFriendSlotCapacityIncludingPendingOutgoing(User $user): bool
+    {
+        return $this->getFriendCount($user) + $this->countPendingSentFriendRequests($user) < $user->maxFriendsAllowed();
+    }
+
+    /**
+     * 新規申請を送れない（フレンド＋未処理送信申請で枠を使い切り）
      */
     public function isMaxFriendsReached(User $user): bool
     {
-        return $this->getFriendCount($user) >= $user->maxFriendsAllowed();
+        return !$this->hasFriendSlotCapacityIncludingPendingOutgoing($user);
     }
 }
 
