@@ -142,8 +142,8 @@ Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->name('
 
 // 認証関連のルート
 Route::get('/auth', [AuthController::class, 'showAuthChoice'])->name('auth.choice');
-Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider'])->where('provider', 'x|google|apple')->name('auth.provider.redirect');
-Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback'])->where('provider', 'x|google|apple')->name('auth.provider.callback');
+Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider'])->where('provider', 'google')->name('auth.provider.redirect');
+Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback'])->where('provider', 'google')->name('auth.provider.callback');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 // パスワード再設定（メール／SMS のワンタイムリンク）

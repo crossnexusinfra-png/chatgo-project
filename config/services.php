@@ -65,16 +65,4 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
-    'apple' => [
-        'client_id' => env('APPLE_CLIENT_ID'),
-        'client_secret' => env('APPLE_CLIENT_SECRET'),
-        'redirect' => env('APPLE_REDIRECT_URI'),
-    ],
-
-    'twitter' => [
-        'client_id' => env('X_CLIENT_ID'),
-        'client_secret' => env('X_CLIENT_SECRET'),
-        'redirect' => env('X_REDIRECT_URI'),
-    ],
-
 ];

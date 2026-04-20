@@ -1280,21 +1280,17 @@ class AuthController extends Controller
     private function normalizeProvider(string $provider): ?string
     {
         $provider = strtolower($provider);
-        return in_array($provider, ['google', 'apple', 'x'], true) ? $provider : null;
+        return $provider === 'google' ? $provider : null;
     }
 
     private function providerColumn(string $provider): string
     {
-        return match ($provider) {
-            'google' => 'google_provider_id',
-            'apple' => 'apple_provider_id',
-            default => 'x_provider_id',
-        };
+        return 'google_provider_id';
     }
 
     private function socialiteDriver(string $provider): string
     {
-        return $provider === 'x' ? 'twitter' : $provider;
+        return 'google';
     }
 
     private function registerWithExternalAccount(Request $request, array $externalRegistration)

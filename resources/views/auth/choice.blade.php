@@ -31,14 +31,8 @@
             </div>
             
             <div class="auth-buttons">
-                <a href="{{ route('auth.provider.redirect', ['provider' => 'x']) }}" class="auth-btn login-btn">
-                    <span class="btn-text">Xで続ける</span>
-                </a>
                 <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}" class="auth-btn login-btn">
                     <span class="btn-text">Googleで続ける</span>
-                </a>
-                <a href="{{ route('auth.provider.redirect', ['provider' => 'apple']) }}" class="auth-btn login-btn">
-                    <span class="btn-text">Appleで続ける</span>
                 </a>
                 <a href="{{ route('login') }}" class="auth-btn login-btn">
                     <span class="btn-icon">🔑</span>
