@@ -181,7 +181,7 @@
                                     <form action="{{ route('friends.accept-request', $available['received_request']) }}" method="POST" class="form-inline friend-accept-request-form">
                                         @csrf
                                         <div class="js-friend-form-fields">
-                                        <button type="submit" class="btn btn-success">{{ \App\Services\LanguageService::trans('accept', $lang) }}</button>
+                                        <button type="submit" class="btn btn-success" {{ empty($available['can_accept']) ? 'disabled' : '' }}>{{ \App\Services\LanguageService::trans('accept', $lang) }}</button>
                                         </div>
                                     </form>
                                     <form action="{{ route('friends.reject-request', $available['received_request']) }}" method="POST" class="form-inline friend-reject-request-form" id="reject-form-{{ $available['received_request']->id }}">

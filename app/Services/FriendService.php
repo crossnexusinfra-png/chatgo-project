@@ -282,6 +282,36 @@ class FriendService
     }
 
     /**
+     * 承認者側の枠のみで判定する（フレンド数＋自分が送った未処理申請）。申請者側の枠は承認可否に使わない。
+     */
+    public function accepterHasCapacityToAcceptFriend(User $accepter): bool
+    {
+        $pendingSentByAccepter = FriendRequest::query()
+            ->where('from_user_id', $accepter->user_id)
+            ->pending()
+            ->count();
+
+        return $this->getFriendCount($accepter) + $pendingSentByAccepter < $accepter->maxFriendsAllowed();
+    }
+
+    /**
+     * 指定のフレンド申請を承認できるか（サーバー側 accept と同一条件）
+     */
+    public function canAcceptFriendRequest(FriendRequest $request): bool
+    {
+        if ($request->status !== 'pending') {
+            return false;
+        }
+
+        $toUser = User::query()->find($request->to_user_id);
+        if (!$toUser) {
+            return false;
+        }
+
+        return $this->accepterHasCapacityToAcceptFriend($toUser);
+    }
+
+    /**
      * フレンド申請を承認
      */
     public function acceptFriendRequest(FriendRequest $request): bool
@@ -304,16 +334,7 @@ class FriendService
                 return false;
             }
 
-            if ($this->getFriendCount($fromUser) >= $fromUser->maxFriendsAllowed()) {
-                return false;
-            }
-
-            $pendingSentByAccepter = FriendRequest::query()
-                ->where('from_user_id', $toUser->user_id)
-                ->where('status', 'pending')
-                ->lockForUpdate()
-                ->count();
-            if ($this->getFriendCount($toUser) + $pendingSentByAccepter >= $toUser->maxFriendsAllowed()) {
+            if (!$this->accepterHasCapacityToAcceptFriend($toUser)) {
                 return false;
             }
 
@@ -544,6 +565,7 @@ class FriendService
                     'sent_request' => $sentRequest,
                     'received_request' => $receivedRequest,
                     'is_invite' => $invite !== null,
+                    'can_accept' => $receivedRequest ? $this->canAcceptFriendRequest($receivedRequest) : false,
                 ];
             }
         }
