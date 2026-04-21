@@ -3,6 +3,7 @@
 @php
     // コントローラーから渡された$langを使用、なければ取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $phoneIsRequired = !empty($user->phone);
 @endphp
 
 @section('title')
@@ -56,8 +57,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="phone">{{ \App\Services\LanguageService::trans('phone', $lang) }} <span class="required">*</span></label>
-                    <input type="tel" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" required>
+                    <label for="phone">
+                        {{ \App\Services\LanguageService::trans('phone', $lang) }}
+                        @if($phoneIsRequired)
+                            <span class="required">*</span>
+                        @else
+                            <small>（任意）</small>
+                        @endif
+                    </label>
+                    <input type="tel" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" {{ $phoneIsRequired ? 'required' : '' }}>
                     @error('phone')
                         <span class="error-message error-message-inline">{{ $message }}</span>
                     @enderror

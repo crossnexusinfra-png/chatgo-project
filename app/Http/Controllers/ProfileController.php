@@ -45,6 +45,12 @@ class ProfileController extends Controller
         
         // 言語を最初に取得（セッションキャッシュを活用）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        $hasExistingPhone = !empty($user->phone);
+        $phoneRule = $hasExistingPhone
+            ? 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id'
+            : 'nullable|string|max:20|unique:users,phone,' . $user->user_id . ',user_id';
+        $newPhone = trim((string) $request->input('phone', ''));
+        $newPhone = $newPhone === '' ? null : $newPhone;
         
         $user = Auth::user();
         
@@ -183,7 +189,7 @@ class ProfileController extends Controller
         
         $request->validate([
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
-            'phone' => 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id',
+            'phone' => $phoneRule,
             'residence' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
             'default_avatar' => ['nullable', 'string', 'regex:#^(none|(man|woman)\d+\.png)$#'],
             'language' => 'required|string|in:JA,EN',
@@ -198,15 +204,15 @@ class ProfileController extends Controller
 
         // usernameとuser_identifierは変更不可（bioはUI廃止のためフォームから除外、DBカラムは残置）
         $emailChanged = $user->email !== $request->email;
-        $phoneChanged = $user->phone !== $request->phone;
+        $phoneChanged = $user->phone !== $newPhone;
 
         // 連絡先を変えずに保存した場合、未完了の保留変更があれば破棄
         if (!$emailChanged && !$phoneChanged && ProfilePendingContactService::get($user->user_id)) {
             ProfilePendingContactService::clear($user->user_id);
         }
 
-        if ($phoneChanged) {
-            $verificationResult = VeriphoneService::verifyPhone($request->phone);
+        if ($phoneChanged && $newPhone !== null) {
+            $verificationResult = VeriphoneService::verifyPhone($newPhone);
 
             if (!$verificationResult['is_valid']) {
                 return back()->withErrors(['phone' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
@@ -221,7 +227,7 @@ class ProfileController extends Controller
             $data['email'] = $request->email;
         }
         if (!$phoneChanged) {
-            $data['phone'] = $request->phone;
+            $data['phone'] = $newPhone;
         }
 
         // 言語設定が変更された場合、セッションキャッシュをクリア
@@ -271,7 +277,7 @@ class ProfileController extends Controller
             $user->refresh();
             ProfilePendingContactService::put($user->user_id, [
                 'email' => $emailChanged ? $request->email : null,
-                'phone' => $phoneChanged ? $request->phone : null,
+                'phone' => $phoneChanged ? $newPhone : null,
                 'email_changed' => $emailChanged,
                 'phone_changed' => $phoneChanged,
             ]);
@@ -281,7 +287,7 @@ class ProfileController extends Controller
         if ($emailChanged && $phoneChanged) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$request->phone})");
+            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$newPhone})");
 
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
@@ -301,7 +307,7 @@ class ProfileController extends Controller
         } elseif ($phoneChanged) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$request->phone})");
+            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$newPhone})");
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.sms-verification')
