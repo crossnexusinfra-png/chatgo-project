@@ -1,47 +1,52 @@
 /* お知らせ画面のスタイル */
 
+/* main-container は付けない（bbs の flex 行レイアウトと衝突しヘッダーが潰れるのを防ぐ） */
 .notifications-container {
+    width: 100%;
     max-width: 800px;
     margin: 12px auto 12px auto;
-    padding: 0 15px 12px 15px;
+    padding: 20px 15px 24px 15px;
+    box-sizing: border-box;
     display: block;
 }
 
 .notifications-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
 .notifications-title {
     font-size: 20px;
     margin: 0;
-    flex: 1;
-    min-width: 0;
 }
 
-.notifications-auto-sent-filter {
-    margin: 0;
-    flex-shrink: 0;
+.notifications-auto-sent-form {
+    margin: 0 0 14px 0;
+    padding: 10px 14px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-sizing: border-box;
 }
 
 .notifications-auto-sent-label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     font-size: 14px;
     color: #374151;
     cursor: pointer;
     user-select: none;
 }
 
-.notifications-auto-sent-label input {
-    width: auto;
+.notifications-auto-sent-label input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
     margin: 0;
+    flex-shrink: 0;
     cursor: pointer;
+    accent-color: #2563eb;
 }
 
 .notifications-pagination-header {

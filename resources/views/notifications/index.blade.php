@@ -15,16 +15,16 @@
 @endpush
 
 @section('content')
-<div class="main-container notifications-container">
+<div class="notifications-container">
     <div class="notifications-header">
         <h1 class="notifications-title">{{ \App\Services\LanguageService::trans('notifications_title', $lang) }}</h1>
-        <form method="get" action="{{ route('notifications.index') }}" class="notifications-auto-sent-filter">
-            <label class="notifications-auto-sent-label">
-                <input type="checkbox" name="show_auto_sent" value="1" {{ !empty($showAutoSent) ? 'checked' : '' }} onchange="this.form.submit()">
-                <span>{{ \App\Services\LanguageService::trans('notifications_show_auto_sent', $lang) }}</span>
-            </label>
-        </form>
     </div>
+    <form method="get" action="{{ route('notifications.index') }}" class="notifications-auto-sent-form">
+        <label class="notifications-auto-sent-label" for="notificationsShowAutoSent">
+            <input type="checkbox" name="show_auto_sent" value="1" id="notificationsShowAutoSent" {{ !empty($showAutoSent) ? 'checked' : '' }}>
+            <span>{{ \App\Services\LanguageService::trans('notifications_show_auto_sent', $lang) }}</span>
+        </label>
+    </form>
     <div class="notifications-list" id="notificationsList">
         @forelse($messages as $m)
             @php
@@ -169,7 +169,7 @@
         }
     };
 </script>
-<script src="{{ asset('js/notifications-index.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+<script src="{{ asset('js/notifications-index.js') }}?v={{ @filemtime(public_path('js/notifications-index.js')) ?: time() }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
 

@@ -647,6 +647,16 @@
 
     // CSP対応: インラインイベントを使わずイベント委譲でバインド
     document.addEventListener('DOMContentLoaded', function() {
+        const autoSentCheckbox = document.getElementById('notificationsShowAutoSent');
+        if (autoSentCheckbox) {
+            autoSentCheckbox.addEventListener('change', function() {
+                const form = this.closest('form');
+                if (form) {
+                    form.submit();
+                }
+            });
+        }
+
         const listEl = document.getElementById('notificationsList');
         if (!listEl) return;
 
