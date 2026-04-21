@@ -287,6 +287,7 @@ class AdminController extends Controller
         }
 
         $filter = request('filter', 'all');
+        $showAutoSent = request()->boolean('show_auto_sent', false);
         $with = ['parentMessage'];
         if (Schema::hasTable('admin_message_recipients')) {
             $with[] = 'recipients';
@@ -342,6 +343,12 @@ class AdminController extends Controller
                 break;
         }
 
+        if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
+            $query->where(function ($w) {
+                $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
+            });
+        }
+
         $messages = $query->orderByDesc('published_at')
             ->orderByDesc('created_at')
             ->paginate(10)
@@ -349,7 +356,7 @@ class AdminController extends Controller
 
         $lang = $this->getAdminLanguage();
 
-        return view('admin.messages-history', compact('messages', 'filter', 'lang'));
+        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent'));
     }
 
     /** 初回登録時お知らせテンプレートを設定 */

@@ -303,8 +303,29 @@
 
 .admin-messages-filter-form {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 12px 16px;
     align-items: center;
+}
+
+.admin-messages-filter-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.admin-messages-filter-checkbox-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #0275d8;
 }
 
 .admin-messages-reply-limit-section {

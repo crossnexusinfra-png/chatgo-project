@@ -1,5 +1,6 @@
 @php
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $adminHistoryHasAutoSentColumn = \Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_auto_sent');
 @endphp
 @extends('layouts.app')
 
@@ -33,6 +34,12 @@
                         <option value="guests" {{ ($filter ?? '') === 'guests' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_guests', $lang) }}</option>
                     </select>
                 </label>
+                @if(!empty($adminHistoryHasAutoSentColumn))
+                <label class="admin-messages-filter-checkbox-label">
+                    <input type="checkbox" name="show_auto_sent" value="1" {{ !empty($showAutoSent) ? 'checked' : '' }} onchange="this.form.submit()">
+                    <span>{{ \App\Services\LanguageService::trans('admin_messages_show_auto_sent', $lang) }}</span>
+                </label>
+                @endif
             </form>
         </div>
 

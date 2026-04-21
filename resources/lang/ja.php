@@ -309,6 +309,7 @@ return [
     'admin_messages_filter_members' => '会員への送信',
     'admin_messages_filter_specific' => '特定ユーザーへの送信',
     'admin_messages_filter_guests' => '非会員への送信',
+    'admin_messages_show_auto_sent' => '自動送信のお知らせも一覧に含める',
     'admin_messages_sent_to' => '対象:',
     'admin_messages_sent_to_individual' => '個人向け（ユーザーID: {user_id}）',
     'admin_messages_sent_to_members' => '会員',

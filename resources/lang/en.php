@@ -309,6 +309,7 @@ return [
     'admin_messages_filter_members' => 'Sent to members',
     'admin_messages_filter_specific' => 'Sent to specific users',
     'admin_messages_filter_guests' => 'Sent to guests',
+    'admin_messages_show_auto_sent' => 'Include automated notifications in the list',
     'admin_messages_sent_to' => 'Target:',
     'admin_messages_sent_to_individual' => 'Individual (User ID: {user_id})',
     'admin_messages_sent_to_members' => 'Members',
