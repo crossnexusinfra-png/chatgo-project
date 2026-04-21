@@ -75,7 +75,11 @@
                         @if(!$isExternalRegistration)<span class="required">*</span>@endif
                         @if($isExternalRegistration)<small>（任意）</small>@endif
                     </label>
-                    <x-country-select name="phone_country" id="phone_country" value="{{ old('phone_country') }}" {{ !$isExternalRegistration ? 'required' : '' }} />
+                    @if($isExternalRegistration)
+                        <x-country-select name="phone_country" value="{{ old('phone_country') }}" />
+                    @else
+                        <x-country-select name="phone_country" value="{{ old('phone_country') }}" required />
+                    @endif
                     <small class="form-help">
                         {{ \App\Services\LanguageService::trans('register_phone_country_help', $lang) }}
                         @if($isExternalRegistration) Google登録では未入力でも進めます。 @endif

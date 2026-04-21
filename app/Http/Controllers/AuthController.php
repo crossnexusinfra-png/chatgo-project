@@ -28,6 +28,7 @@ class AuthController extends Controller
     public function showLoginForm(Request $request)
     {
         session(['social_auth_intent' => 'login']);
+        session()->forget('external_registration');
         $email = $request->old('email', '');
         $failureCount = $email !== '' ? LoginFailureService::getFailureCount($email) : 0;
         $lockExpiry = $email !== '' ? LoginFailureService::getLockExpiry($email) : null;
@@ -463,6 +464,7 @@ class AuthController extends Controller
             'terms_agreed' => 'required|accepted',
         ]);
         session(['terms_agreed_for_registration' => true]);
+        session()->forget('external_registration');
 
         // セッションに保存されたintended_urlを保持
         $intendedUrl = session('intended_url');
@@ -962,6 +964,7 @@ class AuthController extends Controller
         }
 
         if ($socialIntent === 'login') {
+            session()->forget('external_registration');
             return redirect()->route('auth.choice')->with('error', \App\Services\LanguageService::trans(
                 'social_login_account_not_found',
                 \App\Services\LanguageService::getCurrentLanguage()
