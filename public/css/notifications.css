@@ -23,6 +23,27 @@
     min-width: 0;
 }
 
+.notifications-auto-sent-filter {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.notifications-auto-sent-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+.notifications-auto-sent-label input {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
 .notifications-pagination-header {
     display: flex;
     align-items: center;

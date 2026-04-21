@@ -196,6 +196,7 @@ return [
     
     // Notifications
     'notifications_title' => 'Notifications',
+    'notifications_show_auto_sent' => 'Show automated notifications',
     'notifications_empty' => 'No new notifications.',
     'notification_no_title' => '(No Title)',
     'notifications_load_more' => 'Load More',

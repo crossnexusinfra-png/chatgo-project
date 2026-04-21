@@ -339,6 +339,7 @@ class ReportController extends Controller
             'allows_reply' => false,
             'reply_used' => false,
             'unlimited_reply' => false,
+            'is_auto_sent' => true,
         ]);
     }
 }

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use App\Policies\AdminPolicy;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Services\UserOutCountFreezeService;
 use App\Services\TranslationService;
 use App\Services\UserOutCountReductionService;
@@ -140,6 +141,21 @@ class AdminController extends Controller
                 return isset($group->has_previous_rejection) && $group->has_previous_rejection;
             });
         }
+        $groups = $groups->values();
+
+        $perPage = 10;
+        $currentPage = max((int) request()->query('page', 1), 1);
+        $pageItems = $groups->forPage($currentPage, $perPage)->values();
+        $groups = new LengthAwarePaginator(
+            $pageItems,
+            $groups->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
 
         // 新着数
         $newReportsCount = Report::where('created_at', '>', $reportsSince)->count();
@@ -369,6 +385,7 @@ class AdminController extends Controller
             'unlimited_reply' => false,
             'reply_used' => false,
             'coin_amount' => request('welcome_coin_amount') ? (int)request('welcome_coin_amount') : null,
+            'is_auto_sent' => false,
         ]);
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_messages_welcome_set', $lang));
@@ -468,6 +485,7 @@ class AdminController extends Controller
             'target_nationalities' => $targetNationalities ?: null,
             'target_registered_after' => $targetRegisteredAfter,
             'target_registered_before' => $targetRegisteredBefore,
+            'is_auto_sent' => false,
         ]);
 
         foreach ($recipientUserIds as $uid) {
@@ -938,6 +956,7 @@ class AdminController extends Controller
             'allows_reply' => false,
             'reply_used' => false,
             'coin_amount' => $coinAmount,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -970,6 +989,7 @@ class AdminController extends Controller
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -1065,6 +1085,7 @@ class AdminController extends Controller
             'published_at' => now(),
             'allows_reply' => true,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -1088,6 +1109,7 @@ class AdminController extends Controller
             'allows_reply' => false,
             'reply_used' => false,
             'coin_amount' => $coinAmount,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -1110,6 +1132,7 @@ class AdminController extends Controller
             'published_at' => now(),
             'allows_reply' => true,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -1138,7 +1161,7 @@ class AdminController extends Controller
             $query->where('starred', true);
         }
 
-        $suggestions = $query->orderByDesc('created_at')->get();
+        $suggestions = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
 
         $newSuggestionsCount = \App\Models\Suggestion::where('created_at', '>', $suggestionsSince)->count();
 
@@ -1665,6 +1688,7 @@ class AdminController extends Controller
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -1681,6 +1705,7 @@ class AdminController extends Controller
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 

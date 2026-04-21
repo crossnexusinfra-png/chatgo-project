@@ -37,6 +37,7 @@ class WelcomeNotificationService
             'unlimited_reply' => $template->unlimited_reply ?? false,
             'reply_used' => false,
             'coin_amount' => $template->coin_amount,
+            'is_auto_sent' => true,
         ]);
     }
 }

@@ -387,16 +387,23 @@
 
 .admin-messages-list-item-title {
     font-weight: 600;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .admin-messages-list-item-body {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     margin-top: 4px;
 }
 
 .admin-messages-list-item-meta {
     color: #6b7280;
     font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     margin-top: 6px;
 }
 

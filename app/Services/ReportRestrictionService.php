@@ -644,6 +644,7 @@ class ReportRestrictionService
                 'allows_reply' => false,
                 'reply_used' => false,
                 'coin_amount' => $coinAmount,
+                'is_auto_sent' => true,
             ]);
         } catch (\Throwable $e) {
             \Log::warning('sendSelfAcknowledgeApprovalMessage failed', [
@@ -686,6 +687,7 @@ class ReportRestrictionService
                 'published_at' => now(),
                 'allows_reply' => false,
                 'reply_used' => false,
+                'is_auto_sent' => true,
             ]);
         } catch (\Throwable $e) {
             \Log::warning('sendSelfAcknowledgeDeletionNotice failed', [
@@ -899,6 +901,7 @@ class ReportRestrictionService
             'allows_reply' => false,
             'unlimited_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -955,6 +958,7 @@ class ReportRestrictionService
             'allows_reply' => false,
             'reply_used' => false,
             'unlimited_reply' => false,
+            'is_auto_sent' => true,
         ]);
     }
 }

@@ -120,6 +120,21 @@
         @endforelse
         </tbody>
     </table>
+    @if(method_exists($groups, 'hasPages') && $groups->hasPages())
+        <div class="admin-messages-submit-container">
+            @if($groups->onFirstPage())
+                <span class="admin-link">←</span>
+            @else
+                <a class="admin-link" href="{{ $groups->previousPageUrl() }}">←</a>
+            @endif
+            <span> {{ $groups->currentPage() }} / {{ $groups->lastPage() }} </span>
+            @if($groups->hasMorePages())
+                <a class="admin-link" href="{{ $groups->nextPageUrl() }}">→</a>
+            @else
+                <span class="admin-link">→</span>
+            @endif
+        </div>
+    @endif
 </div>
 @endsection
 

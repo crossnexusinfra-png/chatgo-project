@@ -147,6 +147,7 @@ class UserOutCountFreezeService
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -166,6 +167,7 @@ class UserOutCountFreezeService
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 
@@ -184,6 +186,7 @@ class UserOutCountFreezeService
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,
+            'is_auto_sent' => true,
         ]);
     }
 }

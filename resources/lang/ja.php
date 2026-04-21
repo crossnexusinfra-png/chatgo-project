@@ -196,6 +196,7 @@ return [
     
     // お知らせ
     'notifications_title' => 'お知らせ',
+    'notifications_show_auto_sent' => '自動送信のお知らせも表示する',
     'notifications_empty' => '新しいお知らせはありません。',
     'notification_no_title' => '（タイトルなし）',
     'notifications_load_more' => 'さらに表示',

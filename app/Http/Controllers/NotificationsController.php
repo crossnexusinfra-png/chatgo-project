@@ -23,10 +23,20 @@ class NotificationsController extends Controller
         $user = auth()->user();
         $userId = $user->user_id;
 
+        $showAutoSent = request()->boolean('show_auto_sent', false);
+
         // 送信済み・親メッセージのみ・新しい順
         $baseQuery = AdminMessage::query()
             ->whereNotNull('published_at')
             ->whereNull('parent_message_id')
+            ->when(
+                Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent,
+                function ($q) {
+                    $q->where(function ($w) {
+                        $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
+                    });
+                }
+            )
             ->orderByDesc('published_at')
             ->orderByDesc('created_at');
 
@@ -60,7 +70,7 @@ class NotificationsController extends Controller
                 });
         });
 
-        $messages = $query->paginate(10);
+        $messages = $query->paginate(10)->withQueryString();
         $messageIds = $messages->pluck('id')->toArray();
 
         if (!empty($messageIds)) {
@@ -116,7 +126,7 @@ class NotificationsController extends Controller
             ]);
         }
         
-        return view('notifications.index', compact('messages', 'lang'))->with('hideSearch', true);
+        return view('notifications.index', compact('messages', 'lang', 'showAutoSent'))->with('hideSearch', true);
     }
 
     /**
@@ -219,6 +229,7 @@ class NotificationsController extends Controller
             'allows_reply' => false,
             'reply_used' => false,
             'parent_message_id' => $message->id,
+            'is_auto_sent' => false,
         ]);
         
         // 元のメッセージを返信済みにマーク（unlimited_replyがfalseの場合のみ）
@@ -648,6 +659,7 @@ class NotificationsController extends Controller
                 'allows_reply' => false,
                 'reply_used' => false,
                 'unlimited_reply' => false,
+                'is_auto_sent' => true,
             ]);
         }
     }

@@ -98,6 +98,21 @@
         @endforelse
         </tbody>
     </table>
+    @if(method_exists($suggestions, 'hasPages') && $suggestions->hasPages())
+        <div class="admin-messages-submit-container">
+            @if($suggestions->onFirstPage())
+                <span class="admin-link">←</span>
+            @else
+                <a class="admin-link" href="{{ $suggestions->previousPageUrl() }}">←</a>
+            @endif
+            <span> {{ $suggestions->currentPage() }} / {{ $suggestions->lastPage() }} </span>
+            @if($suggestions->hasMorePages())
+                <a class="admin-link" href="{{ $suggestions->nextPageUrl() }}">→</a>
+            @else
+                <span class="admin-link">→</span>
+            @endif
+        </div>
+    @endif
 </div>
 @endsection
 
