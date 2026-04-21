@@ -114,58 +114,13 @@
     </div>
 
     <div class="filter-section">
-            <h2 class="admin-messages-filter-title">{{ \App\Services\LanguageService::trans('admin_messages_sent_list', $lang) }}</h2>
-            <p class="admin-messages-back-link">
-                <a href="{{ route('admin.messages.history', ['filter' => ($filter ?? 'all')]) }}" class="admin-link">
-                    {{ \App\Services\LanguageService::trans('admin_messages_history_button', $lang) }}
-                </a>
-            </p>
-            <form method="get" action="{{ route('admin.messages') }}" class="admin-messages-filter-form">
-                <label class="admin-messages-filter-label">
-                <span>{{ \App\Services\LanguageService::trans('admin_messages_filter', $lang) }}</span>
-                    <select name="filter" class="admin-messages-select" onchange="this.form.submit()">
-                    <option value="all" {{ ($filter ?? 'all') === 'all' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_all', $lang) }}</option>
-                    <option value="report_auto_reply" {{ ($filter ?? '') === 'report_auto_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto_reply', $lang) }}</option>
-                    <option value="manual_reply" {{ ($filter ?? '') === 'manual_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_manual_reply', $lang) }}</option>
-                    <option value="report_auto" {{ ($filter ?? '') === 'report_auto' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto', $lang) }}</option>
-                    <option value="members" {{ ($filter ?? '') === 'members' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_members', $lang) }}</option>
-                    <option value="specific" {{ ($filter ?? '') === 'specific' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_specific', $lang) }}</option>
-                    <option value="guests" {{ ($filter ?? '') === 'guests' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_guests', $lang) }}</option>
-                </select>
-            </label>
-        </form>
+        <h2 class="admin-messages-filter-title">{{ \App\Services\LanguageService::trans('admin_messages_sent_list', $lang) }}</h2>
+        <p class="admin-messages-back-link">
+            <a href="{{ route('admin.messages.history') }}" class="admin-link">
+                {{ \App\Services\LanguageService::trans('admin_messages_history_button', $lang) }}
+            </a>
+        </p>
     </div>
-    @forelse($messages as $m)
-        <div class="list-item">
-                <div class="admin-messages-list-item-content">
-                    <div class="admin-messages-list-item-left">
-                        <div class="admin-messages-list-item-title">{{ $m->title ?? \App\Services\LanguageService::trans('notification_no_title', $lang) }}</div>
-                        <div class="admin-messages-list-item-body">{{ $m->body }}</div>
-                        <div class="admin-messages-list-item-meta">
-                        @if($m->user_id)
-                            {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{user_id}', $m->user_id, \App\Services\LanguageService::trans('admin_messages_sent_to_individual', $lang)) }}
-                        @elseif($m->recipients && $m->recipients->isNotEmpty())
-                            {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{count}', $m->recipients->count(), \App\Services\LanguageService::trans('admin_messages_sent_to_specific', $lang)) }}
-                        @else
-                            {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ $m->audience === 'members' ? \App\Services\LanguageService::trans('admin_messages_sent_to_members', $lang) : \App\Services\LanguageService::trans('admin_messages_sent_to_guests', $lang) }}
-                        @endif
-                        / {{ \App\Services\LanguageService::trans('admin_messages_sent_at', $lang) }} @if($m->published_at)<span data-utc-datetime="{{ $m->published_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $m->published_at->format('Y-m-d H:i') }}</span>@endif
-                        @if($m->parent_message_id)
-                                <span class="admin-messages-reply-indicator">{{ \App\Services\LanguageService::trans('admin_messages_reply_indicator', $lang) }}</span>
-                        @endif
-                    </div>
-                </div>
-                @if(!$m->parent_message_id)
-                        <form method="post" action="{{ route('admin.messages.cancel', $m->id) }}" class="admin-messages-cancel-form" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_cancel_confirm', $lang) }}');">
-                        @csrf
-                            <button type="submit" class="admin-messages-cancel-button">{{ \App\Services\LanguageService::trans('admin_messages_cancel', $lang) }}</button>
-                    </form>
-                @endif
-            </div>
-        </div>
-    @empty
-        <p>{{ \App\Services\LanguageService::trans('admin_messages_no_messages', $lang) }}</p>
-    @endforelse
     </div>
 </div>
     <script src="{{ asset('js/admin-messages.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
