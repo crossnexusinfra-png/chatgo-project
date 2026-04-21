@@ -242,6 +242,16 @@ class NotificationsController extends Controller
         if ($titleKey) {
             return \App\Services\LanguageService::trans($titleKey, $lang);
         }
+        if (strtoupper((string) $lang) === 'EN') {
+            return $message->getAttributeValue('title_en')
+                ?? $message->getAttributeValue('title_ja')
+                ?? $message->getAttributeValue('title');
+        }
+        if (strtoupper((string) $lang) === 'JA') {
+            return $message->getAttributeValue('title_ja')
+                ?? $message->getAttributeValue('title_en')
+                ?? $message->getAttributeValue('title');
+        }
         return $message->getAttributeValue('title');
     }
 
@@ -253,6 +263,16 @@ class NotificationsController extends Controller
         $bodyKey = $message->getAttributeValue('body_key');
         if ($bodyKey) {
             return \App\Services\LanguageService::trans($bodyKey, $lang);
+        }
+        if (strtoupper((string) $lang) === 'EN') {
+            return $message->getAttributeValue('body_en')
+                ?? $message->getAttributeValue('body_ja')
+                ?? ($message->getAttributeValue('body') ?? '');
+        }
+        if (strtoupper((string) $lang) === 'JA') {
+            return $message->getAttributeValue('body_ja')
+                ?? $message->getAttributeValue('body_en')
+                ?? ($message->getAttributeValue('body') ?? '');
         }
         return $message->getAttributeValue('body') ?? '';
     }

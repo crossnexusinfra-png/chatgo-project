@@ -267,8 +267,10 @@ class AdminController extends Controller
         }
         $lang = $this->getAdminLanguage();
         request()->validate([
-            'welcome_title' => 'nullable|string|max:255',
-            'welcome_body' => 'required|string|max:10000',
+            'welcome_title_ja' => 'nullable|string|max:255',
+            'welcome_title_en' => 'nullable|string|max:255',
+            'welcome_body_ja' => 'required|string|max:10000',
+            'welcome_body_en' => 'nullable|string|max:10000',
             'welcome_coin_amount' => 'nullable|integer|min:0',
         ]);
 
@@ -276,8 +278,13 @@ class AdminController extends Controller
         AdminMessage::where('is_welcome', true)->update(['is_welcome' => false]);
 
         AdminMessage::create([
-            'title' => request('welcome_title'),
-            'body' => request('welcome_body'),
+            'title_ja' => request('welcome_title_ja'),
+            'title_en' => request('welcome_title_en'),
+            'body_ja' => request('welcome_body_ja'),
+            'body_en' => request('welcome_body_en'),
+            // 既存ロジック互換のため、従来カラムにも保存
+            'title' => request('welcome_title_ja'),
+            'body' => request('welcome_body_ja'),
             'audience' => 'members',
             'published_at' => null,
             'is_welcome' => true,
@@ -297,8 +304,10 @@ class AdminController extends Controller
 
         request()->validate([
             'target_type' => 'required|in:all_members,filtered,specific',
-            'body' => 'required|string|max:2000',
-            'title' => 'nullable|string|max:255',
+            'body_ja' => 'required|string|max:2000',
+            'body_en' => 'nullable|string|max:2000',
+            'title_ja' => 'nullable|string|max:255',
+            'title_en' => 'nullable|string|max:255',
             'title_key' => 'nullable|string|max:255',
             'body_key' => 'nullable|string|max:255',
             'allows_reply' => 'nullable|boolean',
@@ -364,8 +373,13 @@ class AdminController extends Controller
         $message = AdminMessage::create([
             'title_key' => request('title_key'),
             'body_key' => request('body_key'),
-            'title' => request('title'),
-            'body' => request('body'),
+            'title_ja' => request('title_ja'),
+            'title_en' => request('title_en'),
+            'body_ja' => request('body_ja'),
+            'body_en' => request('body_en'),
+            // 既存ロジック互換のため、従来カラムにも保存
+            'title' => request('title_ja'),
+            'body' => request('body_ja'),
             'audience' => 'members',
             'published_at' => now(),
             'user_id' => $userId,

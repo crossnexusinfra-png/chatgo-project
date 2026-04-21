@@ -10,7 +10,7 @@ class AdminMessage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title_key', 'body_key', 'title', 'body', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount',
+        'title_key', 'body_key', 'title', 'body', 'title_ja', 'title_en', 'body_ja', 'body_en', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount',
         'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 
@@ -112,6 +112,14 @@ class AdminMessage extends Model
         if ($titleKey) {
             return \App\Services\LanguageService::trans($titleKey);
         }
+        // 多言語カラムがある場合はユーザー言語を優先
+        $lang = strtoupper((string) \App\Services\LanguageService::getCurrentLanguage());
+        if ($lang === 'EN' && array_key_exists('title_en', $this->attributes) && !empty($this->attributes['title_en'])) {
+            return $this->attributes['title_en'];
+        }
+        if (array_key_exists('title_ja', $this->attributes) && !empty($this->attributes['title_ja'])) {
+            return $this->attributes['title_ja'];
+        }
         // 直接保存されている場合はそのまま返す
         return $this->attributes['title'] ?? null;
     }
@@ -129,6 +137,14 @@ class AdminMessage extends Model
             // プレースホルダーを置換（動的な内容がある場合）
             // 注意: body_paramsは現在実装されていませんが、将来的な拡張のために残しています
             return $body;
+        }
+        // 多言語カラムがある場合はユーザー言語を優先
+        $lang = strtoupper((string) \App\Services\LanguageService::getCurrentLanguage());
+        if ($lang === 'EN' && array_key_exists('body_en', $this->attributes) && !empty($this->attributes['body_en'])) {
+            return $this->attributes['body_en'];
+        }
+        if (array_key_exists('body_ja', $this->attributes) && !empty($this->attributes['body_ja'])) {
+            return $this->attributes['body_ja'];
         }
         // 直接保存されている場合はそのまま返す
         return $this->attributes['body'] ?? '';

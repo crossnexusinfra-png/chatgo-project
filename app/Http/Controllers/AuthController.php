@@ -929,7 +929,9 @@ class AuthController extends Controller
         }
         session(['social_auth_intent' => $intent]);
 
-        return Socialite::driver($this->socialiteDriver($provider))->redirect();
+        return Socialite::driver($this->socialiteDriver($provider))
+            ->with(['prompt' => 'select_account'])
+            ->redirect();
     }
 
     public function handleProviderCallback(Request $request, string $provider)

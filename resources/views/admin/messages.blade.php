@@ -26,10 +26,14 @@
             <h2 class="admin-messages-section-title">{{ \App\Services\LanguageService::trans('admin_messages_welcome_title', $lang) }}</h2>
             <form method="post" action="{{ route('admin.messages.set-welcome') }}">
                 @csrf
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
-                <input type="text" name="welcome_title" value="{{ optional($welcomeMessage)->title ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}</label>
-                <textarea name="welcome_body" rows="4" required>{{ optional($welcomeMessage)->body ?? '' }}</textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                <input type="text" name="welcome_title_ja" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
+                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="Title in English">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                <textarea name="welcome_body_ja" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                <textarea name="welcome_body_en" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
                 <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
                 <div class="admin-messages-submit-container">
@@ -77,10 +81,14 @@
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers', $lang) }}</label>
                 <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="abc_user, def_id"></textarea>
             </div>
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}</label>
-            <input type="text" name="title" id="title" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}</label>
-            <textarea name="body" id="body" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+            <input type="text" name="title_ja" id="title_ja" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
+            <input type="text" name="title_en" id="title_en" placeholder="Title in English">
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+            <textarea name="body_ja" id="body_ja" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+            <textarea name="body_en" id="body_en" rows="5" placeholder="Message body in English"></textarea>
                 <div class="admin-messages-form-row">
                     <label class="admin-messages-label-flex">
                     <input type="checkbox" name="allows_reply" value="1" id="allows_reply">
@@ -168,16 +176,16 @@
                 const template = templates[templateKey];
                 
                 // フォームフィールドに値を設定
-                const titleField = document.getElementById('title');
-                const bodyField = document.getElementById('body');
+                const titleJaField = document.getElementById('title_ja');
+                const bodyJaField = document.getElementById('body_ja');
                 const coinAmountField = document.getElementById('coin_amount');
                 
-                if (titleField && template.title) {
-                    titleField.value = template.title;
+                if (titleJaField && template.title) {
+                    titleJaField.value = template.title;
                 }
                 
-                if (bodyField && template.body) {
-                    bodyField.value = template.body;
+                if (bodyJaField && template.body) {
+                    bodyJaField.value = template.body;
                 }
                 
                 if (coinAmountField && template.coin_amount !== undefined) {

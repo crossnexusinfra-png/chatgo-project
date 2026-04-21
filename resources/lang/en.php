@@ -624,6 +624,8 @@ return [
     'social_login_account_not_found' => 'No account is linked to this Google account. Please register first.',
     'social_register_terms_required' => 'You must agree to the terms before registering with Google.',
     'password_reset_email_intro' => 'We will send a password reset link to your registered email address.',
+    'password_reset_link_email_intro' => 'We received a request to reset your password. Use the link below to set a new password.',
+    'password_reset_link_email_ignore' => 'If you did not request this, you can ignore this email.',
     'password_reset_send_link' => 'Send reset link',
     'password_reset_forgot_email_link' => 'Forgot your email? (reset with your registered phone number)',
     'password_reset_phone_title' => 'Reset password with phone number',

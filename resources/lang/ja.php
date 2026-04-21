@@ -618,6 +618,8 @@ return [
     'social_login_account_not_found' => 'このGoogleアカウントに紐づくアカウントが見つかりません。新規登録が必要です。',
     'social_register_terms_required' => 'Googleで登録する前に、利用規約への同意が必要です。',
     'password_reset_email_intro' => '登録のメールアドレスに、パスワード再設定用のリンクを送ります。',
+    'password_reset_link_email_intro' => 'パスワード再設定のリクエストを受け付けました。以下のリンクから新しいパスワードを設定してください。',
+    'password_reset_link_email_ignore' => '心当たりがない場合はこのメールを無視してください。',
     'password_reset_send_link' => '再設定用リンクを送信',
     'password_reset_forgot_email_link' => 'メールアドレスを忘れた方はこちら（登録電話番号で再設定）',
     'password_reset_phone_title' => '電話番号でパスワード再設定',
