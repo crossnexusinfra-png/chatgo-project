@@ -17,6 +17,18 @@
             <div class="auth-header">
                 <h1>{{ \App\Services\LanguageService::trans('auth_choice_welcome', $lang) }}</h1>
                 <p>{{ \App\Services\LanguageService::trans('auth_choice_subtitle', $lang) }}</p>
+
+                @if(session('success'))
+                    <div class="alert alert-success" style="margin-top: 1rem;">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-warning" style="margin-top: 1rem;">
+                        {{ session('error') }}
+                    </div>
+                @endif
                 
                 @if(session('message'))
                     <div class="auth-message">

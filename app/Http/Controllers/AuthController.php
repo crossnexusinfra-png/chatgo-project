@@ -962,9 +962,10 @@ class AuthController extends Controller
         }
 
         if ($socialIntent === 'login') {
-            return redirect()->route('login')->withErrors([
-                'email' => \App\Services\LanguageService::trans('social_login_account_not_found', \App\Services\LanguageService::getCurrentLanguage()),
-            ]);
+            return redirect()->route('auth.choice')->with('error', \App\Services\LanguageService::trans(
+                'social_login_account_not_found',
+                \App\Services\LanguageService::getCurrentLanguage()
+            ));
         }
 
         session([
