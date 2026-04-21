@@ -1326,6 +1326,8 @@ class AuthController extends Controller
             'username' => 'required|string|min:5|max:10',
             'user_identifier' => 'nullable|string|min:5|max:15|regex:/^[a-z_]+$/|unique:users,user_identifier',
             'email' => 'required|string|email|max:255|unique:users',
+            'phone_country' => 'nullable|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ|required_with:phone_local',
+            'phone_local' => 'nullable|string|max:20|required_with:phone_country',
             'nationality' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
             'residence' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
             'birthdate' => 'required|date|before:today',
@@ -1335,19 +1337,47 @@ class AuthController extends Controller
         $userIdentifier = $request->user_identifier ?: $this->generateUniqueUserIdentifier();
         $providerColumn = $this->providerColumn((string) $externalRegistration['provider']);
         $language = $this->getLanguageFromNationality($request->nationality);
+        $internationalPhone = null;
+
+        if ($request->filled('phone_country') && $request->filled('phone_local')) {
+            try {
+                $internationalPhone = PhoneNumberService::convertToInternational(
+                    (string) $request->phone_country,
+                    (string) $request->phone_local
+                );
+            } catch (\InvalidArgumentException $e) {
+                return back()->withErrors(['phone_country' => $e->getMessage()])->withInput();
+            }
+
+            $existingPhoneUser = User::where('phone', $internationalPhone)->first();
+            if ($existingPhoneUser) {
+                if ($existingPhoneUser->is_permanently_banned) {
+                    return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('banned_phone_not_usable', $lang)])->withInput();
+                }
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('validation_phone_unique', $lang)])->withInput();
+            }
+
+            $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
+            if (!$verificationResult['is_valid']) {
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+            }
+            if (!empty($verificationResult['is_voip'])) {
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+            }
+        }
 
         $user = User::create([
             'username' => $request->username,
             'user_identifier' => $userIdentifier,
             'email' => $request->email,
-            'phone' => null,
+            'phone' => $internationalPhone,
             'nationality' => $request->nationality,
             'residence' => $request->residence,
             'birthdate' => $request->birthdate,
             'password' => Hash::make(Str::random(64)),
             'is_verified' => true,
             'email_verified_at' => now(),
-            'sms_verified_at' => null,
+            'sms_verified_at' => $internationalPhone ? now() : null,
             'language' => $language,
             'coins' => 0,
             $providerColumn => (string) $externalRegistration['provider_id'],

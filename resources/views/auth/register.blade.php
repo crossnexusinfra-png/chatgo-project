@@ -1,6 +1,7 @@
 @php
     // ViewComposerから渡された$langを使用、なければ取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $isExternalRegistration = !empty($externalRegistration);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $lang }}">
@@ -68,40 +69,45 @@
                     @enderror
                 </div>
                 
-                @if(empty($externalRegistration))
                 <div class="form-group">
-                    <label for="phone_country">{{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }} <span class="required">*</span></label>
-                    <x-country-select name="phone_country" id="phone_country" value="{{ old('phone_country') }}" required />
-                    <small class="form-help">{{ \App\Services\LanguageService::trans('register_phone_country_help', $lang) }}</small>
+                    <label for="phone_country">
+                        {{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }}
+                        @if(!$isExternalRegistration)<span class="required">*</span>@endif
+                        @if($isExternalRegistration)<small>（任意）</small>@endif
+                    </label>
+                    <x-country-select name="phone_country" id="phone_country" value="{{ old('phone_country') }}" {{ !$isExternalRegistration ? 'required' : '' }} />
+                    <small class="form-help">
+                        {{ \App\Services\LanguageService::trans('register_phone_country_help', $lang) }}
+                        @if($isExternalRegistration) Google登録では未入力でも進めます。 @endif
+                    </small>
                     @error('phone_country')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                @endif
                 
-                @if(empty($externalRegistration))
                 <div class="form-group">
-                    <label for="phone_local">{{ \App\Services\LanguageService::trans('register_phone_local_label', $lang) }} <span class="required">*</span></label>
+                    <label for="phone_local">
+                        {{ \App\Services\LanguageService::trans('register_phone_local_label', $lang) }}
+                        @if(!$isExternalRegistration)<span class="required">*</span>@endif
+                        @if($isExternalRegistration)<small>（任意）</small>@endif
+                    </label>
                     <div class="phone-input-container">
                         <span id="country-code-display" class="country-code-display">+81</span>
                         <input type="tel" id="phone_local" name="phone_local" value="{{ old('phone_local') }}" 
-                               placeholder="{{ \App\Services\LanguageService::trans('register_phone_local_placeholder', $lang) }}" required>
+                               placeholder="{{ \App\Services\LanguageService::trans('register_phone_local_placeholder', $lang) }}" {{ !$isExternalRegistration ? 'required' : '' }}>
                     </div>
                     <small class="form-help" id="phone-help">{{ \App\Services\LanguageService::trans('register_phone_local_help', $lang) }}</small>
                     @error('phone_local')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
                 </div>
-                @endif
                 
-                @if(empty($externalRegistration))
                 <!-- 隠しフィールドで国際表記の電話番号を送信 -->
                 <input type="hidden" id="phone" name="phone" value="{{ old('phone') }}">
-                @endif
                 
                 <div class="form-group">
                     <label for="email">{{ \App\Services\LanguageService::trans('register_email_label', $lang) }} <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" value="{{ old('email', $externalRegistration['email'] ?? '') }}" required autocomplete="email" {{ !empty($externalRegistration) ? 'readonly' : '' }}>
+                    <input type="email" id="email" name="email" value="{{ old('email', $externalRegistration['email'] ?? '') }}" required autocomplete="email" {{ $isExternalRegistration ? 'readonly' : '' }}>
                     @error('email')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
