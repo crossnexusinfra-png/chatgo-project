@@ -45,12 +45,6 @@ class ProfileController extends Controller
         
         // 言語を最初に取得（セッションキャッシュを活用）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $hasExistingPhone = !empty($user->phone);
-        $phoneRule = $hasExistingPhone
-            ? 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id'
-            : 'nullable|string|max:20|unique:users,phone,' . $user->user_id . ',user_id';
-        $newPhone = trim((string) $request->input('phone', ''));
-        $newPhone = $newPhone === '' ? null : $newPhone;
         
         $user = Auth::user();
         
@@ -186,6 +180,13 @@ class ProfileController extends Controller
             'residence.string' => \App\Services\LanguageService::trans('validation_residence_string', $lang),
             'residence.in' => \App\Services\LanguageService::trans('validation_residence_in', $lang),
         ];
+
+        $hasExistingPhone = !empty($user->phone);
+        $phoneRule = $hasExistingPhone
+            ? 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id'
+            : 'nullable|string|max:20|unique:users,phone,' . $user->user_id . ',user_id';
+        $newPhone = trim((string) $request->input('phone', ''));
+        $newPhone = $newPhone === '' ? null : $newPhone;
         
         $request->validate([
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
