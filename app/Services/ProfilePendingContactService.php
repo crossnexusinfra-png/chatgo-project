@@ -60,6 +60,6 @@ class ProfilePendingContactService
 
         return ($pending && !empty($pending['phone_changed']) && isset($pending['phone']))
             ? (string) $pending['phone']
-            : $user->phone;
+            : (string) ($user->phone ?? '');
     }
 }
