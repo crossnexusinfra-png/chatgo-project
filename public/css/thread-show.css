@@ -1046,10 +1046,17 @@ body {
 
 /* 電話番号未登録ユーザー向けのメディア投稿無効表示 */
 .media-file-btn-disabled-by-phone {
-    background: #b0b0b0 !important;
+    background: rgba(176, 176, 176, 0.65) !important;
     color: #666 !important;
     cursor: not-allowed !important;
-    opacity: 0.9;
+    border: 1px solid #bdbdbd !important;
+    box-shadow: none !important;
+}
+
+.media-file-btn-disabled-by-phone:hover,
+.media-file-btn-disabled-by-phone:active {
+    background: rgba(176, 176, 176, 0.65) !important;
+    transform: none !important;
 }
 
 /* 送信中: 本文入力欄を読み取り専用表示 */

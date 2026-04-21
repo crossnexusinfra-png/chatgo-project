@@ -3093,9 +3093,9 @@ button.back-link--button {
 /* 電話番号未登録ユーザー向けのメディア投稿無効表示 */
 .media-input-disabled-by-phone {
     border-color: #c7c7c7 !important;
-    background: #f2f2f2 !important;
+    background: white !important;
     cursor: not-allowed !important;
-    opacity: 0.9;
+    opacity: 1;
 }
 
 .media-input-disabled-by-phone:hover {
@@ -3103,8 +3103,9 @@ button.back-link--button {
 }
 
 .media-input-disabled-by-phone .file-input-button {
-    background: #b0b0b0 !important;
+    background: rgba(176, 176, 176, 0.65) !important;
     color: #666 !important;
+    border: 1px solid #bdbdbd !important;
 }
 
 .file-input-button {

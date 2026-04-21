@@ -388,7 +388,13 @@
                         </div>
                         <div class="media-file-container">
                             <input type="file" id="media_file" name="media_file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/webm" class="media-file-input-hidden">
-                            <button type="button" id="media-file-btn" class="media-file-btn js-media-file-btn" title="{{ \App\Services\LanguageService::trans('attach_file', $lang) }}">+</button>
+                            <button
+                                type="button"
+                                id="media-file-btn"
+                                class="media-file-btn js-media-file-btn"
+                                data-media-post-allowed="{{ auth()->check() && auth()->user() && !auth()->user()->requiresPhoneVerificationRestrictions() ? '1' : '0' }}"
+                                title="{{ \App\Services\LanguageService::trans('attach_file', $lang) }}"
+                            >+</button>
                             <span id="media-file-name" class="media-file-name-display"></span>
                         </div>
                         <button type="submit" class="submit-btn">{{ \App\Services\LanguageService::trans('submit', $lang) }}</button>

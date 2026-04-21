@@ -15,7 +15,7 @@
     const lang = config.lang || 'ja';
     const routes = config.routes || {};
     const isCurrentUserThreadOwner = config.isCurrentUserThreadOwner || false;
-    const canUseMediaPosts = config.canUseMediaPosts !== false;
+    const canUseMediaPostsFromConfig = config.canUseMediaPosts !== false;
     const continuationRequestThreshold = config.continuationRequestThreshold || 3;
     const csrfToken = config.csrfToken || '';
 
@@ -964,6 +964,9 @@
         const mediaFileName = document.getElementById('media-file-name');
         const responseForm = document.getElementById('response-form');
         const bodyTextarea = document.getElementById('body');
+        const canUseMediaPosts = mediaFileBtn
+            ? mediaFileBtn.getAttribute('data-media-post-allowed') === '1'
+            : canUseMediaPostsFromConfig;
 
         if (!mediaFileBtn || !mediaFileInput) {
             return;
