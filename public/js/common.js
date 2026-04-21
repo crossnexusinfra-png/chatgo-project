@@ -8,6 +8,7 @@
     const translations = config.translations || {};
     const routes = config.routes || {};
     const isAdult = config.isAdult || false;
+    const canUseMediaPosts = config.canUseMediaPosts !== false;
 
     /**
      * UTC日時をローカルタイムゾーンに変換して表示するユーティリティ関数
@@ -549,8 +550,32 @@
         // 画像ファイル選択時のファイル名表示
         const imageInput = document.getElementById('image');
         const imageFileName = document.getElementById('imageFileName');
+        const imageInputLabel = imageInput ? document.querySelector('label[for="image"]') : null;
         if (imageInput && imageFileName) {
+            if (!canUseMediaPosts) {
+                const disabledMessage = translations.mediaPostPhoneVerificationRequired || '電話番号未登録アカウントではメディア投稿は利用できません。';
+                if (imageInputLabel) {
+                    imageInputLabel.classList.add('media-input-disabled-by-phone');
+                    imageInputLabel.setAttribute('aria-disabled', 'true');
+                    imageInputLabel.setAttribute('title', disabledMessage);
+                }
+
+                imageInput.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert(disabledMessage);
+                });
+
+                imageInput.addEventListener('change', function() {
+                    imageInput.value = '';
+                    imageFileName.textContent = translations.noFileSelected || 'No file selected';
+                    alert(disabledMessage);
+                });
+            }
+
             imageInput.addEventListener('change', function(e) {
+                if (!canUseMediaPosts) {
+                    return;
+                }
                 const file = e.target.files[0];
                 if (file) {
                     imageFileName.textContent = file.name;

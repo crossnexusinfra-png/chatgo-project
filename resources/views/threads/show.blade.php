@@ -444,6 +444,7 @@
         'phpUploadMaxSize' => $phpUploadMaxSize ?? (2 * 1024 * 1024),
         'lang' => strtolower($lang),
         'isCurrentUserThreadOwner' => isset($isCurrentUserThreadOwner) && $isCurrentUserThreadOwner,
+        'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
         'continuationRequestThreshold' => $continuationRequestThreshold ?? 3,
         'csrfToken' => csrf_token(),
         'routes' => [
@@ -476,6 +477,7 @@
             'videoMaxSize' => \App\Services\LanguageService::trans('video_max_size', $lang),
             'audioMaxSize' => \App\Services\LanguageService::trans('audio_max_size', $lang),
             'messageOrFileRequired' => \App\Services\LanguageService::trans('message_or_file_required', $lang),
+            'mediaPostPhoneVerificationRequired' => \App\Services\LanguageService::trans('media_post_phone_verification_required', $lang),
             'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
             'adVideoLoading' => \App\Services\LanguageService::trans('ad_video_loading', $lang),
             'adVideoPlaying' => \App\Services\LanguageService::trans('ad_video_playing', $lang),

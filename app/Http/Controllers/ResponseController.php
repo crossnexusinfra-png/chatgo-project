@@ -234,7 +234,9 @@ class ResponseController extends Controller
         }
 
         if ($currentUser->requiresPhoneVerificationRestrictions() && $request->hasFile('media_file')) {
-            return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではメディア投稿は利用できません。']);
+            return back()->withInput()->withErrors([
+                'body' => \App\Services\LanguageService::trans('media_post_phone_verification_required', $lang),
+            ]);
         }
 
         // ファイルアップロードの処理
@@ -653,7 +655,9 @@ class ResponseController extends Controller
         }
 
         if ($currentUser->requiresPhoneVerificationRestrictions() && $request->hasFile('media_file')) {
-            return back()->withInput()->withErrors(['body' => '電話番号未登録アカウントではメディア投稿は利用できません。']);
+            return back()->withInput()->withErrors([
+                'body' => \App\Services\LanguageService::trans('media_post_phone_verification_required', $lang),
+            ]);
         }
 
         // コインを消費（メディア1件ごとに1コイン、URLを除く本文は1〜100文字で1コイン・以降100文字ごとに1コイン）

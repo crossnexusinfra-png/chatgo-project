@@ -1,5 +1,6 @@
 <meta name="common-config" content="{{ json_encode([
     'isAdult' => auth()->check() && auth()->user() ? auth()->user()->isAdult() : false,
+    'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
     'routes' => [
         'existingReportRoute' => route('api.reports.existing')
     ],
@@ -17,6 +18,7 @@
         'reportReasonAdultContent' => \App\Services\LanguageService::trans('report_reason_adult_content', $lang),
         'other' => \App\Services\LanguageService::trans('other', $lang),
         'noFileSelected' => \App\Services\LanguageService::trans('no_file_selected', $lang),
+        'mediaPostPhoneVerificationRequired' => \App\Services\LanguageService::trans('media_post_phone_verification_required', $lang),
         'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
         'confirmReportSubmit' => \App\Services\LanguageService::trans('confirm_report_submit', $lang),
         'confirmCreateThreadSubmit' => \App\Services\LanguageService::trans('confirm_create_thread_submit', $lang),

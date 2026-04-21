@@ -1044,6 +1044,14 @@ body {
     transform: none !important;
 }
 
+/* 電話番号未登録ユーザー向けのメディア投稿無効表示 */
+.media-file-btn-disabled-by-phone {
+    background: #b0b0b0 !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.9;
+}
+
 /* 送信中: 本文入力欄を読み取り専用表示 */
 #response-form textarea#body[readonly],
 #response-form textarea[name="body"][readonly] {

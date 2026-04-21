@@ -15,6 +15,7 @@
     const lang = config.lang || 'ja';
     const routes = config.routes || {};
     const isCurrentUserThreadOwner = config.isCurrentUserThreadOwner || false;
+    const canUseMediaPosts = config.canUseMediaPosts !== false;
     const continuationRequestThreshold = config.continuationRequestThreshold || 3;
     const csrfToken = config.csrfToken || '';
 
@@ -1003,10 +1004,24 @@
             }
         }
 
+        function showMediaRestrictedError() {
+            showMediaError(translations.mediaPostPhoneVerificationRequired || '電話番号未登録アカウントではメディア投稿は利用できません。');
+        }
+
+        if (!canUseMediaPosts) {
+            mediaFileBtn.classList.add('media-file-btn-disabled-by-phone');
+            mediaFileBtn.setAttribute('aria-disabled', 'true');
+            mediaFileBtn.setAttribute('title', translations.mediaPostPhoneVerificationRequired || '電話番号未登録アカウントではメディア投稿は利用できません。');
+        }
+
         mediaFileBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             if (responseForm && responseForm.classList.contains('response-form-submitting')) {
+                return;
+            }
+            if (!canUseMediaPosts) {
+                showMediaRestrictedError();
                 return;
             }
             if (mediaFileBtn.disabled) {
@@ -1018,6 +1033,12 @@
         });
 
         mediaFileInput.addEventListener('change', function(e) {
+            if (!canUseMediaPosts) {
+                mediaFileInput.value = '';
+                mediaFileName.style.display = 'none';
+                showMediaRestrictedError();
+                return;
+            }
             const file = e.target.files[0];
             clearMediaError();
 

@@ -598,7 +598,9 @@ class ThreadController extends Controller
         }
 
         if ($user->requiresPhoneVerificationRestrictions() && $request->hasFile('image')) {
-            return back()->withErrors(['image' => '電話番号未登録アカウントではメディア投稿は利用できません。'])
+            return back()->withErrors([
+                'image' => \App\Services\LanguageService::trans('media_post_phone_verification_required', $lang),
+            ])
                 ->withInput();
         }
 

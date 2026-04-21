@@ -728,6 +728,7 @@ return [
     'media_file_invalid_format' => '許可されていないファイル形式です。画像：JPG/PNG/WebP（最大1.5MB）、動画：MP4/WebM（最大10MB）、音声：MP3/M4A/WebM（最大5MB）のみ対応しています。',
     'media_file_too_large' => 'ファイルサイズが大きすぎます。',
     'media_file_upload_failed' => 'ファイルのアップロードに失敗しました。',
+    'media_post_phone_verification_required' => '電話番号未登録アカウントではメディア投稿は利用できません。',
     'media_file_php_limit_exceeded' => 'ファイルサイズがPHPの設定上限を超えています。現在の設定：アップロード上限 {upload_max}、POST上限 {post_max}。ファイルサイズを小さくするか、サーバー管理者にご連絡ください。',
     
     // スパム判定

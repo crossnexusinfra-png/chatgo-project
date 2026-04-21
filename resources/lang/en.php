@@ -733,6 +733,7 @@ return [
     'media_file_invalid_format' => 'File format not allowed. Only images (JPG/PNG/WebP, max 1.5MB), videos (MP4/WebM, max 10MB), and audio (MP3/M4A/WebM, max 5MB) are supported.',
     'media_file_too_large' => 'File size is too large.',
     'media_file_upload_failed' => 'The media file failed to upload.',
+    'media_post_phone_verification_required' => 'Media posting is unavailable for accounts without a registered phone number.',
     'media_file_php_limit_exceeded' => 'File size exceeds PHP configuration limits. Current settings: upload_max {upload_max}, post_max {post_max}. Please reduce the file size or contact the server administrator.',
     
     // Spam Detection
