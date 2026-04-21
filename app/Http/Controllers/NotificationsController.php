@@ -32,9 +32,7 @@ class NotificationsController extends Controller
             ->when(
                 Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent,
                 function ($q) {
-                    $q->where(function ($w) {
-                        $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
-                    });
+                    $q->excludingSystemAutoNotifications();
                 }
             )
             ->orderByDesc('published_at')

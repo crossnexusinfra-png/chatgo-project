@@ -328,6 +328,11 @@
     accent-color: #0275d8;
 }
 
+.admin-messages-filter-submit {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .admin-messages-reply-limit-section {
     display: none;
     margin-left: 20px;

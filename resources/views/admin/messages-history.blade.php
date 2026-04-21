@@ -24,7 +24,7 @@
             <form method="get" action="{{ route('admin.messages.history') }}" class="admin-messages-filter-form">
                 <label class="admin-messages-filter-label">
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_filter', $lang) }}</span>
-                    <select name="filter" class="admin-messages-select" onchange="this.form.submit()">
+                    <select name="filter" class="admin-messages-select">
                         <option value="all" {{ ($filter ?? 'all') === 'all' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_all', $lang) }}</option>
                         <option value="report_auto_reply" {{ ($filter ?? '') === 'report_auto_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto_reply', $lang) }}</option>
                         <option value="manual_reply" {{ ($filter ?? '') === 'manual_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_manual_reply', $lang) }}</option>
@@ -36,10 +36,11 @@
                 </label>
                 @if(!empty($adminHistoryHasAutoSentColumn))
                 <label class="admin-messages-filter-checkbox-label">
-                    <input type="checkbox" name="show_auto_sent" value="1" {{ !empty($showAutoSent) ? 'checked' : '' }} onchange="this.form.submit()">
+                    <input type="checkbox" name="show_auto_sent" value="1" {{ !empty($showAutoSent) ? 'checked' : '' }}>
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_show_auto_sent', $lang) }}</span>
                 </label>
                 @endif
+                <button type="submit" class="btn btn-primary admin-messages-filter-submit">{{ \App\Services\LanguageService::trans('admin_apply', $lang) }}</button>
             </form>
         </div>
 

@@ -344,9 +344,7 @@ class AdminController extends Controller
         }
 
         if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
-            $query->where(function ($w) {
-                $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
-            });
+            $query->excludingSystemAutoNotifications();
         }
 
         $messages = $query->orderByDesc('published_at')

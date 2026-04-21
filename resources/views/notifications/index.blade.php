@@ -24,6 +24,7 @@
             <input type="checkbox" name="show_auto_sent" value="1" id="notificationsShowAutoSent" {{ !empty($showAutoSent) ? 'checked' : '' }}>
             <span>{{ \App\Services\LanguageService::trans('notifications_show_auto_sent', $lang) }}</span>
         </label>
+        <button type="submit" class="notifications-auto-sent-apply">{{ \App\Services\LanguageService::trans('apply_filters', $lang) }}</button>
     </form>
     <div class="notifications-list" id="notificationsList">
         @forelse($messages as $m)
