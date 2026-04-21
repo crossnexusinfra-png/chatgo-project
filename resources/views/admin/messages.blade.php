@@ -115,6 +115,11 @@
 
     <div class="filter-section">
             <h2 class="admin-messages-filter-title">{{ \App\Services\LanguageService::trans('admin_messages_sent_list', $lang) }}</h2>
+            <p class="admin-messages-back-link">
+                <a href="{{ route('admin.messages.history', ['filter' => ($filter ?? 'all')]) }}" class="admin-link">
+                    {{ \App\Services\LanguageService::trans('admin_messages_history_button', $lang) }}
+                </a>
+            </p>
             <form method="get" action="{{ route('admin.messages') }}" class="admin-messages-filter-form">
                 <label class="admin-messages-filter-label">
                 <span>{{ \App\Services\LanguageService::trans('admin_messages_filter', $lang) }}</span>

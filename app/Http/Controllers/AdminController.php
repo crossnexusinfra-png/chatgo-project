@@ -259,6 +259,83 @@ class AdminController extends Controller
         return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage'));
     }
 
+    /** 過去のお知らせ一覧（10件ずつページング） */
+    public function messagesHistory()
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageMessages($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $filter = request('filter', 'all');
+        $with = ['parentMessage'];
+        if (Schema::hasTable('admin_message_recipients')) {
+            $with[] = 'recipients';
+        }
+        $query = AdminMessage::whereNotNull('published_at')
+            ->with($with);
+        if (Schema::hasColumn('admin_messages', 'is_welcome')) {
+            $query->where(function ($q) {
+                $q->where('is_welcome', false)->orWhereNull('is_welcome');
+            });
+        }
+
+        switch ($filter) {
+            case 'report_auto_reply':
+                $query->whereNotNull('parent_message_id')
+                    ->whereHas('parentMessage', function($q) {
+                        $q->whereNotNull('user_id');
+                    });
+                break;
+            case 'manual_reply':
+                $query->whereNotNull('parent_message_id')
+                    ->whereHas('parentMessage', function($q) {
+                        $q->whereNull('user_id');
+                    });
+                break;
+            case 'report_auto':
+                $query->whereNotNull('user_id')
+                    ->whereNull('parent_message_id');
+                break;
+            case 'members':
+                $query->whereNull('user_id')
+                    ->whereDoesntHave('recipients')
+                    ->where('audience', 'members')
+                    ->whereNull('parent_message_id');
+                break;
+            case 'specific':
+                $query->whereNull('parent_message_id');
+                if (Schema::hasTable('admin_message_recipients')) {
+                    $query->where(function ($q) {
+                        $q->whereNotNull('user_id')->orWhereHas('recipients');
+                    });
+                } else {
+                    $query->whereNotNull('user_id');
+                }
+                break;
+            case 'guests':
+                $query->whereNull('user_id')
+                    ->where('audience', 'guests')
+                    ->whereNull('parent_message_id');
+                break;
+            case 'all':
+            default:
+                break;
+        }
+
+        $messages = $query->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        $lang = $this->getAdminLanguage();
+
+        return view('admin.messages-history', compact('messages', 'filter', 'lang'));
+    }
+
     /** 初回登録時お知らせテンプレートを設定 */
     public function messagesSetWelcome()
     {
