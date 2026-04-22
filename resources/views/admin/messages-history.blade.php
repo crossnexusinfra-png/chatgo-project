@@ -34,12 +34,23 @@
                         <option value="guests" {{ ($filter ?? '') === 'guests' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_guests', $lang) }}</option>
                     </select>
                 </label>
+                <label class="admin-messages-filter-label">
+                    <span>{{ \App\Services\LanguageService::trans('admin_sort_order', $lang) }}</span>
+                    <select name="sort" class="admin-messages-select">
+                        <option value="latest" {{ ($sort ?? 'latest') === 'latest' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_latest', $lang) }}</option>
+                        <option value="oldest" {{ ($sort ?? '') === 'oldest' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_oldest', $lang) }}</option>
+                    </select>
+                </label>
                 @if(!empty($adminHistoryHasAutoSentColumn))
                 <label class="admin-messages-filter-checkbox-label">
                     <input type="checkbox" name="show_auto_sent" value="1" {{ !empty($showAutoSent) ? 'checked' : '' }}>
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_show_auto_sent', $lang) }}</span>
                 </label>
                 @endif
+                <label class="admin-messages-filter-checkbox-label">
+                    <input type="checkbox" name="reply_only" value="1" {{ !empty($replyOnly) ? 'checked' : '' }}>
+                    <span>{{ \App\Services\LanguageService::trans('admin_messages_filter_reply_only', $lang) }}</span>
+                </label>
                 <button type="submit" class="btn btn-primary admin-messages-filter-submit">{{ \App\Services\LanguageService::trans('admin_apply', $lang) }}</button>
             </form>
         </div>

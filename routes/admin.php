@@ -35,6 +35,7 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         Route::get('/messages', [AdminController::class, 'messages'])->name('messages');
         Route::get('/messages/history', [AdminController::class, 'messagesHistory'])->name('messages.history');
         Route::post('/messages', [AdminController::class, 'messagesStore'])->name('messages.store');
+        Route::post('/messages/templates', [AdminController::class, 'messagesTemplateStore'])->name('messages.templates.store');
         Route::post('/messages/set-welcome', [AdminController::class, 'messagesSetWelcome'])->name('messages.set-welcome');
         Route::post('/messages/{messageId}/cancel', [AdminController::class, 'messagesCancel'])->name('messages.cancel');
 

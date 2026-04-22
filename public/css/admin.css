@@ -333,6 +333,35 @@
     white-space: nowrap;
 }
 
+.admin-collapsible-card {
+    margin-top: 12px;
+}
+
+.admin-collapsible-toggle {
+    width: 100%;
+    text-align: left;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    color: #111827;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.admin-collapsible-toggle:hover {
+    background: #eef2ff;
+}
+
+.admin-collapsible-panel {
+    display: none;
+    margin-top: 12px;
+}
+
+.admin-collapsible-panel.is-open {
+    display: block;
+}
+
 .admin-messages-reply-limit-section {
     display: none;
     margin-left: 20px;

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Models\AdminMessage;
+use App\Models\AdminMessageTemplate;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use App\Policies\AdminPolicy;
@@ -266,13 +267,48 @@ class AdminController extends Controller
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = $this->getAdminLanguage();
 
+        $templates = collect(config('admin.message_templates', []))
+            ->map(function (array $template, string $key) {
+                return [
+                    'key' => 'config:' . $key,
+                    'name' => $template['name'] ?? $key,
+                    'title_ja' => $template['title'] ?? null,
+                    'title_en' => null,
+                    'body_ja' => $template['body'] ?? '',
+                    'body_en' => null,
+                    'coin_amount' => $template['coin_amount'] ?? null,
+                    'source' => 'config',
+                ];
+            })
+            ->values();
+
+        if (Schema::hasTable('admin_message_templates')) {
+            $dbTemplates = AdminMessageTemplate::query()
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(function (AdminMessageTemplate $template) {
+                    return [
+                        'key' => 'db:' . $template->id,
+                        'name' => $template->name,
+                        'title_ja' => $template->title_ja,
+                        'title_en' => $template->title_en,
+                        'body_ja' => $template->body_ja,
+                        'body_en' => $template->body_en,
+                        'coin_amount' => $template->coin_amount,
+                        'source' => 'db',
+                    ];
+                })
+                ->values();
+            $templates = $dbTemplates->concat($templates)->values();
+        }
+
         // 初回登録時お知らせテンプレート（1件のみ・カラム存在時のみ）
         $welcomeMessage = null;
         if (Schema::hasColumn('admin_messages', 'is_welcome')) {
             $welcomeMessage = AdminMessage::where('is_welcome', true)->whereNull('published_at')->first();
         }
 
-        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage'));
+        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage', 'templates'));
     }
 
     /** 過去のお知らせ一覧（10件ずつページング） */
@@ -288,6 +324,8 @@ class AdminController extends Controller
 
         $filter = request('filter', 'all');
         $showAutoSent = request()->boolean('show_auto_sent', false);
+        $replyOnly = request()->boolean('reply_only', false);
+        $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
         $with = ['parentMessage'];
         if (Schema::hasTable('admin_message_recipients')) {
             $with[] = 'recipients';
@@ -343,18 +381,58 @@ class AdminController extends Controller
                 break;
         }
 
+        if ($replyOnly) {
+            $query->whereNotNull('parent_message_id');
+        }
+
         if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
             $query->excludingSystemAutoNotifications();
         }
 
-        $messages = $query->orderByDesc('published_at')
-            ->orderByDesc('created_at')
+        if ($sort === 'oldest') {
+            $query->orderBy('published_at')->orderBy('created_at');
+        } else {
+            $query->orderByDesc('published_at')->orderByDesc('created_at');
+        }
+
+        $messages = $query
             ->paginate(10)
             ->withQueryString();
 
         $lang = $this->getAdminLanguage();
 
-        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent'));
+        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'replyOnly', 'sort'));
+    }
+
+    /** お知らせテンプレートを作成 */
+    public function messagesTemplateStore()
+    {
+        $lang = $this->getAdminLanguage();
+        if (!Schema::hasTable('admin_message_templates')) {
+            return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
+        }
+
+        request()->validate([
+            'template_name' => 'required|string|max:255',
+            'template_title_ja' => 'nullable|string|max:255',
+            'template_title_en' => 'nullable|string|max:255',
+            'template_body_ja' => 'required|string|max:10000',
+            'template_body_en' => 'nullable|string|max:10000',
+            'template_coin_amount' => 'nullable|integer|min:0',
+        ]);
+
+        AdminMessageTemplate::create([
+            'name' => request('template_name'),
+            'title_ja' => request('template_title_ja'),
+            'title_en' => request('template_title_en'),
+            'body_ja' => request('template_body_ja'),
+            'body_en' => request('template_body_en'),
+            'coin_amount' => request()->filled('template_coin_amount') ? (int) request('template_coin_amount') : null,
+        ]);
+
+        return redirect()
+            ->route('admin.messages')
+            ->with('success', \App\Services\LanguageService::trans('admin_messages_template_created', $lang));
     }
 
     /** 初回登録時お知らせテンプレートを設定 */

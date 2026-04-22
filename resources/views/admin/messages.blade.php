@@ -21,39 +21,15 @@
             <div class="admin-messages-success">{{ session('success') }}</div>
     @endif
 
-        {{-- 初回登録時お知らせテンプレート設定 --}}
-        <div class="card admin-card admin-messages-welcome-section">
-            <h2 class="admin-messages-section-title">{{ \App\Services\LanguageService::trans('admin_messages_welcome_title', $lang) }}</h2>
-            <form method="post" action="{{ route('admin.messages.set-welcome') }}">
-                @csrf
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
-                <input type="text" name="welcome_title_ja" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="Title in English">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
-                <textarea name="welcome_body_ja" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
-                <textarea name="welcome_body_en" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
-                <div class="admin-messages-submit-container">
-                    <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_welcome_save', $lang) }}</button>
-                </div>
-            </form>
-        </div>
-
         <div class="card admin-card">
         <form method="post" action="{{ route('admin.messages.store') }}" id="admin-messages-form">
             @csrf
-            @php
-                $templates = config('admin.message_templates', []);
-            @endphp
-            @if(!empty($templates))
+            @if(($templates ?? collect())->isNotEmpty())
                 <label>テンプレート</label>
                 <select id="message-template-select">
                     <option value="">テンプレートを選択してください</option>
-                    @foreach($templates as $key => $template)
-                        <option value="{{ $key }}">{{ $template['name'] }}</option>
+                    @foreach($templates as $template)
+                        <option value="{{ $template['key'] }}">{{ $template['name'] }}</option>
                     @endforeach
                 </select>
             @endif
@@ -113,6 +89,56 @@
         </form>
     </div>
 
+    <div class="card admin-card admin-collapsible-card">
+        <button type="button" class="admin-collapsible-toggle" data-target-id="adminTemplateCreatePanel" aria-expanded="false">
+            ▼ {{ \App\Services\LanguageService::trans('admin_messages_template_create_title', $lang) }}
+        </button>
+        <div id="adminTemplateCreatePanel" class="admin-collapsible-panel">
+            <form method="post" action="{{ route('admin.messages.templates.store') }}">
+                @csrf
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_template_name', $lang) }}</label>
+                <input type="text" name="template_name" required maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_template_name_placeholder', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                <input type="text" name="template_title_ja" maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
+                <input type="text" name="template_title_en" maxlength="255" placeholder="Title in English">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                <textarea name="template_body_ja" rows="4" required></textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                <textarea name="template_body_en" rows="4"></textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
+                <input type="number" name="template_coin_amount" min="0" placeholder="0">
+                <div class="admin-messages-submit-container">
+                    <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card admin-card admin-collapsible-card admin-messages-welcome-section">
+        <button type="button" class="admin-collapsible-toggle" data-target-id="adminWelcomeSettingPanel" aria-expanded="false">
+            ▼ {{ \App\Services\LanguageService::trans('admin_messages_welcome_title', $lang) }}
+        </button>
+        <div id="adminWelcomeSettingPanel" class="admin-collapsible-panel">
+            <form method="post" action="{{ route('admin.messages.set-welcome') }}">
+                @csrf
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                <input type="text" name="welcome_title_ja" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
+                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="Title in English">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                <textarea name="welcome_body_ja" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                <textarea name="welcome_body_en" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
+                <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
+                <div class="admin-messages-submit-container">
+                    <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_welcome_save', $lang) }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="filter-section">
         <h2 class="admin-messages-filter-title">{{ \App\Services\LanguageService::trans('admin_messages_sent_list', $lang) }}</h2>
         <p class="admin-messages-back-link">
@@ -126,7 +152,7 @@
     <script src="{{ asset('js/admin-messages.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script nonce="{{ $csp_nonce ?? '' }}">
         (function() {
-            const templates = @json(config('admin.message_templates', []));
+            const templates = @json(collect($templates ?? [])->keyBy('key'));
             
             function applyTemplate(templateKey) {
                 if (!templateKey || !templates[templateKey]) {
@@ -140,12 +166,20 @@
                 const bodyJaField = document.getElementById('body_ja');
                 const coinAmountField = document.getElementById('coin_amount');
                 
-                if (titleJaField && template.title) {
-                    titleJaField.value = template.title;
+                if (titleJaField && template.title_ja) {
+                    titleJaField.value = template.title_ja;
+                }
+                const titleEnField = document.getElementById('title_en');
+                if (titleEnField && template.title_en) {
+                    titleEnField.value = template.title_en;
                 }
                 
-                if (bodyJaField && template.body) {
-                    bodyJaField.value = template.body;
+                if (bodyJaField && template.body_ja) {
+                    bodyJaField.value = template.body_ja;
+                }
+                const bodyEnField = document.getElementById('body_en');
+                if (bodyEnField && template.body_en) {
+                    bodyEnField.value = template.body_en;
                 }
                 
                 if (coinAmountField && template.coin_amount !== undefined) {
@@ -179,6 +213,14 @@
                         targetType.addEventListener('change', toggleTargetExtra);
                         toggleTargetExtra();
                     }
+                    document.querySelectorAll('.admin-collapsible-toggle').forEach(function(toggleBtn) {
+                        toggleBtn.addEventListener('click', function() {
+                            const panel = document.getElementById(toggleBtn.dataset.targetId);
+                            if (!panel) return;
+                            const isOpen = panel.classList.toggle('is-open');
+                            toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                        });
+                    });
                 });
             } else {
                 const templateSelect = document.getElementById('message-template-select');
@@ -188,6 +230,14 @@
                     targetType.addEventListener('change', toggleTargetExtra);
                     toggleTargetExtra();
                 }
+                document.querySelectorAll('.admin-collapsible-toggle').forEach(function(toggleBtn) {
+                    toggleBtn.addEventListener('click', function() {
+                        const panel = document.getElementById(toggleBtn.dataset.targetId);
+                        if (!panel) return;
+                        const isOpen = panel.classList.toggle('is-open');
+                        toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                    });
+                });
             }
         })();
     </script>

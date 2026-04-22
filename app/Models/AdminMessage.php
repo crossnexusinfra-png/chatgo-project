@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Schema;
 
 class AdminMessage extends Model
 {
@@ -24,30 +23,6 @@ class AdminMessage extends Model
         'report_restriction_review_title',
         'report_restriction_ack_title',
         'suggestion_received_title',
-    ];
-
-    /**
-     * title_key が無い旧データ向け：コード上の自動送信で使う固定タイトル（title / title_ja / title_en のいずれかに一致）
-     */
-    public const AUTO_SENT_STOCK_TITLES = [
-        '通報内容の対応について',
-        '削除処理完了のお知らせ',
-        '改善要望の対応について',
-        '利用に関する警告',
-        'アカウント一時凍結のお知らせ',
-        'アカウント永久凍結のお知らせ',
-        'ルーム削除のお知らせ',
-        'リプライ削除のお知らせ',
-        'プロフィール削除のお知らせ',
-        'Update on Your Report',
-        'Deletion Completed',
-        'Update on Your Suggestion',
-        'Warning Notice',
-        'Temporary Account Suspension',
-        'Permanent Account Suspension',
-        'Room Deletion Notice',
-        'Reply Deletion Notice',
-        'Profile Deletion Notice',
     ];
 
     protected $casts = [
@@ -112,28 +87,15 @@ class AdminMessage extends Model
     }
 
     /**
-     * システム自動送信のお知らせを除外（is_auto_sent・title_key・旧データの固定タイトル・継続ルーム通知のパターン）
+     * システム自動送信のお知らせを除外（is_auto_sent / title_key ベース）
      */
     public function scopeExcludingSystemAutoNotifications(Builder $query): Builder
     {
         $keys = self::AUTO_SENT_TITLE_KEYS;
-        $titles = self::AUTO_SENT_STOCK_TITLES;
 
-        return $query->whereNot(function (Builder $auto) use ($keys, $titles) {
+        return $query->whereNot(function (Builder $auto) use ($keys) {
             $auto->where('is_auto_sent', true)
-                ->orWhereIn('title_key', $keys)
-                ->orWhereIn('title', $titles)
-                ->orWhere('title', 'like', '%ルームが作成されました')
-                ->orWhere('title', 'like', 'Room #%created');
-
-            if (Schema::hasColumn('admin_messages', 'title_ja')) {
-                $auto->orWhereIn('title_ja', $titles)
-                    ->orWhere('title_ja', 'like', '%ルームが作成されました');
-            }
-            if (Schema::hasColumn('admin_messages', 'title_en')) {
-                $auto->orWhereIn('title_en', $titles)
-                    ->orWhere('title_en', 'like', 'Room #%created');
-            }
+                ->orWhereIn('title_key', $keys);
         });
     }
 
