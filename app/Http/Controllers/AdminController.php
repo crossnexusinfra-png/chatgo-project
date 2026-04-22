@@ -135,7 +135,7 @@ class AdminController extends Controller
             }
         }
         if (!empty($responseIds)) {
-            $responses = Response::withTrashed()
+            $responses = Response::query()
                 ->whereIn('response_id', $responseIds)
                 ->get(['response_id', 'user_id']);
             foreach ($responses as $response) {
