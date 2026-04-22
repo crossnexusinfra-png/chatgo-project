@@ -48,6 +48,10 @@
                 </label>
                 @endif
                 <label class="admin-messages-filter-checkbox-label">
+                    <input type="checkbox" name="include_templates" value="1" {{ !empty($includeTemplates) ? 'checked' : '' }}>
+                    <span>{{ \App\Services\LanguageService::trans('admin_messages_include_templates', $lang) }}</span>
+                </label>
+                <label class="admin-messages-filter-checkbox-label">
                     <input type="checkbox" name="reply_only" value="1" {{ !empty($replyOnly) ? 'checked' : '' }}>
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_filter_reply_only', $lang) }}</span>
                 </label>

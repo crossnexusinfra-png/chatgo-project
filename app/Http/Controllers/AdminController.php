@@ -328,6 +328,7 @@ class AdminController extends Controller
 
         $filter = request('filter', 'all');
         $showAutoSent = request()->boolean('show_auto_sent', false);
+        $includeTemplates = request()->boolean('include_templates', false);
         $replyOnly = request()->boolean('reply_only', false);
         $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
         $with = ['parentMessage'];
@@ -392,6 +393,11 @@ class AdminController extends Controller
         if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
             $query->excludingSystemAutoNotifications();
         }
+        if (Schema::hasColumn('admin_messages', 'is_from_template') && !$includeTemplates) {
+            $query->where(function ($q) {
+                $q->whereNull('is_from_template')->orWhere('is_from_template', false);
+            });
+        }
 
         if ($sort === 'oldest') {
             $query->orderBy('published_at')->orderBy('created_at');
@@ -405,11 +411,11 @@ class AdminController extends Controller
 
         $lang = $this->getAdminLanguage();
 
-        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'replyOnly', 'sort'));
+        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'replyOnly', 'sort', 'includeTemplates'));
     }
 
-    /** お知らせテンプレートを作成 */
-    public function messagesTemplateStore()
+    /** お知らせテンプレートを作成/更新 */
+    public function messagesTemplateSave()
     {
         $lang = $this->getAdminLanguage();
         if (!Schema::hasTable('admin_message_templates')) {
@@ -423,61 +429,45 @@ class AdminController extends Controller
             'template_body_ja' => 'required|string|max:10000',
             'template_body_en' => 'nullable|string|max:10000',
             'template_coin_amount' => 'nullable|integer|min:0',
+            'template_id' => 'nullable|integer|exists:admin_message_templates,id',
         ]);
 
-        AdminMessageTemplate::create([
+        $payload = [
             'name' => request('template_name'),
             'title_ja' => request('template_title_ja'),
             'title_en' => request('template_title_en'),
             'body_ja' => request('template_body_ja'),
             'body_en' => request('template_body_en'),
             'coin_amount' => request()->filled('template_coin_amount') ? (int) request('template_coin_amount') : null,
-        ]);
+        ];
 
-        return redirect()
-            ->route('admin.messages')
-            ->with('success', \App\Services\LanguageService::trans('admin_messages_template_created', $lang));
-    }
-
-    /** お知らせテンプレートを更新 */
-    public function messagesTemplateUpdate(AdminMessageTemplate $template)
-    {
-        $lang = $this->getAdminLanguage();
-        if (!Schema::hasTable('admin_message_templates')) {
-            return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
+        if (request()->filled('template_id')) {
+            $template = AdminMessageTemplate::findOrFail((int) request('template_id'));
+            $template->update($payload);
+            $messageKey = 'admin_messages_template_updated';
+        } else {
+            AdminMessageTemplate::create($payload);
+            $messageKey = 'admin_messages_template_created';
         }
 
-        request()->validate([
-            'template_name' => 'required|string|max:255',
-            'template_title_ja' => 'nullable|string|max:255',
-            'template_title_en' => 'nullable|string|max:255',
-            'template_body_ja' => 'required|string|max:10000',
-            'template_body_en' => 'nullable|string|max:10000',
-            'template_coin_amount' => 'nullable|integer|min:0',
-        ]);
-
-        $template->update([
-            'name' => request('template_name'),
-            'title_ja' => request('template_title_ja'),
-            'title_en' => request('template_title_en'),
-            'body_ja' => request('template_body_ja'),
-            'body_en' => request('template_body_en'),
-            'coin_amount' => request()->filled('template_coin_amount') ? (int) request('template_coin_amount') : null,
-        ]);
-
         return redirect()
             ->route('admin.messages')
-            ->with('success', \App\Services\LanguageService::trans('admin_messages_template_updated', $lang));
+            ->with('success', \App\Services\LanguageService::trans($messageKey, $lang));
     }
 
     /** お知らせテンプレートを削除 */
-    public function messagesTemplateDelete(AdminMessageTemplate $template)
+    public function messagesTemplateDelete()
     {
         $lang = $this->getAdminLanguage();
         if (!Schema::hasTable('admin_message_templates')) {
             return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
         }
 
+        request()->validate([
+            'template_id' => 'required|integer|exists:admin_message_templates,id',
+        ]);
+
+        $template = AdminMessageTemplate::findOrFail((int) request('template_id'));
         $template->delete();
 
         return redirect()
@@ -619,6 +609,8 @@ class AdminController extends Controller
             'target_registered_after' => $targetRegisteredAfter,
             'target_registered_before' => $targetRegisteredBefore,
             'is_auto_sent' => false,
+            'is_manual_sent' => true,
+            'is_from_template' => request()->filled('template_key'),
         ]);
 
         foreach ($recipientUserIds as $uid) {

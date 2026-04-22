@@ -12,6 +12,7 @@ class AdminMessage extends Model
 
     protected $fillable = [
         'title_key', 'body_key', 'title', 'body', 'title_ja', 'title_en', 'body_ja', 'body_en', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount', 'is_auto_sent',
+        'is_manual_sent', 'is_from_template',
         'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 
@@ -35,6 +36,8 @@ class AdminMessage extends Model
         'unlimited_reply' => 'boolean',
         'is_welcome' => 'boolean',
         'is_auto_sent' => 'boolean',
+        'is_manual_sent' => 'boolean',
+        'is_from_template' => 'boolean',
     ];
     
     /**
@@ -91,17 +94,18 @@ class AdminMessage extends Model
      */
     public function scopeExcludingSystemAutoNotifications(Builder $query): Builder
     {
-        $keys = self::AUTO_SENT_TITLE_KEYS;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_manual_sent')) {
+            return $query->where('is_manual_sent', true);
+        }
 
-        return $query
-            ->where(function (Builder $q) {
-                $q->whereNull('is_auto_sent')
-                    ->orWhere('is_auto_sent', false);
-            })
-            ->where(function (Builder $q) use ($keys) {
-                $q->whereNull('title_key')
-                    ->orWhereNotIn('title_key', $keys);
+        $keys = self::AUTO_SENT_TITLE_KEYS;
+        return $query->where(function (Builder $q) use ($keys) {
+            $q->where(function (Builder $w) {
+                $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
+            })->where(function (Builder $w) use ($keys) {
+                $w->whereNull('title_key')->orWhereNotIn('title_key', $keys);
             });
+        });
     }
 
     /**

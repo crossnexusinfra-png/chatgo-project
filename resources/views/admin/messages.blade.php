@@ -32,6 +32,7 @@
                         <option value="{{ $template['key'] }}">{{ $template['name'] }}</option>
                     @endforeach
                 </select>
+                <input type="hidden" name="template_key" id="template_key" value="">
             @endif
             <label>{{ \App\Services\LanguageService::trans('admin_messages_target_type', $lang) }}</label>
             <select name="target_type" id="target_type" required>
@@ -94,52 +95,39 @@
             ▼ {{ \App\Services\LanguageService::trans('admin_messages_template_create_title', $lang) }}
         </button>
         <div id="adminTemplateCreatePanel" class="admin-collapsible-panel">
-            <form method="post" action="{{ route('admin.messages.templates.store') }}">
+            <form method="post" action="{{ route('admin.messages.templates.save') }}" id="adminTemplateEditorForm">
                 @csrf
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_template_target', $lang) }}</label>
+                <select id="template-editor-select">
+                    <option value="new">{{ \App\Services\LanguageService::trans('admin_messages_template_new', $lang) }}</option>
+                    @foreach(($editableTemplates ?? collect()) as $template)
+                        <option value="{{ $template->id }}">{{ $template->name }}</option>
+                    @endforeach
+                </select>
+                <input type="hidden" name="template_id" id="template_editor_id" value="">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_template_name', $lang) }}</label>
-                <input type="text" name="template_name" required maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_template_name_placeholder', $lang) }}">
+                <input type="text" name="template_name" id="template_editor_name" required maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_template_name_placeholder', $lang) }}">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
-                <input type="text" name="template_title_ja" maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                <input type="text" name="template_title_ja" id="template_editor_title_ja" maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-                <input type="text" name="template_title_en" maxlength="255" placeholder="Title in English">
+                <input type="text" name="template_title_en" id="template_editor_title_en" maxlength="255" placeholder="Title in English">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
-                <textarea name="template_body_ja" rows="4" required></textarea>
+                <textarea name="template_body_ja" id="template_editor_body_ja" rows="4" required></textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
-                <textarea name="template_body_en" rows="4"></textarea>
+                <textarea name="template_body_en" id="template_editor_body_en" rows="4"></textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                <input type="number" name="template_coin_amount" min="0" placeholder="0">
-                <div class="admin-messages-submit-container">
-                    <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
+                <input type="number" name="template_coin_amount" id="template_editor_coin" min="0" placeholder="0">
+                <div class="admin-template-edit-actions">
+                    <button type="submit" id="template_editor_save_button">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
                 </div>
             </form>
-            @if(($editableTemplates ?? collect())->isNotEmpty())
-                <hr class="admin-template-divider">
-                <h3 class="admin-messages-section-title">{{ \App\Services\LanguageService::trans('admin_messages_template_edit_list_title', $lang) }}</h3>
-                @foreach($editableTemplates as $template)
-                    <form method="post" action="{{ route('admin.messages.templates.update', $template) }}" class="admin-template-edit-form">
-                        @csrf
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_template_name', $lang) }}</label>
-                        <input type="text" name="template_name" value="{{ $template->name }}" required maxlength="255">
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
-                        <input type="text" name="template_title_ja" value="{{ $template->title_ja }}" maxlength="255">
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-                        <input type="text" name="template_title_en" value="{{ $template->title_en }}" maxlength="255">
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
-                        <textarea name="template_body_ja" rows="3" required>{{ $template->body_ja }}</textarea>
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
-                        <textarea name="template_body_en" rows="3">{{ $template->body_en }}</textarea>
-                        <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                        <input type="number" name="template_coin_amount" min="0" value="{{ $template->coin_amount }}">
-                        <div class="admin-template-edit-actions">
-                            <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang) }}</button>
-                        </div>
-                    </form>
-                            <form method="post" action="{{ route('admin.messages.templates.delete', $template) }}" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_template_delete_confirm', $lang) }}');">
-                                @csrf
-                                <button type="submit" class="admin-messages-cancel-button">{{ \App\Services\LanguageService::trans('admin_messages_template_delete_submit', $lang) }}</button>
-                            </form>
-                @endforeach
-            @endif
+            <form method="post" action="{{ route('admin.messages.templates.delete') }}" id="adminTemplateDeleteForm" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_template_delete_confirm', $lang) }}');">
+                @csrf
+                <input type="hidden" name="template_id" id="template_delete_id" value="">
+                <div class="admin-template-edit-actions">
+                    <button type="submit" id="template_editor_delete_button" class="admin-messages-cancel-button" disabled>{{ \App\Services\LanguageService::trans('admin_messages_template_delete_submit', $lang) }}</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -181,6 +169,9 @@
     <script nonce="{{ $csp_nonce ?? '' }}">
         (function() {
             const templates = @json(collect($templates ?? [])->keyBy('key'));
+            const editableTemplates = @json(collect($editableTemplates ?? [])->keyBy('id'));
+            const templateCreateLabel = @json(\App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang));
+            const templateUpdateLabel = @json(\App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang));
             
             function applyTemplate(templateKey) {
                 if (!templateKey || !templates[templateKey]) {
@@ -214,6 +205,65 @@
                     coinAmountField.value = template.coin_amount;
                 }
             }
+
+            function syncSendTemplateKey() {
+                const select = document.getElementById('message-template-select');
+                const hidden = document.getElementById('template_key');
+                if (select && hidden) {
+                    hidden.value = select.value || '';
+                }
+            }
+
+            function resetTemplateEditor() {
+                const idEl = document.getElementById('template_editor_id');
+                const nameEl = document.getElementById('template_editor_name');
+                const titleJaEl = document.getElementById('template_editor_title_ja');
+                const titleEnEl = document.getElementById('template_editor_title_en');
+                const bodyJaEl = document.getElementById('template_editor_body_ja');
+                const bodyEnEl = document.getElementById('template_editor_body_en');
+                const coinEl = document.getElementById('template_editor_coin');
+                const deleteIdEl = document.getElementById('template_delete_id');
+                const deleteBtn = document.getElementById('template_editor_delete_button');
+                const saveBtn = document.getElementById('template_editor_save_button');
+                if (idEl) idEl.value = '';
+                if (nameEl) nameEl.value = '';
+                if (titleJaEl) titleJaEl.value = '';
+                if (titleEnEl) titleEnEl.value = '';
+                if (bodyJaEl) bodyJaEl.value = '';
+                if (bodyEnEl) bodyEnEl.value = '';
+                if (coinEl) coinEl.value = '';
+                if (deleteIdEl) deleteIdEl.value = '';
+                if (deleteBtn) deleteBtn.disabled = true;
+                if (saveBtn) saveBtn.textContent = templateCreateLabel;
+            }
+
+            function loadTemplateToEditor(templateId) {
+                const t = editableTemplates[String(templateId)];
+                if (!t) {
+                    resetTemplateEditor();
+                    return;
+                }
+                const idEl = document.getElementById('template_editor_id');
+                const nameEl = document.getElementById('template_editor_name');
+                const titleJaEl = document.getElementById('template_editor_title_ja');
+                const titleEnEl = document.getElementById('template_editor_title_en');
+                const bodyJaEl = document.getElementById('template_editor_body_ja');
+                const bodyEnEl = document.getElementById('template_editor_body_en');
+                const coinEl = document.getElementById('template_editor_coin');
+                const deleteIdEl = document.getElementById('template_delete_id');
+                const deleteBtn = document.getElementById('template_editor_delete_button');
+                const saveBtn = document.getElementById('template_editor_save_button');
+                if (idEl) idEl.value = t.id;
+                if (nameEl) nameEl.value = t.name || '';
+                if (titleJaEl) titleJaEl.value = t.title_ja || '';
+                if (titleEnEl) titleEnEl.value = t.title_en || '';
+                if (bodyJaEl) bodyJaEl.value = t.body_ja || '';
+                if (bodyEnEl) bodyEnEl.value = t.body_en || '';
+                if (coinEl) coinEl.value = (t.coin_amount ?? '') === null ? '' : (t.coin_amount ?? '');
+                if (deleteIdEl) deleteIdEl.value = t.id;
+                if (deleteBtn) deleteBtn.disabled = false;
+                if (saveBtn) saveBtn.textContent = templateUpdateLabel;
+            }
             
             // グローバルスコープに公開
             window.applyTemplate = applyTemplate;
@@ -235,7 +285,23 @@
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
                     const templateSelect = document.getElementById('message-template-select');
-                    if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); });
+                    if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); syncSendTemplateKey(); });
+                    syncSendTemplateKey();
+                    const editorSelect = document.getElementById('template-editor-select');
+                    if (editorSelect) {
+                        editorSelect.addEventListener('change', function() {
+                            if (this.value === 'new') {
+                                resetTemplateEditor();
+                            } else {
+                                loadTemplateToEditor(this.value);
+                            }
+                        });
+                        if (editorSelect.value && editorSelect.value !== 'new') {
+                            loadTemplateToEditor(editorSelect.value);
+                        } else {
+                            resetTemplateEditor();
+                        }
+                    }
                     const targetType = document.getElementById('target_type');
                     if (targetType) {
                         targetType.addEventListener('change', toggleTargetExtra);
@@ -252,7 +318,23 @@
                 });
             } else {
                 const templateSelect = document.getElementById('message-template-select');
-                if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); });
+                if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); syncSendTemplateKey(); });
+                syncSendTemplateKey();
+                const editorSelect = document.getElementById('template-editor-select');
+                if (editorSelect) {
+                    editorSelect.addEventListener('change', function() {
+                        if (this.value === 'new') {
+                            resetTemplateEditor();
+                        } else {
+                            loadTemplateToEditor(this.value);
+                        }
+                    });
+                    if (editorSelect.value && editorSelect.value !== 'new') {
+                        loadTemplateToEditor(editorSelect.value);
+                    } else {
+                        resetTemplateEditor();
+                    }
+                }
                 const targetType = document.getElementById('target_type');
                 if (targetType) {
                     targetType.addEventListener('change', toggleTargetExtra);
