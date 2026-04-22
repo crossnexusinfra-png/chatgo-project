@@ -11,12 +11,19 @@
 
     window.copyInviteCode = function() {
         const inviteCode = document.getElementById('inviteCode');
+        const copyButton = document.querySelector('.js-copy-invite-code');
         if (inviteCode) {
-            inviteCode.select();
-            document.execCommand('copy');
-            if (translations.inviteCodeCopied) {
-                alert(translations.inviteCodeCopied);
-            }
+            const text = inviteCode.value || '';
+            if (!text) return;
+            const originalButtonText = copyButton ? copyButton.textContent : '';
+            navigator.clipboard.writeText(text).then(function() {
+                if (copyButton) {
+                    copyButton.textContent = translations.inviteCodeCopied || 'Copied';
+                    setTimeout(function() {
+                        copyButton.textContent = originalButtonText;
+                    }, 1400);
+                }
+            });
         }
     };
 

@@ -48,7 +48,10 @@
                         <div class="admin-messages-list-item-body">{{ $m->body }}</div>
                         <div class="admin-messages-list-item-meta">
                             {{ \App\Services\LanguageService::trans('admin_messages_reply_source', $lang) }}:
-                            {{ optional($m->parentMessage)->title ?? \App\Services\LanguageService::trans('notification_no_title', $lang) }}
+                            <details>
+                                <summary>{{ optional($m->parentMessage)->title ?? \App\Services\LanguageService::trans('notification_no_title', $lang) }}</summary>
+                                <div class="admin-message">{{ optional($m->parentMessage)->body ?? '' }}</div>
+                            </details>
                             / {{ \App\Services\LanguageService::trans('admin_messages_sent_at', $lang) }}
                             @if($m->published_at)<span data-utc-datetime="{{ $m->published_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $m->published_at->format('Y-m-d H:i') }}</span>@endif
                         </div>

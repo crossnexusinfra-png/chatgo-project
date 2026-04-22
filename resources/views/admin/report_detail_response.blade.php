@@ -56,7 +56,11 @@
         <tbody>
         @forelse ($reports as $r)
             <tr>
-                <td>{{ $r->user_id }}</td>
+                <td>
+                    @php $copyToken = optional($r->user)->user_identifier ?? (string) $r->user_id; @endphp
+                    <code class="admin-copy-token">{{ $copyToken }}</code>
+                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                </td>
                 <td>{{ $r->reason }}</td>
                 <td class="admin-message">{{ $r->description }}</td>
                 <td>{{ optional($r->created_at)->format('Y-m-d H:i') }}</td>
@@ -105,6 +109,19 @@
         window.adminReportDetailResponseConfig = {
             targetResponseId: {{ $responseId }}
         };
+    </script>
+    <script nonce="{{ $csp_nonce ?? '' }}">
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.admin-copy-btn');
+            if (!btn) return;
+            const text = btn.getAttribute('data-copy-text') || '';
+            if (!text) return;
+            const originalText = btn.textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
+                setTimeout(function() { btn.textContent = originalText; }, 1200);
+            });
+        });
     </script>
     <script src="{{ asset('js/admin-report-detail-response.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 </div>

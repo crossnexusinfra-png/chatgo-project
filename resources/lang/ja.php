@@ -1004,6 +1004,7 @@ return [
     'invite_code_help' => 'このコードを他のユーザーに共有すると、登録時に10コインずつ配布されます。',
     'invite_code_copied' => '招待コードをコピーしました',
     'copy' => 'コピー',
+    'copied' => 'コピーしました',
     'received_friend_requests' => '受信したフレンド申請',
     'sent_friend_requests' => '送信したフレンド申請',
     'pending' => '申請中',

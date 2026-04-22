@@ -51,7 +51,10 @@
                         <div class="admin-messages-list-item-body">{{ $m->body }}</div>
                         <div class="admin-messages-list-item-meta">
                             @if($m->user_id)
-                                {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{user_id}', $m->user_id, \App\Services\LanguageService::trans('admin_messages_sent_to_individual', $lang)) }}
+                                {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}:
+                                @php $copyToken = optional($m->user)->user_identifier ?? (string) $m->user_id; @endphp
+                                <code class="admin-copy-token">{{ $copyToken }}</code>
+                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                             @elseif($m->recipients && $m->recipients->isNotEmpty())
                                 {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{count}', $m->recipients->count(), \App\Services\LanguageService::trans('admin_messages_sent_to_specific', $lang)) }}
                             @else
@@ -93,5 +96,18 @@
         @endif
     </div>
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.admin-copy-btn');
+    if (!btn) return;
+    const text = btn.getAttribute('data-copy-text') || '';
+    if (!text) return;
+    const originalText = btn.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
+        setTimeout(function() { btn.textContent = originalText; }, 1200);
+    });
+});
+</script>
 @endsection
 

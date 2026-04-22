@@ -32,8 +32,12 @@
             </select>
         </label>
         <label class="admin-label-margin">
-            <input type="checkbox" name="show_completed" value="1" {{ !empty($showCompleted) ? 'checked' : '' }}>
-            {{ \App\Services\LanguageService::trans('admin_show_completed', $lang) }}
+            <input type="checkbox" name="show_approved" value="1" {{ !empty($showApproved) ? 'checked' : '' }}>
+            {{ \App\Services\LanguageService::trans('admin_reports_show_approved', $lang) }}
+        </label>
+        <label class="admin-label-margin">
+            <input type="checkbox" name="show_rejected" value="1" {{ !empty($showRejected) ? 'checked' : '' }}>
+            {{ \App\Services\LanguageService::trans('admin_reports_show_rejected', $lang) }}
         </label>
         <button type="submit">{{ \App\Services\LanguageService::trans('admin_apply', $lang) }}</button>
     </form>
@@ -54,7 +58,11 @@
         @forelse ($appeals as $a)
             <tr>
                 <td>{{ $a->freeze_appeal_id }}</td>
-                <td>{{ $a->user_id }}</td>
+                <td>
+                    @php $copyToken = optional($a->user)->user_identifier ?? (string) $a->user_id; @endphp
+                    <code class="admin-copy-token">{{ $copyToken }}</code>
+                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                </td>
                 <td class="admin-message">{{ $a->message }}</td>
                 <td>{{ $a->out_count_snapshot }}</td>
                 <td>
@@ -129,4 +137,17 @@
         </div>
     @endif
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.admin-copy-btn');
+    if (!btn) return;
+    const text = btn.getAttribute('data-copy-text') || '';
+    if (!text) return;
+    const originalText = btn.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
+        setTimeout(function() { btn.textContent = originalText; }, 1200);
+    });
+});
+</script>
 @endsection

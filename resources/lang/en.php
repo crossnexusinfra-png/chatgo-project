@@ -1003,6 +1003,7 @@ return [
     'invite_code_help' => 'Share this code with other users. Both you and the invited user will receive 10 coins when they register.',
     'invite_code_copied' => 'Invite code copied',
     'copy' => 'Copy',
+    'copied' => 'Copied',
     'received_friend_requests' => 'Received Friend Requests',
     'sent_friend_requests' => 'Sent Friend Requests',
     'pending' => 'Pending',

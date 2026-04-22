@@ -1246,7 +1246,7 @@ class AdminController extends Controller
      */
     public function suggestions()
     {
-        $query = Suggestion::query();
+        $query = Suggestion::query()->with('user');
 
         // 直前の改善要望一覧訪問
         $prevSuggestionsVisit = \App\Models\AccessLog::where('type', 'admin_suggestions_visit')
@@ -1254,10 +1254,22 @@ class AdminController extends Controller
             ->first();
         $suggestionsSince = $prevSuggestionsVisit?->created_at ?? now()->subYears(10);
 
-        // デフォルト: 処理済み（採用/非採用）は非表示
-        $showCompleted = request()->boolean('show_completed', false);
-        if (!$showCompleted) {
+        // デフォルト: 未処理のみ。チェックONで採用/非採用を追加表示
+        $showApproved = request()->boolean('show_approved', false);
+        $showRejected = request()->boolean('show_rejected', false);
+        if (!$showApproved && !$showRejected) {
             $query->whereNull('completed');
+        } else {
+            if (!$showApproved) {
+                $query->where(function ($q) {
+                    $q->whereNull('completed')->orWhere('completed', false);
+                });
+            }
+            if (!$showRejected) {
+                $query->where(function ($q) {
+                    $q->whereNull('completed')->orWhere('completed', true);
+                });
+            }
         }
 
         // 星付きのみ
@@ -1291,7 +1303,8 @@ class AdminController extends Controller
 
         return view('admin.suggestions', [
             'suggestions' => $suggestions,
-            'showCompleted' => $showCompleted,
+            'showApproved' => $showApproved,
+            'showRejected' => $showRejected,
             'onlyStarred' => $onlyStarred,
             'sort' => $sort,
             'suggestionsSince' => $suggestionsSince,
@@ -1619,11 +1632,19 @@ class AdminController extends Controller
             ->first();
         $appealsSince = $prevVisit?->created_at ?? now()->subYears(10);
 
-        $showCompleted = request()->boolean('show_completed', false);
+        $showApproved = request()->boolean('show_approved', false);
+        $showRejected = request()->boolean('show_rejected', false);
         $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
         $query = FreezeAppeal::query()->with('user');
-        if (!$showCompleted) {
+        if (!$showApproved && !$showRejected) {
             $query->where('status', 'pending');
+        } else {
+            if (!$showApproved) {
+                $query->whereIn('status', ['pending', 'rejected']);
+            }
+            if (!$showRejected) {
+                $query->whereIn('status', ['pending', 'approved']);
+            }
         }
         if ($sort === 'oldest') {
             $query->orderBy('created_at');
@@ -1650,7 +1671,8 @@ class AdminController extends Controller
 
         return view('admin.freeze-appeals', [
             'appeals' => $appeals,
-            'showCompleted' => $showCompleted,
+            'showApproved' => $showApproved,
+            'showRejected' => $showRejected,
             'sort' => $sort,
             'appealsSince' => $appealsSince,
             'newAppealsCount' => $newAppealsCount,
