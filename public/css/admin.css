@@ -401,6 +401,19 @@
     cursor: pointer;
 }
 
+.admin-out-count-input {
+    width: 80px;
+}
+
+.admin-out-count-submit-btn {
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+.admin-pending-approval {
+    color: #999;
+}
+
 .admin-messages-reply-limit-section {
     display: none;
     margin-left: 20px;

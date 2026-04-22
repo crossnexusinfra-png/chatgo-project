@@ -28,21 +28,5 @@
         'processing' => \App\Services\LanguageService::trans('processing', $lang)
     ]
 ]) }}">
-<script nonce="{{ $csp_nonce ?? '' }}">
-    // common.js の前に commonConfig を読み込む（通報理由ドロップダウン等で使用）
-    (function() {
-        const meta = document.querySelector('meta[name="common-config"]');
-        if (meta) {
-            try {
-                window.commonConfig = JSON.parse(meta.getAttribute('content'));
-            } catch (e) {
-                console.error('Failed to parse common-config:', e);
-                window.commonConfig = {};
-            }
-        } else {
-            window.commonConfig = {};
-        }
-    })();
-</script>
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>

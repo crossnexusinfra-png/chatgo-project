@@ -13,6 +13,7 @@ return [
     'next' => 'Next',
     'search' => 'Search',
     'close' => 'Close',
+    'within' => ' max',
     
     // Header
     'menu' => 'Menu',
@@ -1026,6 +1027,13 @@ return [
     'admin_reports_reason' => 'Reason',
     'admin_reports_detail' => 'Detail',
     'admin_reports_created_at_label' => 'Created At',
+    'admin_reports_out_count' => 'Out Count',
+    'admin_set' => 'Set',
+    'admin_pending_approval' => 'Pending approval',
+    'admin_messages_template_label' => 'Template',
+    'admin_messages_template_select_placeholder' => 'Please select a template',
+    'admin_messages_target_nationalities_example' => 'JP,US,GB',
+    'admin_messages_recipient_identifiers_example' => 'abc_user, def_id',
     'admin_logs_file_size_kb' => ':size KB',
     'admin_logs_file_size_mb' => ':size MB',
     'admin_logs_update_button' => 'Update',

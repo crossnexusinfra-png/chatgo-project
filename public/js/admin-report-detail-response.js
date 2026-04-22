@@ -4,8 +4,8 @@
 (function() {
     'use strict';
 
-    const config = window.adminReportDetailResponseConfig || {};
-    const targetResponseId = config.targetResponseId || null;
+    const configElement = document.getElementById('admin-report-detail-response-config');
+    const targetResponseId = configElement ? Number(configElement.dataset.targetResponseId || 0) : 0;
 
     // ページ読み込み時に対象リプライまでスクロール
     document.addEventListener('DOMContentLoaded', function() {

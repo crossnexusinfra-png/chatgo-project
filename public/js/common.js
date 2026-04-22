@@ -4,7 +4,18 @@
 (function() {
     'use strict';
 
-    const config = window.commonConfig || {};
+    function parseCommonConfig() {
+        const meta = document.querySelector('meta[name="common-config"]');
+        if (!meta) return window.commonConfig || {};
+        try {
+            return JSON.parse(meta.getAttribute('content') || '{}');
+        } catch (e) {
+            console.error('Failed to parse common-config:', e);
+            return {};
+        }
+    }
+
+    const config = parseCommonConfig();
     const translations = config.translations || {};
     const routes = config.routes || {};
     const isAdult = config.isAdult || false;
@@ -218,6 +229,41 @@
                 document.body.style.overflow = '';
             }
         });
+
+        document.addEventListener('change', function(e) {
+            const autoSubmitEl = e.target.closest('[data-auto-submit-form="1"]');
+            if (!autoSubmitEl) return;
+            const form = autoSubmitEl.form || autoSubmitEl.closest('form');
+            if (form) {
+                form.submit();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const watchAdBtn = e.target.closest('[data-action="watch-ad-index"]');
+            if (!watchAdBtn) return;
+            e.preventDefault();
+            if (typeof window.watchAdFromIndex === 'function') {
+                window.watchAdFromIndex();
+            }
+        });
+
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (!form || form.tagName !== 'FORM') return;
+            const confirmMessage = form.getAttribute('data-confirm-message');
+            if (confirmMessage && !confirm(confirmMessage)) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('error', function(e) {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.matches('.js-hide-on-error')) {
+                target.style.display = 'none';
+            }
+        }, true);
 
         // R18タグ選択時に自動的にR18チェックボックスをチェック
         const tagSelect = document.getElementById('tag');

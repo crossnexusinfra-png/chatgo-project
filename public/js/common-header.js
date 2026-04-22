@@ -4,7 +4,12 @@
 (function() {
     'use strict';
 
-    const config = window.headerConfig || {};
+    const configElement = document.getElementById('common-header-config');
+    const config = {
+        translations: {
+            search: configElement ? (configElement.dataset.search || '') : ''
+        }
+    };
     const translations = config.translations || {};
 
     // 検索フォームのバリデーション

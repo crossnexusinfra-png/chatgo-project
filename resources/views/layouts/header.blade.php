@@ -37,13 +37,7 @@
                 </form>
             </div>
             
-            <script nonce="{{ $csp_nonce ?? '' }}">
-                window.headerConfig = {
-                    translations: {
-                        search: '{{ \App\Services\LanguageService::trans("search", $lang) }}'
-                    }
-                };
-            </script>
+            <div id="common-header-config" data-search="{{ \App\Services\LanguageService::trans('search', $lang) }}" hidden></div>
             <script src="{{ asset('js/common-header.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
             @endif
             

@@ -136,46 +136,17 @@
     @endif
 </div>
 
-<script nonce="{{ $csp_nonce ?? '' }}">
-    (function () {
-        const templates = @json($noticeTemplates ?? []);
-        const hasOldNotice = @json(
-            old('notice_title_ja') !== null
-            || old('notice_title_en') !== null
-            || old('notice_body_ja') !== null
-            || old('notice_body_en') !== null
-        );
-        const typeEl = document.getElementById('enforcement_type_select');
-        const durationWrap = document.getElementById('duration_hours_wrap');
-        const titleJa = document.getElementById('notice_title_ja');
-        const titleEn = document.getElementById('notice_title_en');
-        const bodyJa = document.getElementById('notice_body_ja');
-        const bodyEn = document.getElementById('notice_body_en');
-
-        function applyTemplate(type) {
-            const t = templates[type];
-            if (!t) return;
-            if (titleJa) titleJa.value = t.title_ja || '';
-            if (titleEn) titleEn.value = t.title_en || '';
-            if (bodyJa) bodyJa.value = t.body_ja || '';
-            if (bodyEn) bodyEn.value = t.body_en || '';
-        }
-
-        function sync() {
-            if (!typeEl || !durationWrap) return;
-            durationWrap.style.display = (typeEl.value === 'restriction' || typeEl.value === 'temporary_freeze') ? 'block' : 'none';
-        }
-        if (typeEl) {
-            typeEl.addEventListener('change', function () {
-                sync();
-                applyTemplate(typeEl.value);
-            });
-            sync();
-            if (!hasOldNotice) {
-                applyTemplate(typeEl.value);
-            }
-        }
-    })();
-</script>
+<div
+    id="admin-user-enforcements-config"
+    data-templates="{{ e(json_encode($noticeTemplates ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+    data-has-old-notice="{{ (
+        old('notice_title_ja') !== null
+        || old('notice_title_en') !== null
+        || old('notice_body_ja') !== null
+        || old('notice_body_en') !== null
+    ) ? '1' : '0' }}"
+    hidden
+></div>
+<script src="{{ asset('js/admin-user-enforcements.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 

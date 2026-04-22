@@ -40,7 +40,7 @@
                                         {{ $error }}
                                         @auth
                                         <div class="error-message-margin-top">
-                                            <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" onclick="watchAdFromIndex()">
+                                            <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" data-action="watch-ad-index">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
                                             <span id="adWatchStatusMain" class="ad-status-inline"></span>
@@ -105,7 +105,7 @@
                             <p class="ad-section-description">
                                 {{ \App\Services\LanguageService::trans('ad_video_description', $lang) }}
                             </p>
-                            <button id="watchAdBtnMain" class="btn btn-primary watch-ad-button" onclick="watchAdFromIndex()">
+                            <button id="watchAdBtnMain" class="btn btn-primary watch-ad-button" data-action="watch-ad-index">
                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                             </button>
                             <div id="adWatchStatusMain" class="ad-status"></div>
@@ -771,20 +771,6 @@
         ]
     ]) }}">
     <script src="{{ asset('js/thread-index.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        // metaタグから設定を読み込む
-        (function() {
-            const meta = document.querySelector('meta[name="thread-index-config"]');
-            if (meta) {
-                try {
-                    window.threadIndexConfig = JSON.parse(meta.getAttribute('content'));
-                } catch (e) {
-                    console.error('Failed to parse thread-index-config:', e);
-                    window.threadIndexConfig = {};
-                }
-            }
-        })();
-    </script>
 @endauth
 
 @endsection

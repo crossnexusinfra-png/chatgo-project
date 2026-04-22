@@ -32,7 +32,8 @@
                 : '';
         @endphp
         @if ($externalApiAlertMessage !== '')
-            <script nonce="{{ $csp_nonce ?? '' }}">alert({!! \Illuminate\Support\Js::from($externalApiAlertMessage) !!});</script>
+            <div id="external-api-alert-config" data-alert-message="{{ e($externalApiAlertMessage) }}" hidden></div>
+            <script src="{{ asset('js/external-api-alert.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
         @endif
         @if (session('login_reward_message'))
             <div class="alert alert-success alert-margin">
@@ -72,12 +73,12 @@
                         <div class="form-group">
                             <label for="title">{{ \App\Services\LanguageService::trans('thread_title', $lang) }}:</label>
                             <input type="text" id="title" name="title" class="js-create-thread-title" value="{{ old('title') }}" maxlength="50" required>
-                            <small>50{{ \App\Services\LanguageService::trans('characters', $lang) }}以内{{ \App\Services\LanguageService::trans('thread_title_newline_hint', $lang) }}</small>
+                            <small>50{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('within', $lang) }}{{ \App\Services\LanguageService::trans('thread_title_newline_hint', $lang) }}</small>
                         </div>
                         <div class="form-group">
                             <label for="create-thread-body">{{ \App\Services\LanguageService::trans('thread_create_first_reply_label', $lang) }}:</label>
                             <textarea id="create-thread-body" name="body" class="js-create-thread-body" rows="5" maxlength="500" data-base-coin="{{ (new \App\Services\CoinService())->getThreadCreationCost() }}">{{ old('body') }}</textarea>
-                            <small>500{{ \App\Services\LanguageService::trans('characters', $lang) }}以内。100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
+                            <small>500{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('within', $lang) }}。100{{ \App\Services\LanguageService::trans('characters', $lang) }}{{ \App\Services\LanguageService::trans('thread_body_coin_per_100', $lang) }}</small>
                             <p class="thread-create-coin-display" id="threadCreateCoinDisplay" data-room-label="{{ \App\Services\LanguageService::trans('thread_coin_room', $lang) }}" data-first-reply-label="{{ \App\Services\LanguageService::trans('thread_coin_first_reply', $lang) }}" data-total-label="{{ \App\Services\LanguageService::trans('thread_coin_total', $lang) }}"></p>
                         </div>
                         @php

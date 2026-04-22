@@ -13,6 +13,7 @@ return [
     'next' => '次へ',
     'search' => '検索',
     'close' => '閉じる',
+    'within' => '以内',
     
     // ヘッダー
     'menu' => 'メニュー',
@@ -1027,6 +1028,13 @@ return [
     'admin_reports_reason' => '理由',
     'admin_reports_detail' => '詳細',
     'admin_reports_created_at_label' => '作成日時',
+    'admin_reports_out_count' => 'アウト数',
+    'admin_set' => '設定',
+    'admin_pending_approval' => '未承認',
+    'admin_messages_template_label' => 'テンプレート',
+    'admin_messages_template_select_placeholder' => 'テンプレートを選択してください',
+    'admin_messages_target_nationalities_example' => 'JP,US,GB',
+    'admin_messages_recipient_identifiers_example' => 'abc_user, def_id',
     'admin_logs_file_size_kb' => ':size KB',
     'admin_logs_file_size_mb' => ':size MB',
     'admin_logs_update_button' => '更新',

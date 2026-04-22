@@ -4,7 +4,23 @@
 (function() {
     'use strict';
 
-    const config = window.profileIndexConfig || {};
+    function parseJsonDataset(value, fallback) {
+        if (!value) return fallback;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.error('Failed to parse profile index config dataset:', e);
+            return fallback;
+        }
+    }
+
+    const configElement = document.getElementById('profile-index-config');
+    const config = configElement ? {
+        lang: configElement.dataset.lang || 'ja',
+        userId: configElement.dataset.userId ? parseInt(configElement.dataset.userId, 10) : null,
+        translations: parseJsonDataset(configElement.dataset.translations, {}),
+        countries: parseJsonDataset(configElement.dataset.countries, {})
+    } : (window.profileIndexConfig || {});
     const lang = config.lang || 'ja';
     const translations = config.translations || {};
     const userId = config.userId || null;
@@ -52,6 +68,35 @@
 
     // さらに表示ボタンの処理
     document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('click', function(e) {
+            const openResidenceBtn = e.target.closest('[data-action="open-residence-history-modal"]');
+            if (openResidenceBtn) {
+                e.preventDefault();
+                const targetUserId = parseInt(openResidenceBtn.getAttribute('data-user-id') || String(userId || ''), 10);
+                if (!isNaN(targetUserId)) {
+                    window.openResidenceHistoryModal(targetUserId);
+                }
+                return;
+            }
+            const closeResidenceBtn = e.target.closest('[data-action="close-residence-history-modal"]');
+            if (closeResidenceBtn) {
+                e.preventDefault();
+                window.closeResidenceHistoryModal();
+                return;
+            }
+            const openCoinBtn = e.target.closest('[data-action="open-coin-reward-modal"]');
+            if (openCoinBtn) {
+                e.preventDefault();
+                window.openCoinRewardModal();
+                return;
+            }
+            const closeCoinBtn = e.target.closest('[data-action="close-coin-reward-modal"]');
+            if (closeCoinBtn) {
+                e.preventDefault();
+                window.closeCoinRewardModal();
+            }
+        });
+
         window.initLoadMoreButton({
             buttonId: 'load-more-threads',
             listId: 'threads-list',

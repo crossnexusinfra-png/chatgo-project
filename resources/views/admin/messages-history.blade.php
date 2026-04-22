@@ -54,7 +54,7 @@
                                 {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}:
                                 @php $copyToken = optional($m->user)->user_identifier ?? (string) $m->user_id; @endphp
                                 <code class="admin-copy-token">{{ $copyToken }}</code>
-                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}" data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                             @elseif($m->recipients && $m->recipients->isNotEmpty())
                                 {{ \App\Services\LanguageService::trans('admin_messages_sent_to', $lang) }}: {{ str_replace('{count}', $m->recipients->count(), \App\Services\LanguageService::trans('admin_messages_sent_to_specific', $lang)) }}
                             @else
@@ -68,7 +68,7 @@
                         </div>
                     </div>
                     @if(!$m->parent_message_id)
-                        <form method="post" action="{{ route('admin.messages.cancel', $m->id) }}" class="admin-messages-cancel-form" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_cancel_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.messages.cancel', $m->id) }}" class="admin-messages-cancel-form" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_messages_cancel_confirm', $lang) }}">
                             @csrf
                             <button type="submit" class="admin-messages-cancel-button">{{ \App\Services\LanguageService::trans('admin_messages_cancel', $lang) }}</button>
                         </form>
@@ -96,18 +96,6 @@
         @endif
     </div>
 </div>
-<script nonce="{{ $csp_nonce ?? '' }}">
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.admin-copy-btn');
-    if (!btn) return;
-    const text = btn.getAttribute('data-copy-text') || '';
-    if (!text) return;
-    const originalText = btn.textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
-        setTimeout(function() { btn.textContent = originalText; }, 1200);
-    });
-});
-</script>
+<script src="{{ asset('js/admin-copy-btn.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 

@@ -52,7 +52,7 @@
                     <!-- ソート選択 -->
                     <div class="filter-group">
                         <label for="sort_by">{{ \App\Services\LanguageService::trans('sort_order', $lang) }}</label>
-                        <select name="sort_by" id="sort_by" class="filter-select" onchange="this.form.submit()">
+                        <select name="sort_by" id="sort_by" class="filter-select" data-auto-submit-form="1">
                             <option value="latest" {{ ($sortBy ?? 'latest') === 'latest' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('sort_latest', $lang) }}</option>
                             <option value="popular" {{ ($sortBy ?? 'latest') === 'popular' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('sort_popular', $lang) }}</option>
                         </select>
@@ -62,7 +62,7 @@
                     @if(($sortBy ?? 'latest') === 'popular')
                     <div class="filter-group">
                         <label for="period">{{ \App\Services\LanguageService::trans('view_count_period', $lang) }}</label>
-                        <select name="period" id="period" class="filter-select" onchange="this.form.submit()">
+                        <select name="period" id="period" class="filter-select" data-auto-submit-form="1">
                             <option value="30" {{ ($period ?? '') === '30' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('period_30', $lang) }}</option>
                             <option value="365" {{ ($period ?? '') === '365' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('period_365', $lang) }}</option>
                             <option value="all" {{ ($period ?? '') === 'all' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('period_all', $lang) }}</option>
@@ -76,9 +76,9 @@
                     <div class="filter-group">
                         <label>{{ \App\Services\LanguageService::trans('filter_threads', $lang) }}</label>
                         <div class="radio-group">
-                            <label><input type="radio" name="completion" value="all" {{ ($completionStatus ?? 'all') === 'all' ? 'checked' : '' }} onchange="this.form.submit()">{{ \App\Services\LanguageService::trans('filter_all', $lang) }}</label>
-                            <label><input type="radio" name="completion" value="incomplete" {{ ($completionStatus ?? 'all') === 'incomplete' ? 'checked' : '' }} onchange="this.form.submit()">{{ \App\Services\LanguageService::trans('filter_incomplete', $lang) }}</label>
-                            <label><input type="radio" name="completion" value="completed" {{ ($completionStatus ?? 'all') === 'completed' ? 'checked' : '' }} onchange="this.form.submit()">{{ \App\Services\LanguageService::trans('filter_completed', $lang) }}</label>
+                            <label><input type="radio" name="completion" value="all" {{ ($completionStatus ?? 'all') === 'all' ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_all', $lang) }}</label>
+                            <label><input type="radio" name="completion" value="incomplete" {{ ($completionStatus ?? 'all') === 'incomplete' ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_incomplete', $lang) }}</label>
+                            <label><input type="radio" name="completion" value="completed" {{ ($completionStatus ?? 'all') === 'completed' ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_completed', $lang) }}</label>
                         </div>
                     </div>
                     <div class="filter-group filter-actions">
@@ -295,16 +295,16 @@
         </main>
     </div>
     
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        window.threadTagConfig = {
-            tag: '{{ urlencode($tagName ?? $tag ?? '') }}',
-            searchQuery: '{{ $searchQuery ?? '' }}',
-            sortBy: '{{ $sortBy ?? 'popular' }}',
-            period: '{{ $period ?? '30' }}',
-            completion: '{{ $completionStatus ?? 'all' }}',
-            hasMoreThreads: {{ isset($totalCount) && $totalCount > $threads->count() ? 'true' : 'false' }},
-            currentOffset: 20
-        };
-    </script>
+    <div
+        id="thread-tag-config"
+        data-tag="{{ urlencode($tagName ?? $tag ?? '') }}"
+        data-search-query="{{ $searchQuery ?? '' }}"
+        data-sort-by="{{ $sortBy ?? 'popular' }}"
+        data-period="{{ $period ?? '30' }}"
+        data-completion="{{ $completionStatus ?? 'all' }}"
+        data-has-more-threads="{{ isset($totalCount) && $totalCount > $threads->count() ? '1' : '0' }}"
+        data-current-offset="20"
+        hidden
+    ></div>
     <script src="{{ asset('js/thread-tag.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

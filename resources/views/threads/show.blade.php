@@ -520,34 +520,5 @@
             'translationUiFatal' => \App\Services\LanguageService::trans('translation_ui_fatal', $lang),
         ]
     ]) }}">
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        // metaタグから設定を読み込む（thread-show.jsの前に実行）
-        (function() {
-            const meta = document.querySelector('meta[name="thread-show-config"]');
-            if (meta) {
-                try {
-                    window.threadShowConfig = JSON.parse(meta.getAttribute('content'));
-                    console.log('[設定読み込み] threadId:', window.threadShowConfig.threadId);
-                } catch (e) {
-                    console.error('Failed to parse thread-show-config:', e);
-                    window.threadShowConfig = {};
-                }
-            } else {
-                console.error('meta[name="thread-show-config"] not found');
-            }
-        })();
-    </script>
     <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-    <script nonce="{{ $csp_nonce ?? '' }}">
-    (function(){
-        var btn = document.getElementById('reply-target-cancel-btn');
-        if (btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof window.cancelReply === 'function') window.cancelReply();
-            });
-        }
-    })();
-    </script>
 @endsection 

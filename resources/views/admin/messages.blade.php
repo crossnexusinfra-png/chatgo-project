@@ -25,9 +25,9 @@
         <form method="post" action="{{ route('admin.messages.store') }}" id="admin-messages-form">
             @csrf
             @if(($templates ?? collect())->isNotEmpty())
-                <label>テンプレート</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_template_label', $lang) }}</label>
                 <select id="message-template-select">
-                    <option value="">テンプレートを選択してください</option>
+                    <option value="">{{ \App\Services\LanguageService::trans('admin_messages_template_select_placeholder', $lang) }}</option>
                     @foreach($templates as $template)
                         <option value="{{ $template['key'] }}">{{ $template['name'] }}</option>
                     @endforeach
@@ -48,7 +48,7 @@
                     <option value="0">{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult_no', $lang) }}</option>
                 </select>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_nationalities', $lang) }}</label>
-                <input type="text" name="target_nationalities" placeholder="JP,US,GB">
+                <input type="text" name="target_nationalities" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_target_nationalities_example', $lang) }}">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_registered_after', $lang) }}</label>
                 <input type="datetime-local" name="target_registered_after">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_registered_before', $lang) }}</label>
@@ -56,16 +56,16 @@
             </div>
             <div id="target_specific_fields" class="admin-messages-target-extra">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers', $lang) }}</label>
-                <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="abc_user, def_id"></textarea>
+                <textarea name="recipient_identifiers" id="recipient_identifiers" rows="3" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_recipient_identifiers_example', $lang) }}"></textarea>
             </div>
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
             <input type="text" name="title_ja" id="title_ja" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-            <input type="text" name="title_en" id="title_en" placeholder="Title in English">
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+            <input type="text" name="title_en" id="title_en" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_en', $lang) }}">
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
             <textarea name="body_ja" id="body_ja" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
-            <textarea name="body_en" id="body_en" rows="5" placeholder="Message body in English"></textarea>
+            <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+            <textarea name="body_en" id="body_en" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_en', $lang) }}"></textarea>
                 <div class="admin-messages-form-row">
                     <label class="admin-messages-label-flex">
                     <input type="checkbox" name="allows_reply" value="1" id="allows_reply">
@@ -107,13 +107,13 @@
                 <input type="hidden" name="template_id" id="template_editor_id" value="">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_template_name', $lang) }}</label>
                 <input type="text" name="template_name" id="template_editor_name" required maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_template_name_placeholder', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
                 <input type="text" name="template_title_ja" id="template_editor_title_ja" maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-                <input type="text" name="template_title_en" id="template_editor_title_en" maxlength="255" placeholder="Title in English">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+                <input type="text" name="template_title_en" id="template_editor_title_en" maxlength="255" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_en', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
                 <textarea name="template_body_ja" id="template_editor_body_ja" rows="4" required></textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
                 <textarea name="template_body_en" id="template_editor_body_en" rows="4"></textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
                 <input type="number" name="template_coin_amount" id="template_editor_coin" min="0" placeholder="0">
@@ -121,7 +121,7 @@
                     <button type="submit" id="template_editor_save_button">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
                 </div>
             </form>
-            <form method="post" action="{{ route('admin.messages.templates.delete') }}" id="adminTemplateDeleteForm" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_template_delete_confirm', $lang) }}');">
+            <form method="post" action="{{ route('admin.messages.templates.delete') }}" id="adminTemplateDeleteForm" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_messages_template_delete_confirm', $lang) }}">
                 @csrf
                 <input type="hidden" name="template_id" id="template_delete_id" value="">
                 <div class="admin-template-edit-actions">
@@ -138,13 +138,13 @@
         <div id="adminWelcomeSettingPanel" class="admin-collapsible-panel">
             <form method="post" action="{{ route('admin.messages.set-welcome') }}">
                 @csrf
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
                 <input type="text" name="welcome_title_ja" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
-                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="Title in English">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_en', $lang) }}">
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
                 <textarea name="welcome_body_ja" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
                 <textarea name="welcome_body_en" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
                 <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
@@ -170,192 +170,16 @@
     </div>
     </div>
 </div>
+    <div
+        id="admin-messages-config"
+        data-templates="{{ e(json_encode(collect($templates ?? [])->keyBy('key'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-editable-templates="{{ e(json_encode(collect($editableTemplates ?? [])->keyBy('id'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-template-create-label="{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}"
+        data-template-update-label="{{ \App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang) }}"
+        hidden
+    ></div>
     <script src="{{ asset('js/admin-messages.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        (function() {
-            const templates = @json(collect($templates ?? [])->keyBy('key'));
-            const editableTemplates = @json(collect($editableTemplates ?? [])->keyBy('id'));
-            const templateCreateLabel = @json(\App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang));
-            const templateUpdateLabel = @json(\App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang));
-            
-            function applyTemplate(templateKey) {
-                if (!templateKey || !templates[templateKey]) {
-                    return;
-                }
-                
-                const template = templates[templateKey];
-                
-                // フォームフィールドに値を設定
-                const titleJaField = document.getElementById('title_ja');
-                const bodyJaField = document.getElementById('body_ja');
-                const coinAmountField = document.getElementById('coin_amount');
-                
-                if (titleJaField && template.title_ja) {
-                    titleJaField.value = template.title_ja;
-                }
-                const titleEnField = document.getElementById('title_en');
-                if (titleEnField && template.title_en) {
-                    titleEnField.value = template.title_en;
-                }
-                
-                if (bodyJaField && template.body_ja) {
-                    bodyJaField.value = template.body_ja;
-                }
-                const bodyEnField = document.getElementById('body_en');
-                if (bodyEnField && template.body_en) {
-                    bodyEnField.value = template.body_en;
-                }
-                
-                if (coinAmountField && template.coin_amount !== undefined) {
-                    coinAmountField.value = template.coin_amount;
-                }
-            }
-
-            function syncSendTemplateKey() {
-                const select = document.getElementById('message-template-select');
-                const hidden = document.getElementById('template_key');
-                if (select && hidden) {
-                    hidden.value = select.value || '';
-                }
-            }
-
-            function resetTemplateEditor() {
-                const idEl = document.getElementById('template_editor_id');
-                const nameEl = document.getElementById('template_editor_name');
-                const titleJaEl = document.getElementById('template_editor_title_ja');
-                const titleEnEl = document.getElementById('template_editor_title_en');
-                const bodyJaEl = document.getElementById('template_editor_body_ja');
-                const bodyEnEl = document.getElementById('template_editor_body_en');
-                const coinEl = document.getElementById('template_editor_coin');
-                const deleteIdEl = document.getElementById('template_delete_id');
-                const deleteBtn = document.getElementById('template_editor_delete_button');
-                const saveBtn = document.getElementById('template_editor_save_button');
-                if (idEl) idEl.value = '';
-                if (nameEl) nameEl.value = '';
-                if (titleJaEl) titleJaEl.value = '';
-                if (titleEnEl) titleEnEl.value = '';
-                if (bodyJaEl) bodyJaEl.value = '';
-                if (bodyEnEl) bodyEnEl.value = '';
-                if (coinEl) coinEl.value = '';
-                if (deleteIdEl) deleteIdEl.value = '';
-                if (deleteBtn) deleteBtn.disabled = true;
-                if (saveBtn) saveBtn.textContent = templateCreateLabel;
-            }
-
-            function loadTemplateToEditor(templateId) {
-                const t = editableTemplates[String(templateId)];
-                if (!t) {
-                    resetTemplateEditor();
-                    return;
-                }
-                const idEl = document.getElementById('template_editor_id');
-                const nameEl = document.getElementById('template_editor_name');
-                const titleJaEl = document.getElementById('template_editor_title_ja');
-                const titleEnEl = document.getElementById('template_editor_title_en');
-                const bodyJaEl = document.getElementById('template_editor_body_ja');
-                const bodyEnEl = document.getElementById('template_editor_body_en');
-                const coinEl = document.getElementById('template_editor_coin');
-                const deleteIdEl = document.getElementById('template_delete_id');
-                const deleteBtn = document.getElementById('template_editor_delete_button');
-                const saveBtn = document.getElementById('template_editor_save_button');
-                if (idEl) idEl.value = t.id;
-                if (nameEl) nameEl.value = t.name || '';
-                if (titleJaEl) titleJaEl.value = t.title_ja || '';
-                if (titleEnEl) titleEnEl.value = t.title_en || '';
-                if (bodyJaEl) bodyJaEl.value = t.body_ja || '';
-                if (bodyEnEl) bodyEnEl.value = t.body_en || '';
-                if (coinEl) coinEl.value = (t.coin_amount ?? '') === null ? '' : (t.coin_amount ?? '');
-                if (deleteIdEl) deleteIdEl.value = t.id;
-                if (deleteBtn) deleteBtn.disabled = false;
-                if (saveBtn) saveBtn.textContent = templateUpdateLabel;
-            }
-            
-            // グローバルスコープに公開
-            window.applyTemplate = applyTemplate;
-            
-            // target_type に応じて条件指定・特定ユーザー欄の表示切替（CSP対応: styleではなくclassで制御）
-            function toggleTargetExtra() {
-                const type = document.getElementById('target_type')?.value;
-                const filteredEl = document.getElementById('target_filtered_fields');
-                const specificEl = document.getElementById('target_specific_fields');
-                if (filteredEl) {
-                    filteredEl.classList.toggle('is-visible', type === 'filtered');
-                }
-                if (specificEl) {
-                    specificEl.classList.toggle('is-visible', type === 'specific');
-                }
-                const ri = document.getElementById('recipient_identifiers');
-                if (ri) ri.required = (type === 'specific');
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    const templateSelect = document.getElementById('message-template-select');
-                    if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); syncSendTemplateKey(); });
-                    syncSendTemplateKey();
-                    const editorSelect = document.getElementById('template-editor-select');
-                    if (editorSelect) {
-                        editorSelect.addEventListener('change', function() {
-                            if (this.value === 'new') {
-                                resetTemplateEditor();
-                            } else {
-                                loadTemplateToEditor(this.value);
-                            }
-                        });
-                        if (editorSelect.value && editorSelect.value !== 'new') {
-                            loadTemplateToEditor(editorSelect.value);
-                        } else {
-                            resetTemplateEditor();
-                        }
-                    }
-                    const targetType = document.getElementById('target_type');
-                    if (targetType) {
-                        targetType.addEventListener('change', toggleTargetExtra);
-                        toggleTargetExtra();
-                    }
-                    document.querySelectorAll('.admin-collapsible-toggle').forEach(function(toggleBtn) {
-                        toggleBtn.addEventListener('click', function() {
-                            const panel = document.getElementById(toggleBtn.dataset.targetId);
-                            if (!panel) return;
-                            const isOpen = panel.classList.toggle('is-open');
-                            toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-                        });
-                    });
-                });
-            } else {
-                const templateSelect = document.getElementById('message-template-select');
-                if (templateSelect) templateSelect.addEventListener('change', function() { applyTemplate(this.value); syncSendTemplateKey(); });
-                syncSendTemplateKey();
-                const editorSelect = document.getElementById('template-editor-select');
-                if (editorSelect) {
-                    editorSelect.addEventListener('change', function() {
-                        if (this.value === 'new') {
-                            resetTemplateEditor();
-                        } else {
-                            loadTemplateToEditor(this.value);
-                        }
-                    });
-                    if (editorSelect.value && editorSelect.value !== 'new') {
-                        loadTemplateToEditor(editorSelect.value);
-                    } else {
-                        resetTemplateEditor();
-                    }
-                }
-                const targetType = document.getElementById('target_type');
-                if (targetType) {
-                    targetType.addEventListener('change', toggleTargetExtra);
-                    toggleTargetExtra();
-                }
-                document.querySelectorAll('.admin-collapsible-toggle').forEach(function(toggleBtn) {
-                    toggleBtn.addEventListener('click', function() {
-                        const panel = document.getElementById(toggleBtn.dataset.targetId);
-                        if (!panel) return;
-                        const isOpen = panel.classList.toggle('is-open');
-                        toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-                    });
-                });
-            }
-        })();
-    </script>
+    <script src="{{ asset('js/admin-messages-templates.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
 

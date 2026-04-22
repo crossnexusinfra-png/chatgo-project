@@ -4,7 +4,25 @@
 (function() {
     'use strict';
 
-    const config = window.notificationsIndexConfig || {};
+    function parseJsonDataset(value, fallback) {
+        if (!value) return fallback;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.error('Failed to parse notifications config dataset:', e);
+            return fallback;
+        }
+    }
+
+    const configElement = document.getElementById('notifications-index-config');
+    const config = configElement ? {
+        messagesData: parseJsonDataset(configElement.dataset.messagesData, []),
+        csrfToken: configElement.dataset.csrfToken || '',
+        userId: configElement.dataset.userId ? parseInt(configElement.dataset.userId, 10) : null,
+        currentPage: parseInt(configElement.dataset.currentPage || '1', 10),
+        hasMorePages: configElement.dataset.hasMorePages === '1',
+        translations: parseJsonDataset(configElement.dataset.translations, {})
+    } : (window.notificationsIndexConfig || {});
     let messagesData = config.messagesData || [];
     const csrfToken = config.csrfToken || '';
     const translations = config.translations || {};

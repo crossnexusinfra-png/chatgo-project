@@ -4,7 +4,18 @@
 (function() {
     'use strict';
 
-    const config = window.threadIndexConfig || {};
+    function parseThreadIndexConfig() {
+        const meta = document.querySelector('meta[name="thread-index-config"]');
+        if (!meta) return window.threadIndexConfig || {};
+        try {
+            return JSON.parse(meta.getAttribute('content') || '{}');
+        } catch (e) {
+            console.error('Failed to parse thread-index-config:', e);
+            return {};
+        }
+    }
+
+    const config = parseThreadIndexConfig();
     const translations = config.translations || {};
     const csrfToken = config.csrfToken || '';
     const routes = config.routes || {};

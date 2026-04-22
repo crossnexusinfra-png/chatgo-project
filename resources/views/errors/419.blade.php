@@ -34,7 +34,5 @@
         </div>
     </div>
 </div>
-<script nonce="{{ $csp_nonce ?? '' }}">
-document.getElementById('error-page-reload')?.addEventListener('click', function() { window.location.reload(); });
-</script>
+<script src="{{ asset('js/error-pages-actions.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

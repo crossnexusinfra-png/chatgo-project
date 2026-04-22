@@ -70,7 +70,7 @@
                     
                     <a href="{{ route('admin.logs.download') }}" class="btn btn-primary">{{ \App\Services\LanguageService::trans('admin_logs_download', $lang) }}</a>
                     
-                    <form method="POST" action="{{ route('admin.logs.clear') }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_logs_clear_confirm', $lang) }}');">
+                    <form method="POST" action="{{ route('admin.logs.clear') }}" class="admin-form-inline" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_logs_clear_confirm', $lang) }}">
                         @csrf
                         <button type="submit" class="btn btn-danger">{{ \App\Services\LanguageService::trans('admin_logs_clear', $lang) }}</button>
                     </form>

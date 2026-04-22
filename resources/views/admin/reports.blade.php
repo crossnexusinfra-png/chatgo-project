@@ -79,7 +79,7 @@
                             @php $token = $userIdentifierById[$rid] ?? (string) $rid; @endphp
                             <div>
                                 <code class="admin-copy-token">{{ $token }}</code>
-                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $token }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $token }}" data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                             </div>
                         @endforeach
                     @else
@@ -90,7 +90,7 @@
                     @if(!empty($reportedUserId))
                         @php $reportedToken = $userIdentifierById[$reportedUserId] ?? (string) $reportedUserId; @endphp
                         <code class="admin-copy-token">{{ $reportedToken }}</code>
-                        <button type="button" class="admin-copy-btn" data-copy-text="{{ $reportedToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                        <button type="button" class="admin-copy-btn" data-copy-text="{{ $reportedToken }}" data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                     @else
                         —
                     @endif
@@ -116,11 +116,11 @@
                 </td>
                 <td>
                     @if ($g->thread_id)
-                        <form method="post" action="{{ route('admin.reports.thread.approve', $g->thread_id) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.reports.thread.approve', $g->thread_id) }}" class="admin-form-inline" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.reports.thread.reject', $g->thread_id) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.reports.thread.reject', $g->thread_id) }}" class="admin-form-inline admin-button-margin" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
                         </form>
@@ -129,11 +129,11 @@
                             <button type="submit">{{ $g->any_flagged ? \App\Services\LanguageService::trans('admin_remove_star', $lang) : \App\Services\LanguageService::trans('admin_toggle_star', $lang) }}</button>
                         </form>
                     @elseif ($g->response_id)
-                        <form method="post" action="{{ route('admin.reports.response.approve', $g->response_id) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.reports.response.approve', $g->response_id) }}" class="admin-form-inline" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.reports.response.reject', $g->response_id) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.reports.response.reject', $g->response_id) }}" class="admin-form-inline admin-button-margin" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
                         </form>
@@ -165,19 +165,7 @@
         </div>
     @endif
 </div>
-<script nonce="{{ $csp_nonce ?? '' }}">
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.admin-copy-btn');
-    if (!btn) return;
-    const text = btn.getAttribute('data-copy-text') || '';
-    if (!text) return;
-    const originalText = btn.textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
-        setTimeout(function() { btn.textContent = originalText; }, 1200);
-    });
-});
-</script>
+<script src="{{ asset('js/admin-copy-btn.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
 

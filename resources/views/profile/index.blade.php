@@ -72,7 +72,7 @@
         if ($countryCode === 'OTHER') {
             return '<span class="country-flag-other" title="' . \App\Services\LanguageService::trans('country_other_title', $lang) . '">🌍</span>';
         }
-        return '<img src="' . $getCountryFlagUrl($countryCode) . '" alt="' . htmlspecialchars($countryCode) . '" class="country-flag-img" onerror="this.style.display=\'none\'">';
+        return '<img src="' . $getCountryFlagUrl($countryCode) . '" alt="' . htmlspecialchars($countryCode) . '" class="country-flag-img js-hide-on-error">';
     };
     
     // 国コードを取得
@@ -109,7 +109,7 @@
                     <div class="detail-item">
                         <label>{{ \App\Services\LanguageService::trans('residence_label', $lang) }}</label>
                         <span class="country-display">
-                            <button type="button" class="btn-history" onclick="openResidenceHistoryModal({{ $user->user_id }})" title="{{ \App\Services\LanguageService::trans('residence_history_title', $lang) }}">
+                            <button type="button" class="btn-history" data-action="open-residence-history-modal" data-user-id="{{ $user->user_id }}" title="{{ \App\Services\LanguageService::trans('residence_history_title', $lang) }}">
                                 📝
                             </button>
                             @if($residenceCode)
@@ -131,7 +131,7 @@
                     <div class="detail-item">
                         <label>{{ \App\Services\LanguageService::trans('consecutive_login_days_label', $lang) }}</label>
                         <span class="country-display">
-                            <button type="button" class="btn-history" onclick="openCoinRewardModal()" title="{{ \App\Services\LanguageService::trans('view_coin_reward_table', $lang) }}">
+                            <button type="button" class="btn-history" data-action="open-coin-reward-modal" title="{{ \App\Services\LanguageService::trans('view_coin_reward_table', $lang) }}">
                                 📊
                             </button>
                             <span class="consecutive-days-badge">{{ \App\Services\LanguageService::trans('consecutive_login_days_count', $lang, ['days' => $consecutiveLoginDays]) }}</span>
@@ -147,9 +147,9 @@
                     @else
                         <a href="{{ route('profile.edit') }}" class="btn btn-primary">{{ \App\Services\LanguageService::trans('profile_edit', $lang) }}</a>
                     @endif
-                    <form action="{{ route('logout') }}" method="POST" class="logout-form">
+                    <form action="{{ route('logout') }}" method="POST" class="logout-form" data-confirm-message="{{ \App\Services\LanguageService::trans('logout_confirm', $lang) }}">
                         @csrf
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ \App\Services\LanguageService::trans('logout_confirm', $lang) }}')">
+                        <button type="submit" class="btn btn-danger">
                             {{ \App\Services\LanguageService::trans('logout', $lang) }}
                         </button>
                     </form>
@@ -344,7 +344,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2>{{ \App\Services\LanguageService::trans('profile_residence_history_modal_title', $lang) }}</h2>
-            <span class="close" onclick="closeResidenceHistoryModal()">&times;</span>
+            <span class="close" data-action="close-residence-history-modal" role="button" tabindex="0">&times;</span>
         </div>
         <div class="modal-body">
             <div id="historyContent">
@@ -359,7 +359,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2>{{ \App\Services\LanguageService::trans('coin_reward_modal_title', $lang) }}</h2>
-            <span class="close" onclick="closeCoinRewardModal()">&times;</span>
+            <span class="close" data-action="close-coin-reward-modal" role="button" tabindex="0">&times;</span>
         </div>
         <div class="modal-body">
             <div class="coin-reward-table">
@@ -416,40 +416,40 @@
     </div>
 </div>
 
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        window.profileIndexConfig = {
-            lang: '{{ $lang }}',
-            userId: {{ $user->user_id }},
-            translations: {
-                loading: '{{ \App\Services\LanguageService::trans("profile_loading", $lang) }}',
-                noHistory: '{{ \App\Services\LanguageService::trans("profile_no_history", $lang) }}',
-                errorOccurred: '{{ \App\Services\LanguageService::trans("profile_error_occurred", $lang) }}',
-                showMore: '{{ \App\Services\LanguageService::trans("show_more", $lang) }}'
-            },
-            countries: {
-                'JP': '{{ \App\Services\LanguageService::trans("country_japan", $lang) }}',
-                'US': '{{ \App\Services\LanguageService::trans("country_usa", $lang) }}',
-                'GB': '{{ \App\Services\LanguageService::trans("country_uk", $lang) }}',
-                'CA': '{{ \App\Services\LanguageService::trans("country_canada", $lang) }}',
-                'AU': '{{ \App\Services\LanguageService::trans("country_australia", $lang) }}',
-                'DE': '{{ \App\Services\LanguageService::trans("country_de", $lang) }}',
-                'FR': '{{ \App\Services\LanguageService::trans("country_fr", $lang) }}',
-                'NL': '{{ \App\Services\LanguageService::trans("country_nl", $lang) }}',
-                'BE': '{{ \App\Services\LanguageService::trans("country_be", $lang) }}',
-                'SE': '{{ \App\Services\LanguageService::trans("country_se", $lang) }}',
-                'FI': '{{ \App\Services\LanguageService::trans("country_fi", $lang) }}',
-                'DK': '{{ \App\Services\LanguageService::trans("country_dk", $lang) }}',
-                'NO': '{{ \App\Services\LanguageService::trans("country_no", $lang) }}',
-                'IS': '{{ \App\Services\LanguageService::trans("country_is", $lang) }}',
-                'AT': '{{ \App\Services\LanguageService::trans("country_at", $lang) }}',
-                'CH': '{{ \App\Services\LanguageService::trans("country_ch", $lang) }}',
-                'IE': '{{ \App\Services\LanguageService::trans("country_ie", $lang) }}',
-                'KR': '{{ \App\Services\LanguageService::trans("country_kr", $lang) }}',
-                'SG': '{{ \App\Services\LanguageService::trans("country_sg", $lang) }}',
-                'NZ': '{{ \App\Services\LanguageService::trans("country_nz", $lang) }}',
-                'OTHER': '{{ \App\Services\LanguageService::trans("country_other", $lang) }}'
-            }
-        };
-    </script>
+    <div
+        id="profile-index-config"
+        data-lang="{{ $lang }}"
+        data-user-id="{{ $user->user_id }}"
+        data-translations="{{ e(json_encode([
+            'loading' => \App\Services\LanguageService::trans('profile_loading', $lang),
+            'noHistory' => \App\Services\LanguageService::trans('profile_no_history', $lang),
+            'errorOccurred' => \App\Services\LanguageService::trans('profile_error_occurred', $lang),
+            'showMore' => \App\Services\LanguageService::trans('show_more', $lang),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-countries="{{ e(json_encode([
+            'JP' => \App\Services\LanguageService::trans('country_japan', $lang),
+            'US' => \App\Services\LanguageService::trans('country_usa', $lang),
+            'GB' => \App\Services\LanguageService::trans('country_uk', $lang),
+            'CA' => \App\Services\LanguageService::trans('country_canada', $lang),
+            'AU' => \App\Services\LanguageService::trans('country_australia', $lang),
+            'DE' => \App\Services\LanguageService::trans('country_de', $lang),
+            'FR' => \App\Services\LanguageService::trans('country_fr', $lang),
+            'NL' => \App\Services\LanguageService::trans('country_nl', $lang),
+            'BE' => \App\Services\LanguageService::trans('country_be', $lang),
+            'SE' => \App\Services\LanguageService::trans('country_se', $lang),
+            'FI' => \App\Services\LanguageService::trans('country_fi', $lang),
+            'DK' => \App\Services\LanguageService::trans('country_dk', $lang),
+            'NO' => \App\Services\LanguageService::trans('country_no', $lang),
+            'IS' => \App\Services\LanguageService::trans('country_is', $lang),
+            'AT' => \App\Services\LanguageService::trans('country_at', $lang),
+            'CH' => \App\Services\LanguageService::trans('country_ch', $lang),
+            'IE' => \App\Services\LanguageService::trans('country_ie', $lang),
+            'KR' => \App\Services\LanguageService::trans('country_kr', $lang),
+            'SG' => \App\Services\LanguageService::trans('country_sg', $lang),
+            'NZ' => \App\Services\LanguageService::trans('country_nz', $lang),
+            'OTHER' => \App\Services\LanguageService::trans('country_other', $lang),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        hidden
+    ></div>
     <script src="{{ asset('js/profile-index.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

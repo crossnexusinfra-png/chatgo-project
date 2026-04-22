@@ -29,11 +29,11 @@
     </form>
 
     <div class="admin-reports-actions-container">
-        <form method="post" action="{{ route('admin.reports.thread.approve', $threadId) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}');">
+        <form method="post" action="{{ route('admin.reports.thread.approve', $threadId) }}" class="admin-form-inline" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_approve_confirm', $lang) }}">
             @csrf
             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_approve', $lang) }}</button>
         </form>
-        <form method="post" action="{{ route('admin.reports.thread.reject', $threadId) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}');">
+        <form method="post" action="{{ route('admin.reports.thread.reject', $threadId) }}" class="admin-form-inline admin-button-margin" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_reports_reject_confirm', $lang) }}">
             @csrf
             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reports_reject', $lang) }}</button>
         </form>
@@ -50,7 +50,7 @@
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_reason', $lang) }}</th>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_detail', $lang) }}</th>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_created_at_label', $lang) }}</th>
-                <th>アウト数</th>
+                <th>{{ \App\Services\LanguageService::trans('admin_reports_out_count', $lang) }}</th>
             </tr>
         </thead>
         <tbody>
@@ -59,7 +59,7 @@
                 <td>
                     @php $copyToken = optional($r->user)->user_identifier ?? (string) $r->user_id; @endphp
                     <code class="admin-copy-token">{{ $copyToken }}</code>
-                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}" data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                 </td>
                 <td>{{ $r->reason }}</td>
                 <td class="admin-message">{{ $r->description }}</td>
@@ -68,11 +68,11 @@
                     @if($r->is_approved && $r->approved_at)
                         <form method="post" action="{{ route('admin.reports.set-out-count', $r->report_id) }}" class="admin-form-inline">
                             @csrf
-                            <input type="number" name="out_count" value="{{ $r->out_count ?? \App\Models\Report::getDefaultOutCount($r->reason) }}" step="0.5" min="0.5" max="3.0" style="width: 80px;">
-                            <button type="submit" style="padding: 2px 8px; font-size: 12px;">設定</button>
+                            <input type="number" name="out_count" value="{{ $r->out_count ?? \App\Models\Report::getDefaultOutCount($r->reason) }}" step="0.5" min="0.5" max="3.0" class="admin-out-count-input">
+                            <button type="submit" class="admin-out-count-submit-btn">{{ \App\Services\LanguageService::trans('admin_set', $lang) }}</button>
                         </form>
                     @else
-                        <span style="color: #999;">未承認</span>
+                        <span class="admin-pending-approval">{{ \App\Services\LanguageService::trans('admin_pending_approval', $lang) }}</span>
                     @endif
                 </td>
             </tr>
@@ -86,7 +86,7 @@
     <h2 class="admin-reports-section-title">{{ \App\Services\LanguageService::trans('admin_reports_thread_content', $lang) }}</h2>
     <div class="admin-reports-content-card">
         <div class="admin-reports-content-title">{{ $thread->title }}</div>
-        <div class="admin-muted admin-reports-content-meta">{{ \App\Services\LanguageService::trans('admin_reports_created_at', $lang) }}: {{ optional($thread->created_at)->format('Y-m-d H:i') }} / {{ \App\Services\LanguageService::trans('admin_reports_author', $lang) }}: {{ $thread->user ? $thread->user->username : '削除されたユーザー' }}</div>
+        <div class="admin-muted admin-reports-content-meta">{{ \App\Services\LanguageService::trans('admin_reports_created_at', $lang) }}: {{ optional($thread->created_at)->format('Y-m-d H:i') }} / {{ \App\Services\LanguageService::trans('admin_reports_author', $lang) }}: {{ $thread->user ? $thread->user->username : \App\Services\LanguageService::trans('deleted_user', $lang) }}</div>
         @php
             $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
             // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
@@ -121,19 +121,7 @@
     </div>
     @endif
 </div>
-<script nonce="{{ $csp_nonce ?? '' }}">
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.admin-copy-btn');
-    if (!btn) return;
-    const text = btn.getAttribute('data-copy-text') || '';
-    if (!text) return;
-    const originalText = btn.textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
-        setTimeout(function() { btn.textContent = originalText; }, 1200);
-    });
-});
-</script>
+<script src="{{ asset('js/admin-copy-btn.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
 

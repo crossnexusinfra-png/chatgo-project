@@ -4,7 +4,22 @@
 (function() {
     'use strict';
 
-    const config = window.profileShowConfig || {};
+    function parseJsonDataset(value, fallback) {
+        if (!value) return fallback;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.error('Failed to parse profile show config dataset:', e);
+            return fallback;
+        }
+    }
+
+    const configElement = document.getElementById('profile-show-config');
+    const config = configElement ? {
+        lang: configElement.dataset.lang || 'ja',
+        translations: parseJsonDataset(configElement.dataset.translations, {}),
+        countries: parseJsonDataset(configElement.dataset.countries, {})
+    } : (window.profileShowConfig || {});
     const lang = config.lang || 'ja';
     const translations = config.translations || {};
     const countries = config.countries || {};
@@ -41,6 +56,23 @@
 
     // さらに表示ボタンの処理
     document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('click', function(e) {
+            const openResidenceBtn = e.target.closest('[data-action="open-residence-history-modal"]');
+            if (openResidenceBtn) {
+                e.preventDefault();
+                const targetUserId = parseInt(openResidenceBtn.getAttribute('data-user-id') || '', 10);
+                if (!isNaN(targetUserId)) {
+                    window.openResidenceHistoryModal(targetUserId);
+                }
+                return;
+            }
+            const closeResidenceBtn = e.target.closest('[data-action="close-residence-history-modal"]');
+            if (closeResidenceBtn) {
+                e.preventDefault();
+                window.closeResidenceHistoryModal();
+            }
+        });
+
         window.initLoadMoreButton({
             buttonId: 'load-more-threads',
             listId: 'threads-list',

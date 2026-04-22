@@ -4,7 +4,22 @@
 (function() {
     'use strict';
 
-    const config = window.friendsIndexConfig || {};
+    function parseJsonDataset(value, fallback) {
+        if (!value) return fallback;
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            console.error('Failed to parse friends config dataset:', e);
+            return fallback;
+        }
+    }
+
+    const configElement = document.getElementById('friends-index-config');
+    const config = configElement ? {
+        csrfToken: configElement.dataset.csrfToken || '',
+        routes: parseJsonDataset(configElement.dataset.routes, {}),
+        translations: parseJsonDataset(configElement.dataset.translations, {})
+    } : (window.friendsIndexConfig || {});
     const translations = config.translations || {};
     const routes = config.routes || {};
     const csrfToken = config.csrfToken || '';

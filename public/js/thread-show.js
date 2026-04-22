@@ -4,8 +4,19 @@
 (function() {
     'use strict';
 
+    function parseThreadShowConfig() {
+        const meta = document.querySelector('meta[name="thread-show-config"]');
+        if (!meta) return window.threadShowConfig || {};
+        try {
+            return JSON.parse(meta.getAttribute('content') || '{}');
+        } catch (e) {
+            console.error('Failed to parse thread-show-config:', e);
+            return {};
+        }
+    }
+
     // グローバル変数（viewから渡される）
-    const config = window.threadShowConfig || {};
+    const config = parseThreadShowConfig();
     const translations = config.translations || {};
     const threadId = config.threadId || 0;
     const initialResponseCount = config.initialResponseCount || 0;
@@ -400,7 +411,7 @@
         }
 
         try {
-            const responsesUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesRoute) || `/threads/${threadId}/responses`;
+            const responsesUrl = (config.routes && config.routes.responsesRoute) || `/threads/${threadId}/responses`;
             const response = await fetch(`${responsesUrl}?offset=${currentOffset}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,
@@ -561,7 +572,7 @@
         });
         
         try {
-            const searchUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesSearchRoute) || `/threads/${threadId}/responses/search`;
+            const searchUrl = (config.routes && config.routes.responsesSearchRoute) || `/threads/${threadId}/responses/search`;
             const response = await fetch(`${searchUrl}?query=${encodeURIComponent(query)}&target=${selectedTarget}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,
@@ -1512,7 +1523,7 @@
 
         try {
             console.log('[リアルタイム更新] 新しいレスポンスをチェック中... (threadId:', threadId, ', lastResponseId:', lastResponseId, ')');
-            const newUrl = (window.threadShowConfig && window.threadShowConfig.routes && window.threadShowConfig.routes.responsesNewRoute) || `/threads/${threadId}/responses/new`;
+            const newUrl = (config.routes && config.routes.responsesNewRoute) || `/threads/${threadId}/responses/new`;
             const response = await fetch(`${newUrl}?last_response_id=${lastResponseId}`, {
                 method: 'GET',
                 headers: jsonApiHeaders,

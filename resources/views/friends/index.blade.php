@@ -216,29 +216,29 @@
     <link rel="stylesheet" href="{{ asset('css/friends.css') }}">
 @endpush
 
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        window.friendsIndexConfig = {
-            csrfToken: '{{ csrf_token() }}',
-            routes: {
-                sendCoinsRoute: '{{ route("friends.send-coins") }}',
-                deleteRoute: '{{ route("friends.delete") }}',
-                rejectAvailableRoute: '{{ route("friends.reject-available") }}'
-            },
-            translations: {
-                submitting: '{{ \App\Services\LanguageService::trans("submitting", $lang) }}',
-                sending_request: '{{ \App\Services\LanguageService::trans("sending_request", $lang) }}',
-                deleting: '{{ \App\Services\LanguageService::trans("deleting", $lang) }}',
-                processing: '{{ \App\Services\LanguageService::trans("processing", $lang) }}',
-                inviteCodeCopied: '{{ \App\Services\LanguageService::trans("invite_code_copied", $lang) }}',
-                errorOccurred: '{{ \App\Services\LanguageService::trans("error_occurred", $lang) }}',
-                hours: '{{ \App\Services\LanguageService::trans("hours", $lang) }}',
-                minutes: '{{ \App\Services\LanguageService::trans("minutes", $lang) }}',
-                seconds: '{{ \App\Services\LanguageService::trans("seconds", $lang) }}',
-                confirmDeleteFriend: '{{ \App\Services\LanguageService::trans("confirm_delete_friend", $lang) }}',
-                confirmRejectRequest: '{{ \App\Services\LanguageService::trans("confirm_reject_request", $lang) }}'
-            }
-        };
-    </script>
+    <div
+        id="friends-index-config"
+        data-csrf-token="{{ csrf_token() }}"
+        data-routes="{{ e(json_encode([
+            'sendCoinsRoute' => route('friends.send-coins'),
+            'deleteRoute' => route('friends.delete'),
+            'rejectAvailableRoute' => route('friends.reject-available'),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-translations="{{ e(json_encode([
+            'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
+            'sending_request' => \App\Services\LanguageService::trans('sending_request', $lang),
+            'deleting' => \App\Services\LanguageService::trans('deleting', $lang),
+            'processing' => \App\Services\LanguageService::trans('processing', $lang),
+            'inviteCodeCopied' => \App\Services\LanguageService::trans('invite_code_copied', $lang),
+            'errorOccurred' => \App\Services\LanguageService::trans('error_occurred', $lang),
+            'hours' => \App\Services\LanguageService::trans('hours', $lang),
+            'minutes' => \App\Services\LanguageService::trans('minutes', $lang),
+            'seconds' => \App\Services\LanguageService::trans('seconds', $lang),
+            'confirmDeleteFriend' => \App\Services\LanguageService::trans('confirm_delete_friend', $lang),
+            'confirmRejectRequest' => \App\Services\LanguageService::trans('confirm_reject_request', $lang),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        hidden
+    ></div>
     <script src="{{ asset('js/friends-index.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 

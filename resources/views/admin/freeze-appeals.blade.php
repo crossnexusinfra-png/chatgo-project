@@ -61,7 +61,7 @@
                 <td>
                     @php $copyToken = optional($a->user)->user_identifier ?? (string) $a->user_id; @endphp
                     <code class="admin-copy-token">{{ $copyToken }}</code>
-                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                    <button type="button" class="admin-copy-btn" data-copy-text="{{ $copyToken }}" data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
                 </td>
                 <td class="admin-message">{{ $a->message }}</td>
                 <td>{{ $a->out_count_snapshot }}</td>
@@ -96,7 +96,7 @@
                             $targetUser = $a->user;
                             $maxOut = $targetUser ? max(0.25, round($targetUser->calculateOutCount(), 2)) : 0.25;
                         @endphp
-                        <form method="post" action="{{ route('admin.freeze-appeals.approve', $a) }}" class="admin-form-inline" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_freeze_appeal_approve_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.freeze-appeals.approve', $a) }}" class="admin-form-inline" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_freeze_appeal_approve_confirm', $lang) }}">
                             @csrf
                             <label class="admin-label-margin">
                                 {{ \App\Services\LanguageService::trans('admin_freeze_appeal_out_reduce', $lang) }}:
@@ -104,7 +104,7 @@
                             </label>
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_approve', $lang) }}</button>
                         </form>
-                        <form method="post" action="{{ route('admin.freeze-appeals.reject', $a) }}" class="admin-form-inline admin-button-margin" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_freeze_appeal_reject_confirm', $lang) }}');">
+                        <form method="post" action="{{ route('admin.freeze-appeals.reject', $a) }}" class="admin-form-inline admin-button-margin" data-confirm-message="{{ \App\Services\LanguageService::trans('admin_freeze_appeal_reject_confirm', $lang) }}">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_reject', $lang) }}</button>
                         </form>
@@ -137,17 +137,5 @@
         </div>
     @endif
 </div>
-<script nonce="{{ $csp_nonce ?? '' }}">
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.admin-copy-btn');
-    if (!btn) return;
-    const text = btn.getAttribute('data-copy-text') || '';
-    if (!text) return;
-    const originalText = btn.textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
-        setTimeout(function() { btn.textContent = originalText; }, 1200);
-    });
-});
-</script>
+<script src="{{ asset('js/admin-copy-btn.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

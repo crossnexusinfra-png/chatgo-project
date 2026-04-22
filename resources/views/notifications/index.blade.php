@@ -130,39 +130,39 @@
         ];
     })->values();
 @endphp
-<script nonce="{{ $csp_nonce ?? '' }}">
-    window.notificationsIndexConfig = {
-        messagesData: @json($messagesData),
-        csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-        userId: {{ auth()->id() ?? 'null' }},
-        currentPage: {{ $messages->currentPage() }},
-        hasMorePages: {{ $messages->hasMorePages() ? 'true' : 'false' }},
-        translations: {
-            processing: '{{ \App\Services\LanguageService::trans("processing", $lang) }}',
-            submitting: '{{ \App\Services\LanguageService::trans("submitting", $lang) }}',
-            replyRequired: '{{ \App\Services\LanguageService::trans('reply_required', $lang) }}',
-            replyFailed: '{{ \App\Services\LanguageService::trans('reply_failed', $lang) }}',
-            replySuccess: '{{ \App\Services\LanguageService::trans('reply_success', $lang) }}',
-            replySuccessMessage: '{{ \App\Services\LanguageService::trans('reply_success_message', $lang) }}',
-            loginRequiredError: '{{ \App\Services\LanguageService::trans('login_required_error', $lang) }}',
-            notificationCoinReceiveFailed: '{{ \App\Services\LanguageService::trans('notification_coin_receive_failed', $lang) }}',
-            notificationReceiveCoin: '{{ \App\Services\LanguageService::trans('notification_receive_coin', $lang) }}',
-            notificationCoinReceived: '{{ \App\Services\LanguageService::trans('notification_coin_received', $lang) }}',
-            r18ChangeApproveFailed: '{{ \App\Services\LanguageService::trans('r18_change_approve_failed', $lang) }}',
-            r18ChangeApproveButton: '{{ \App\Services\LanguageService::trans('r18_change_approve_button', $lang) }}',
-            r18ChangeApproveSuccess: '{{ \App\Services\LanguageService::trans('r18_change_approve_success', $lang) }}',
-            confirmR18ChangeApprove: '{{ \App\Services\LanguageService::trans('confirm_r18_change_approve', $lang) }}',
-            r18ChangeRejectFailed: '{{ \App\Services\LanguageService::trans('r18_change_reject_failed', $lang) }}',
-            r18ChangeRejectButton: '{{ \App\Services\LanguageService::trans('r18_change_reject_button', $lang) }}',
-            r18ChangeRejectSuccess: '{{ \App\Services\LanguageService::trans('r18_change_reject_success', $lang) }}',
-            reportAckButton: '{{ \App\Services\LanguageService::trans('report_restriction_ack_button', $lang) }}',
-            reportAckFailed: '{{ \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang) }}',
-            reportAckSuccess: '{{ \App\Services\LanguageService::trans('report_restriction_ack_success', $lang) }}',
-            notificationsLoading: '{{ \App\Services\LanguageService::trans('notifications_loading', $lang) }}',
-            notificationsLoadFailed: '{{ \App\Services\LanguageService::trans('notifications_load_failed', $lang) }}'
-        }
-    };
-</script>
+<div
+    id="notifications-index-config"
+    data-messages-data="{{ e(json_encode($messagesData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+    data-csrf-token="{{ csrf_token() }}"
+    data-user-id="{{ auth()->id() ?? '' }}"
+    data-current-page="{{ $messages->currentPage() }}"
+    data-has-more-pages="{{ $messages->hasMorePages() ? '1' : '0' }}"
+    data-translations="{{ e(json_encode([
+        'processing' => \App\Services\LanguageService::trans('processing', $lang),
+        'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
+        'replyRequired' => \App\Services\LanguageService::trans('reply_required', $lang),
+        'replyFailed' => \App\Services\LanguageService::trans('reply_failed', $lang),
+        'replySuccess' => \App\Services\LanguageService::trans('reply_success', $lang),
+        'replySuccessMessage' => \App\Services\LanguageService::trans('reply_success_message', $lang),
+        'loginRequiredError' => \App\Services\LanguageService::trans('login_required_error', $lang),
+        'notificationCoinReceiveFailed' => \App\Services\LanguageService::trans('notification_coin_receive_failed', $lang),
+        'notificationReceiveCoin' => \App\Services\LanguageService::trans('notification_receive_coin', $lang),
+        'notificationCoinReceived' => \App\Services\LanguageService::trans('notification_coin_received', $lang),
+        'r18ChangeApproveFailed' => \App\Services\LanguageService::trans('r18_change_approve_failed', $lang),
+        'r18ChangeApproveButton' => \App\Services\LanguageService::trans('r18_change_approve_button', $lang),
+        'r18ChangeApproveSuccess' => \App\Services\LanguageService::trans('r18_change_approve_success', $lang),
+        'confirmR18ChangeApprove' => \App\Services\LanguageService::trans('confirm_r18_change_approve', $lang),
+        'r18ChangeRejectFailed' => \App\Services\LanguageService::trans('r18_change_reject_failed', $lang),
+        'r18ChangeRejectButton' => \App\Services\LanguageService::trans('r18_change_reject_button', $lang),
+        'r18ChangeRejectSuccess' => \App\Services\LanguageService::trans('r18_change_reject_success', $lang),
+        'reportAckButton' => \App\Services\LanguageService::trans('report_restriction_ack_button', $lang),
+        'reportAckFailed' => \App\Services\LanguageService::trans('report_restriction_ack_failed', $lang),
+        'reportAckSuccess' => \App\Services\LanguageService::trans('report_restriction_ack_success', $lang),
+        'notificationsLoading' => \App\Services\LanguageService::trans('notifications_loading', $lang),
+        'notificationsLoadFailed' => \App\Services\LanguageService::trans('notifications_load_failed', $lang),
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+    hidden
+></div>
 <script src="{{ asset('js/notifications-index.js') }}?v={{ @filemtime(public_path('js/notifications-index.js')) ?: time() }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
