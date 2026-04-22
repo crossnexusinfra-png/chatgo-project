@@ -962,9 +962,9 @@
         const mediaCoin = hasMediaFile ? 1 : 0;
         const bodyCoin = hasText ? Math.ceil(charCount / 100) : 0;
         const total = mediaCoin + bodyCoin;
-        const mediaLabel = displayEl.getAttribute('data-media-label') || 'Media';
-        const bodyLabel = displayEl.getAttribute('data-body-label') || 'Body';
-        const totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
+        const mediaLabel = displayEl.getAttribute('data-media-label') || 'メディア';
+        const bodyLabel = displayEl.getAttribute('data-body-label') || '本文';
+        const totalLabel = displayEl.getAttribute('data-total-label') || '合計';
         displayEl.textContent = totalLabel + ': ' + mediaCoin + ' (' + mediaLabel + ') + ' + bodyCoin + ' (' + bodyLabel + ' ' + charCount + ') = ' + total;
     }
 
@@ -1718,7 +1718,7 @@
         if (responsesContainer) {
             const loadingIndicator = document.createElement('div');
             loadingIndicator.id = 'loadingIndicator';
-            loadingIndicator.textContent = translations.loading || 'Loading...';
+            loadingIndicator.textContent = translations.loading || '読み込み中...';
             
             const firstChild = responsesContainer.firstElementChild;
             if (firstChild) {

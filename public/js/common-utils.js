@@ -35,12 +35,12 @@
         if (!btn || !status) return;
 
         btn.disabled = true;
-        status.innerHTML = translations.adVideoLoading || 'Loading...';
+        status.innerHTML = translations.adVideoLoading || '読み込み中...';
 
         const modal = document.getElementById(modalId);
         const video = document.getElementById(videoId);
         if (!modal || !video) {
-            status.innerHTML = '<div class="error-message">' + (translations.videoPlayerInitFailed || 'Failed to initialize video player') + '</div>';
+            status.innerHTML = '<div class="error-message">' + (translations.videoPlayerInitFailed || '動画プレイヤーの初期化に失敗しました') + '</div>';
             btn.disabled = false;
             return;
         }
@@ -50,32 +50,32 @@
             video.removeEventListener('canplay', handleCanPlay);
             video.removeEventListener('ended', handleEnded);
             
-            let errorMessage = translations.videoLoadFailed || 'Failed to load video';
+            let errorMessage = translations.videoLoadFailed || '動画の読み込みに失敗しました';
             
             if (video.error) {
                 const videoSrc = video.querySelector('source')?.src || video.src;
                 switch (video.error.code) {
                     case video.error.MEDIA_ERR_ABORTED:
-                        errorMessage = translations.videoLoadAborted || 'Video loading was aborted';
+                        errorMessage = translations.videoLoadAborted || '動画の読み込みが中断されました';
                         break;
                     case video.error.MEDIA_ERR_NETWORK:
-                        errorMessage = translations.videoNetworkError || 'Network error: Could not load video. Please check your network connection.';
+                        errorMessage = translations.videoNetworkError || 'ネットワークエラー: 動画を読み込めませんでした。ネットワーク接続を確認してください。';
                         break;
                     case video.error.MEDIA_ERR_DECODE:
-                        errorMessage = translations.videoDecodeError || 'Video decoding failed. The video file may be corrupted.';
+                        errorMessage = translations.videoDecodeError || '動画のデコードに失敗しました。ファイルが破損している可能性があります。';
                         break;
                     case video.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                        const videoUrlNotSet = translations.videoUrlNotSet || 'Not Set';
-                        const browserConsoleDetails = translations.browserConsoleDetails || 'Please check the browser console for details.';
-                        errorMessage = (translations.videoFormatNotSupported || 'Video format not supported') + '<br>Video URL: ' + (videoSrc || videoUrlNotSet) + '<br>' + browserConsoleDetails;
+                        const videoUrlNotSet = translations.videoUrlNotSet || '未設定';
+                        const browserConsoleDetails = translations.browserConsoleDetails || '詳細はブラウザのコンソールをご確認ください。';
+                        errorMessage = (translations.videoFormatNotSupported || '動画フォーマットがサポートされていません') + '<br>Video URL: ' + (videoSrc || videoUrlNotSet) + '<br>' + browserConsoleDetails;
                         break;
                     default:
-                        errorMessage = (translations.videoLoadError || 'Video loading error: :code').replace(':code', video.error.code);
+                        errorMessage = (translations.videoLoadError || '動画読み込みエラー: :code').replace(':code', video.error.code);
                 }
             } else {
                 const videoSrc = video.querySelector('source')?.src || video.src;
                 if (!videoSrc) {
-                    errorMessage = translations.videoUrlNotSet || 'Video URL is not set';
+                    errorMessage = translations.videoUrlNotSet || '動画URLが設定されていません';
                 }
             }
             
@@ -87,18 +87,18 @@
 
         function handleCanPlay() {
             video.removeEventListener('canplay', handleCanPlay);
-            status.innerHTML = translations.adVideoPlaying || 'Playing...';
+            status.innerHTML = translations.adVideoPlaying || '再生中...';
             
             const playPromise = video.play();
             
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        status.innerHTML = translations.adVideoPlaying || 'Playing...';
+                        status.innerHTML = translations.adVideoPlaying || '再生中...';
                     })
                     .catch(error => {
                         console.error('Video play failed:', error);
-                        status.innerHTML = '<div class="error-message">' + (translations.videoPlayFailed || 'Failed to play video') + '</div>';
+                        status.innerHTML = '<div class="error-message">' + (translations.videoPlayFailed || '動画の再生に失敗しました') + '</div>';
                         btn.disabled = false;
                         modal.style.display = 'none';
                         video.removeEventListener('error', handleError);
@@ -135,7 +135,7 @@
             })
             .catch(error => {
                 console.error('API error:', error);
-                status.innerHTML = '<div class="error-message">' + (translations.errorOccurred || 'An error occurred') + '</div>';
+                status.innerHTML = '<div class="error-message">' + (translations.errorOccurred || 'エラーが発生しました') + '</div>';
                 btn.disabled = false;
             });
         }
@@ -199,7 +199,7 @@
             }
 
             valueEl.textContent = finalCoins;
-            const rewardText = (translations.adWatchReward || 'coins earned!').replace(':coins', finalCoins);
+            const rewardText = (translations.adWatchReward || ':coinsコイン獲得！').replace(':coins', finalCoins);
             messageEl.textContent = rewardText;
             messageEl.style.display = 'block';
             skipBtn.style.display = 'none';
@@ -387,7 +387,7 @@
                 clearInterval(resendTimer);
                 if (resendBtn) {
                     resendBtn.disabled = false;
-                    resendBtn.innerHTML = translations.resendButton || 'Resend';
+                    resendBtn.innerHTML = translations.resendButton || '再送信';
                 }
             }
             resendTimeLeft--;
@@ -427,7 +427,7 @@
         if (!modal || !content) return;
         
         modal.style.display = 'block';
-        content.innerHTML = '<p class="loading">' + (translations.loading || 'Loading...') + '</p>';
+        content.innerHTML = '<p class="loading">' + (translations.loading || '読み込み中...') + '</p>';
         
         fetch(`/api/user/${userId}/residence-history`, {
             headers: {
@@ -443,7 +443,7 @@
             })
             .then(data => {
                 if (data.length === 0) {
-                    content.innerHTML = '<p class="no-history">' + (translations.noHistory || 'No history available') + '</p>';
+                    content.innerHTML = '<p class="no-history">' + (translations.noHistory || '履歴はありません') + '</p>';
                 } else {
                     let html = '';
                     data.forEach(history => {
@@ -483,7 +483,7 @@
             })
             .catch(error => {
                 console.error('Error fetching residence history:', error);
-                content.innerHTML = '<p class="no-history">' + (translations.errorOccurred || 'An error occurred') + '</p>';
+                content.innerHTML = '<p class="no-history">' + (translations.errorOccurred || 'エラーが発生しました') + '</p>';
             });
     };
 
@@ -513,7 +513,7 @@
             if (!threadsList || !getUrl) return;
 
             this.disabled = true;
-            this.textContent = translations.loading || 'Loading...';
+            this.textContent = translations.loading || '読み込み中...';
             
             const url = getUrl(offset);
             
@@ -534,7 +534,7 @@
                         this.parentElement.remove();
                     } else {
                         this.disabled = false;
-                        this.textContent = translations.showMore || 'Show More';
+                        this.textContent = translations.showMore || 'もっと見る';
                     }
                 } else {
                     this.parentElement.remove();
@@ -543,7 +543,7 @@
             .catch(error => {
                 console.error('Error:', error);
                 this.disabled = false;
-                this.textContent = translations.showMore || 'Show More';
+                this.textContent = translations.showMore || 'もっと見る';
             });
         });
     };

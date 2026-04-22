@@ -1059,6 +1059,8 @@ return [
     'invite_code_copied' => '招待コードをコピーしました',
     'copy' => 'コピー',
     'copied' => 'コピーしました',
+    'attached_image_alt' => '添付画像',
+    'audio_not_supported' => 'お使いのブラウザは音声タグをサポートしていません。',
     'received_friend_requests' => '受信したフレンド申請',
     'sent_friend_requests' => '送信したフレンド申請',
     'pending' => '申請中',

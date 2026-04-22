@@ -34,7 +34,7 @@
             navigator.clipboard.writeText(text).then(function() {
                 if (copyButton) {
                     const copiedLabel = copyButton.getAttribute('data-copied-label')
-                        || translations.inviteCodeCopied
+                        || translations.copied
                         || originalButtonText;
                     copyButton.textContent = copiedLabel;
                     setTimeout(function() {
@@ -120,13 +120,13 @@
                 
                 let timeString = '';
                 if (hours > 0) {
-                    timeString += hours + (translations.hours || 'hours');
+                    timeString += hours + (translations.hours || '');
                 }
                 if (minutes > 0) {
-                    timeString += minutes + (translations.minutes || 'minutes');
+                    timeString += minutes + (translations.minutes || '');
                 }
                 if (seconds > 0 || timeString === '') {
-                    timeString += seconds + (translations.seconds || 'seconds');
+                    timeString += seconds + (translations.seconds || '');
                 }
                 
                 if (waitTimeElement) {
@@ -232,7 +232,7 @@
                     e.preventDefault();
                     return false;
                 }
-                if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
+                if (!confirm(translations.confirmRejectRequest || '')) {
                     e.preventDefault();
                     return false;
                 }
@@ -282,7 +282,7 @@
         }
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
-        if (!confirm(translations.confirmDeleteFriend || 'Delete this friend?')) {
+        if (!confirm(translations.confirmDeleteFriend || '')) {
             return;
         }
         if (button) {
@@ -331,7 +331,7 @@
         }
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
-        if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
+        if (!confirm(translations.confirmRejectRequest || '')) {
             return;
         }
         if (button) {
@@ -378,7 +378,7 @@
             requestId = event;
             event = null;
         }
-        if (!confirm(translations.confirmRejectRequest || 'Reject this friend request?')) {
+        if (!confirm(translations.confirmRejectRequest || '')) {
             return;
         }
         const button = (event && event.target) ? event.target : null;

@@ -343,7 +343,7 @@
                     }
                 @endphp
                 <div class="media-preview-image" data-image-url="{{ $imageUrl }}" role="button" tabindex="0">
-                    <img src="{{ $imageUrl }}" alt="添付画像" class="media-thumbnail js-hide-on-error">
+                    <img src="{{ $imageUrl }}" alt="{{ \App\Services\LanguageService::trans('attached_image_alt', $lang) }}" class="media-thumbnail js-hide-on-error">
                     <div class="media-overlay">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>

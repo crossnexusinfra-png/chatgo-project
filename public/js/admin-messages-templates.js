@@ -22,8 +22,8 @@
 
     const templates = parseJson(configElement.dataset.templates);
     const editableTemplates = parseJson(configElement.dataset.editableTemplates);
-    const templateCreateLabel = configElement.dataset.templateCreateLabel || 'Create';
-    const templateUpdateLabel = configElement.dataset.templateUpdateLabel || 'Update';
+    const templateCreateLabel = configElement.dataset.templateCreateLabel || '作成';
+    const templateUpdateLabel = configElement.dataset.templateUpdateLabel || '更新';
 
     function applyTemplate(templateKey) {
         if (!templateKey || !templates[templateKey]) {

@@ -1062,6 +1062,8 @@ return [
     'invite_code_copied' => 'Invite code copied',
     'copy' => 'Copy',
     'copied' => 'Copied',
+    'attached_image_alt' => 'Attached image',
+    'audio_not_supported' => 'Your browser does not support the audio element.',
     'received_friend_requests' => 'Received Friend Requests',
     'sent_friend_requests' => 'Sent Friend Requests',
     'pending' => 'Pending',

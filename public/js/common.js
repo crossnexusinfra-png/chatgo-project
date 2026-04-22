@@ -164,9 +164,9 @@
             }
             var bodyCoin = charCount > 0 ? Math.ceil(charCount / 100) : 0;
             var total = baseCoin + bodyCoin;
-            var roomLabel = displayEl.getAttribute('data-room-label') || 'Room';
-            var firstReplyLabel = displayEl.getAttribute('data-first-reply-label') || 'First reply';
-            var totalLabel = displayEl.getAttribute('data-total-label') || 'Total';
+            var roomLabel = displayEl.getAttribute('data-room-label') || 'ルーム';
+            var firstReplyLabel = displayEl.getAttribute('data-first-reply-label') || '1リプライ目';
+            var totalLabel = displayEl.getAttribute('data-total-label') || '合計';
             displayEl.textContent = totalLabel + ': ' + baseCoin + ' (' + roomLabel + ') + ' + bodyCoin + ' (' + firstReplyLabel + ' ' + charCount + ') = ' + total;
         }
 
@@ -613,7 +613,7 @@
 
                 imageInput.addEventListener('change', function() {
                     imageInput.value = '';
-                    imageFileName.textContent = translations.noFileSelected || 'No file selected';
+                    imageFileName.textContent = translations.noFileSelected || 'ファイルが選択されていません';
                     alert(disabledMessage);
                 });
             }
@@ -626,7 +626,7 @@
                 if (file) {
                     imageFileName.textContent = file.name;
                 } else {
-                    imageFileName.textContent = translations.noFileSelected || 'No file selected';
+                    imageFileName.textContent = translations.noFileSelected || 'ファイルが選択されていません';
                 }
             });
         }

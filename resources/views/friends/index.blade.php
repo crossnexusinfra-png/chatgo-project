@@ -233,6 +233,7 @@
             'sending_request' => \App\Services\LanguageService::trans('sending_request', $lang),
             'deleting' => \App\Services\LanguageService::trans('deleting', $lang),
             'processing' => \App\Services\LanguageService::trans('processing', $lang),
+            'copied' => \App\Services\LanguageService::trans('copied', $lang),
             'inviteCodeCopied' => \App\Services\LanguageService::trans('invite_code_copied', $lang),
             'errorOccurred' => \App\Services\LanguageService::trans('error_occurred', $lang),
             'hours' => \App\Services\LanguageService::trans('hours', $lang),
