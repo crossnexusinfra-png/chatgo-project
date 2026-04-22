@@ -15,8 +15,8 @@
             return;
         }
 
-        const copiedLabel = btn.getAttribute('data-copied-label') || 'Copied';
         const originalText = btn.textContent;
+        const copiedLabel = btn.getAttribute('data-copied-label') || originalText;
 
         navigator.clipboard.writeText(text).then(function() {
             btn.textContent = copiedLabel;

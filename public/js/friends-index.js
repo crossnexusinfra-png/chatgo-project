@@ -33,7 +33,10 @@
             const originalButtonText = copyButton ? copyButton.textContent : '';
             navigator.clipboard.writeText(text).then(function() {
                 if (copyButton) {
-                    copyButton.textContent = translations.inviteCodeCopied || 'Copied';
+                    const copiedLabel = copyButton.getAttribute('data-copied-label')
+                        || translations.inviteCodeCopied
+                        || originalButtonText;
+                    copyButton.textContent = copiedLabel;
                     setTimeout(function() {
                         copyButton.textContent = originalButtonText;
                     }, 1400);
