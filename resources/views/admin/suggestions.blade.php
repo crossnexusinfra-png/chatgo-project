@@ -17,6 +17,13 @@
     <h1 class="admin-title">{{ \App\Services\LanguageService::trans('admin_suggestions_title', $lang) }} @if(!empty($newSuggestionsCount) && $newSuggestionsCount>0)<span class="admin-new-badge">NEW {{ $newSuggestionsCount }}</span>@endif</h1>
     <form method="get" action="{{ route('admin.suggestions') }}" class="admin-form-margin">
         <label class="admin-label-margin">
+            {{ \App\Services\LanguageService::trans('admin_sort_order', $lang) }}:
+            <select name="sort" class="admin-select-margin">
+                <option value="latest" {{ (($sort ?? 'latest') === 'latest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_latest', $lang) }}</option>
+                <option value="oldest" {{ (($sort ?? '') === 'oldest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_oldest', $lang) }}</option>
+            </select>
+        </label>
+        <label class="admin-label-margin">
             <input type="checkbox" name="show_completed" value="1" {{ !empty($showCompleted) ? 'checked' : '' }}>
             {{ \App\Services\LanguageService::trans('admin_show_completed', $lang) }}
         </label>

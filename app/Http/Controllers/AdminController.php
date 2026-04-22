@@ -55,7 +55,7 @@ class AdminController extends Controller
         $showApproved = request()->boolean('show_approved', false);
         $showRejected = request()->boolean('show_rejected', false);
         $onlyFlagged = request()->boolean('only_flagged', false);
-        $onlyReReported = request()->boolean('only_re_reported', false);
+        $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
 
         // 直前の通報一覧訪問
         $prevReportsVisit = \App\Models\AccessLog::where('type', 'admin_reports_visit')
@@ -102,47 +102,11 @@ class AdminController extends Controller
                 DB::raw('BOOL_OR(approved_at IS NOT NULL AND is_approved IS FALSE) as any_rejected'),
             ])
             ->groupBy('thread_id', 'response_id')
-            ->orderByDesc('last_reported_at')
             ->get();
-        
-        // 各グループに対して、一度拒否された後再通報されたかどうかを判定（N+1問題を回避）
-        $threadIds = $groups->pluck('thread_id')->filter()->unique()->toArray();
-        $responseIds = $groups->pluck('response_id')->filter()->unique()->toArray();
-        
-        // 拒否された通報を一括取得
-        $rejectedThreadReports = Report::whereIn('thread_id', $threadIds)
-            ->whereNotNull('approved_at')
-            ->where('is_approved', false)
-            ->pluck('thread_id')
-            ->unique()
-            ->toArray();
-        
-        $rejectedResponseReports = Report::whereIn('response_id', $responseIds)
-            ->whereNotNull('approved_at')
-            ->where('is_approved', false)
-            ->pluck('response_id')
-            ->unique()
-            ->toArray();
-        
-        foreach ($groups as $group) {
-            $hasPreviousRejection = false;
-            
-            if ($group->thread_id && in_array($group->thread_id, $rejectedThreadReports)) {
-                $hasPreviousRejection = true;
-            } elseif ($group->response_id && in_array($group->response_id, $rejectedResponseReports)) {
-                $hasPreviousRejection = true;
-            }
-            
-            $group->has_previous_rejection = $hasPreviousRejection;
-        }
-        
-        // 再通報のみを表示するフィルター
-        if ($onlyReReported) {
-            $groups = $groups->filter(function($group) {
-                return isset($group->has_previous_rejection) && $group->has_previous_rejection;
-            });
-        }
-        $groups = $groups->values();
+
+        $groups = ($sort === 'oldest')
+            ? $groups->sortBy('last_reported_at')->values()
+            : $groups->sortByDesc('last_reported_at')->values();
 
         $perPage = 10;
         $currentPage = max((int) request()->query('page', 1), 1);
@@ -179,7 +143,7 @@ class AdminController extends Controller
             'showApproved' => $showApproved,
             'showRejected' => $showRejected,
             'onlyFlagged' => $onlyFlagged,
-            'onlyReReported' => $onlyReReported,
+            'sort' => $sort,
             'reportsSince' => $reportsSince,
             'newReportsCount' => $newReportsCount,
             'lang' => $lang,
@@ -326,7 +290,6 @@ class AdminController extends Controller
             }
         }
 
-        $filter = request('filter', 'all');
         $showAutoSent = request()->boolean('show_auto_sent', false);
         $includeTemplates = request()->boolean('include_templates', false);
         $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
@@ -340,37 +303,6 @@ class AdminController extends Controller
             $query->where(function ($q) {
                 $q->where('is_welcome', false)->orWhereNull('is_welcome');
             });
-        }
-
-        switch ($filter) {
-            case 'report_auto':
-                $query->whereNotNull('user_id')
-                    ->whereNull('parent_message_id');
-                break;
-            case 'members':
-                $query->whereNull('user_id')
-                    ->whereDoesntHave('recipients')
-                    ->where('audience', 'members')
-                    ->whereNull('parent_message_id');
-                break;
-            case 'specific':
-                $query->whereNull('parent_message_id');
-                if (Schema::hasTable('admin_message_recipients')) {
-                    $query->where(function ($q) {
-                        $q->whereNotNull('user_id')->orWhereHas('recipients');
-                    });
-                } else {
-                    $query->whereNotNull('user_id');
-                }
-                break;
-            case 'guests':
-                $query->whereNull('user_id')
-                    ->where('audience', 'guests')
-                    ->whereNull('parent_message_id');
-                break;
-            case 'all':
-            default:
-                break;
         }
 
         // 過去お知らせ一覧は「親お知らせ」のみ表示（ユーザー返信は別ページ）
@@ -408,7 +340,7 @@ class AdminController extends Controller
 
         $lang = $this->getAdminLanguage();
 
-        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'sort', 'includeTemplates'));
+        return view('admin.messages-history', compact('messages', 'lang', 'showAutoSent', 'sort', 'includeTemplates'));
     }
 
     /** ユーザーからの返信一覧（10件ずつページング） */
@@ -1333,8 +1265,14 @@ class AdminController extends Controller
         if ($onlyStarred) {
             $query->where('starred', true);
         }
+        $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
 
-        $suggestions = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at');
+        } else {
+            $query->orderByDesc('created_at');
+        }
+        $suggestions = $query->paginate(10)->withQueryString();
 
         $newSuggestionsCount = \App\Models\Suggestion::where('created_at', '>', $suggestionsSince)->count();
 
@@ -1355,6 +1293,7 @@ class AdminController extends Controller
             'suggestions' => $suggestions,
             'showCompleted' => $showCompleted,
             'onlyStarred' => $onlyStarred,
+            'sort' => $sort,
             'suggestionsSince' => $suggestionsSince,
             'newSuggestionsCount' => $newSuggestionsCount,
             'lang' => $lang,
@@ -1681,11 +1620,17 @@ class AdminController extends Controller
         $appealsSince = $prevVisit?->created_at ?? now()->subYears(10);
 
         $showCompleted = request()->boolean('show_completed', false);
-        $query = FreezeAppeal::query()->with('user')->orderByDesc('created_at');
+        $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
+        $query = FreezeAppeal::query()->with('user');
         if (!$showCompleted) {
             $query->where('status', 'pending');
         }
-        $appeals = $query->get();
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at');
+        } else {
+            $query->orderByDesc('created_at');
+        }
+        $appeals = $query->paginate(10)->withQueryString();
 
         $newAppealsCount = FreezeAppeal::where('status', 'pending')
             ->where('created_at', '>', $appealsSince)
@@ -1706,6 +1651,7 @@ class AdminController extends Controller
         return view('admin.freeze-appeals', [
             'appeals' => $appeals,
             'showCompleted' => $showCompleted,
+            'sort' => $sort,
             'appealsSince' => $appealsSince,
             'newAppealsCount' => $newAppealsCount,
             'lang' => $lang,

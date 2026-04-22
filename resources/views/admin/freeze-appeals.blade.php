@@ -25,6 +25,13 @@
     <h1 class="admin-title">{{ \App\Services\LanguageService::trans('admin_freeze_appeals_title', $lang) }} @if(!empty($newAppealsCount) && $newAppealsCount > 0)<span class="admin-new-badge">NEW {{ $newAppealsCount }}</span>@endif</h1>
     <form method="get" action="{{ route('admin.freeze-appeals') }}" class="admin-form-margin">
         <label class="admin-label-margin">
+            {{ \App\Services\LanguageService::trans('admin_sort_order', $lang) }}:
+            <select name="sort" class="admin-select-margin">
+                <option value="latest" {{ (($sort ?? 'latest') === 'latest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_latest', $lang) }}</option>
+                <option value="oldest" {{ (($sort ?? '') === 'oldest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_oldest', $lang) }}</option>
+            </select>
+        </label>
+        <label class="admin-label-margin">
             <input type="checkbox" name="show_completed" value="1" {{ !empty($showCompleted) ? 'checked' : '' }}>
             {{ \App\Services\LanguageService::trans('admin_show_completed', $lang) }}
         </label>
@@ -106,5 +113,20 @@
         @endforelse
         </tbody>
     </table>
+    @if(method_exists($appeals, 'hasPages') && $appeals->hasPages())
+        <div class="admin-messages-submit-container">
+            @if($appeals->onFirstPage())
+                <span class="admin-link">←</span>
+            @else
+                <a class="admin-link" href="{{ $appeals->previousPageUrl() }}">←</a>
+            @endif
+            <span> {{ $appeals->currentPage() }} / {{ $appeals->lastPage() }} </span>
+            @if($appeals->hasMorePages())
+                <a class="admin-link" href="{{ $appeals->nextPageUrl() }}">→</a>
+            @else
+                <span class="admin-link">→</span>
+            @endif
+        </div>
+    @endif
 </div>
 @endsection

@@ -23,16 +23,6 @@
         <div class="filter-section">
             <form method="get" action="{{ route('admin.messages.history') }}" class="admin-messages-filter-form">
                 <label class="admin-messages-filter-label">
-                    <span>{{ \App\Services\LanguageService::trans('admin_messages_filter', $lang) }}</span>
-                    <select name="filter" class="admin-messages-select">
-                        <option value="all" {{ ($filter ?? 'all') === 'all' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_all', $lang) }}</option>
-                        <option value="report_auto" {{ ($filter ?? '') === 'report_auto' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto', $lang) }}</option>
-                        <option value="members" {{ ($filter ?? '') === 'members' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_members', $lang) }}</option>
-                        <option value="specific" {{ ($filter ?? '') === 'specific' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_specific', $lang) }}</option>
-                        <option value="guests" {{ ($filter ?? '') === 'guests' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_guests', $lang) }}</option>
-                    </select>
-                </label>
-                <label class="admin-messages-filter-label">
                     <span>{{ \App\Services\LanguageService::trans('admin_sort_order', $lang) }}</span>
                     <select name="sort" class="admin-messages-select">
                         <option value="latest" {{ ($sort ?? 'latest') === 'latest' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_latest', $lang) }}</option>

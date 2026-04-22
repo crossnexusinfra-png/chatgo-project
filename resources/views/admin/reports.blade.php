@@ -17,6 +17,13 @@
     <h1 class="admin-title">{{ \App\Services\LanguageService::trans('admin_reports_title', $lang) }} @if(!empty($newReportsCount) && $newReportsCount>0)<span class="admin-new-badge">NEW {{ $newReportsCount }}</span>@endif</h1>
     <form method="get" action="{{ route('admin.reports') }}" class="admin-form-margin">
         <label class="admin-label-margin">
+            {{ \App\Services\LanguageService::trans('admin_sort_order', $lang) }}:
+            <select name="sort" class="admin-select-margin">
+                <option value="latest" {{ (request('sort', 'latest') === 'latest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_latest', $lang) }}</option>
+                <option value="oldest" {{ (request('sort') === 'oldest') ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_sort_oldest', $lang) }}</option>
+            </select>
+        </label>
+        <label class="admin-label-margin">
             <input type="checkbox" name="show_approved" value="1" {{ !empty($showApproved) ? 'checked' : '' }}>
             {{ \App\Services\LanguageService::trans('admin_reports_show_approved', $lang) }}
         </label>
@@ -27,10 +34,6 @@
         <label class="admin-label-margin">
             <input type="checkbox" name="only_flagged" value="1" {{ !empty($onlyFlagged) ? 'checked' : '' }}>
             {{ \App\Services\LanguageService::trans('admin_only_starred', $lang) }}
-        </label>
-        <label class="admin-label-margin">
-            <input type="checkbox" name="only_re_reported" value="1" {{ !empty($onlyReReported) ? 'checked' : '' }}>
-            {{ \App\Services\LanguageService::trans('admin_reports_only_re_reported', $lang) }}
         </label>
         <button type="submit">{{ \App\Services\LanguageService::trans('admin_apply', $lang) }}</button>
     </form>
@@ -52,16 +55,10 @@
                 <td>
                     @if ($g->thread_id)
                         {!! $g->any_flagged ? '★' : '☆' !!} {{ \App\Services\LanguageService::trans('admin_reports_thread_id', $lang) }}: {{ $g->thread_id }}
-                        @if(isset($g->has_previous_rejection) && $g->has_previous_rejection)
-                            {{ \App\Services\LanguageService::trans('admin_reports_re_reported', $lang) }}
-                        @endif
-                        <div><a href="{{ route('admin.reports.thread', ['threadId' => $g->thread_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'only_re_reported' => request('only_re_reported')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
+                        <div><a href="{{ route('admin.reports.thread', ['threadId' => $g->thread_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'sort' => request('sort')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
                     @elseif ($g->response_id)
                         {!! $g->any_flagged ? '★' : '☆' !!} {{ \App\Services\LanguageService::trans('admin_reports_response_id', $lang) }}: {{ $g->response_id }}
-                        @if(isset($g->has_previous_rejection) && $g->has_previous_rejection)
-                            {{ \App\Services\LanguageService::trans('admin_reports_re_reported', $lang) }}
-                        @endif
-                        <div><a href="{{ route('admin.reports.response', ['responseId' => $g->response_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'only_re_reported' => request('only_re_reported')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
+                        <div><a href="{{ route('admin.reports.response', ['responseId' => $g->response_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'sort' => request('sort')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
                     @else
                         {{ \App\Services\LanguageService::trans('admin_reports_unknown', $lang) }}
                     @endif
