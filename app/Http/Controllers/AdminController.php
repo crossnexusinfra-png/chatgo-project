@@ -90,7 +90,7 @@ class AdminController extends Controller
         }
 
         // thread/response のどちらか一方でグルーピング
-        $groups = $base
+        $groups = (clone $base)
             ->select([
                 'thread_id',
                 'response_id',
