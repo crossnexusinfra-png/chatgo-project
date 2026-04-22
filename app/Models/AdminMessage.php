@@ -26,6 +26,30 @@ class AdminMessage extends Model
         'suggestion_received_title',
     ];
 
+    /**
+     * 旧データ互換用: title_key が無い自動送信お知らせの固定タイトル
+     */
+    public const AUTO_SENT_LEGACY_TITLES = [
+        '通報内容の対応について',
+        '削除処理完了のお知らせ',
+        '改善要望の対応について',
+        '利用に関する警告',
+        'アカウント一時凍結のお知らせ',
+        'アカウント永久凍結のお知らせ',
+        'ルーム削除のお知らせ',
+        'リプライ削除のお知らせ',
+        'プロフィール削除のお知らせ',
+        'Update on Your Report',
+        'Deletion Completed',
+        'Update on Your Suggestion',
+        'Warning Notice',
+        'Temporary Account Suspension',
+        'Permanent Account Suspension',
+        'Room Deletion Notice',
+        'Reply Deletion Notice',
+        'Profile Deletion Notice',
+    ];
+
     protected $casts = [
         'published_at' => 'datetime',
         'target_registered_after' => 'datetime',
@@ -96,18 +120,22 @@ class AdminMessage extends Model
     {
         if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_manual_sent')) {
             $keys = self::AUTO_SENT_TITLE_KEYS;
+            $legacyAutoTitles = self::AUTO_SENT_LEGACY_TITLES;
 
-            return $query->where(function (Builder $manual) use ($keys) {
+            return $query->where(function (Builder $manual) use ($keys, $legacyAutoTitles) {
                 // 新仕様: 明示的に手動送信として保存されたもの
                 $manual->where('is_manual_sent', true)
                     // 旧データ互換: is_manual_sent が未設定でも、自動送信条件に該当しない既存送信済みは手動扱いにする
-                    ->orWhere(function (Builder $legacy) use ($keys) {
+                    ->orWhere(function (Builder $legacy) use ($keys, $legacyAutoTitles) {
                         $legacy->whereNull('is_manual_sent')
                             ->where(function (Builder $w) {
                                 $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
                             })
                             ->where(function (Builder $w) use ($keys) {
                                 $w->whereNull('title_key')->orWhereNotIn('title_key', $keys);
+                            })
+                            ->where(function (Builder $w) use ($legacyAutoTitles) {
+                                $w->whereNull('title')->orWhereNotIn('title', $legacyAutoTitles);
                             });
                     });
             });
