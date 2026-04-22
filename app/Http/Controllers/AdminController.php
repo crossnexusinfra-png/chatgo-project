@@ -755,6 +755,7 @@ class AdminController extends Controller
         return view('admin.user-enforcements', [
             'enforcements' => $enforcements,
             'lang' => $lang,
+            'noticeTemplates' => $this->manualEnforcementNoticeTemplates(),
         ]);
     }
 
@@ -774,6 +775,10 @@ class AdminController extends Controller
             'enforcement_type' => 'required|in:restriction,temporary_freeze,permanent_freeze',
             'duration_hours' => 'nullable|integer|min:1|max:8760',
             'reason' => 'nullable|string|max:1000',
+            'notice_title_ja' => 'nullable|string|max:255',
+            'notice_title_en' => 'nullable|string|max:255',
+            'notice_body_ja' => 'required|string|max:10000',
+            'notice_body_en' => 'nullable|string|max:10000',
         ]);
 
         $targetToken = trim((string) $validated['target_user']);
@@ -804,6 +809,14 @@ class AdminController extends Controller
             $expiresAt = now()->addHours($hours);
         }
 
+        $notice = [
+            'title_ja' => trim((string) ($validated['notice_title_ja'] ?? '')),
+            'title_en' => trim((string) ($validated['notice_title_en'] ?? '')),
+            'body_ja' => trim((string) ($validated['notice_body_ja'] ?? '')),
+            'body_en' => trim((string) ($validated['notice_body_en'] ?? '')),
+        ];
+        $notice = $this->replaceManualNoticePlaceholders($notice, $reason, $expiresAt);
+
         DB::transaction(function () use ($targetUser, $type, $reason, $expiresAt) {
             if (in_array($type, [AdminUserEnforcement::TYPE_TEMPORARY_FREEZE, AdminUserEnforcement::TYPE_PERMANENT_FREEZE], true)) {
                 AdminUserEnforcement::query()
@@ -821,13 +834,7 @@ class AdminController extends Controller
             ]);
         });
 
-        if ($type === AdminUserEnforcement::TYPE_RESTRICTION) {
-            $this->sendManualRestrictionNotice($targetUser, $expiresAt, $reason);
-        } elseif ($type === AdminUserEnforcement::TYPE_PERMANENT_FREEZE) {
-            $this->sendManualPermanentFreezeNotice($targetUser, $reason);
-        } else {
-            $this->sendManualTemporaryFreezeNotice($targetUser, $expiresAt, $reason);
-        }
+        $this->sendManualEnforcementNotice($targetUser, $notice);
 
         return redirect()
             ->route('admin.user-enforcements')
@@ -2043,20 +2050,44 @@ class AdminController extends Controller
         ]);
     }
 
-    private function sendManualRestrictionNotice(User $user, ?\Carbon\Carbon $until, string $reason = ''): void
+    private function manualEnforcementNoticeTemplates(): array
+    {
+        return [
+            AdminUserEnforcement::TYPE_RESTRICTION => [
+                'title_ja' => '管理者による利用制限のお知らせ',
+                'title_en' => 'Administrative Restriction Notice',
+                'body_ja' => "利用規約に関する重大な違反を確認したため、管理者による利用制限を適用しました。\n制限期間中は、通報による制限と同等の投稿制限が適用されます。\n制限終了予定日時: {until}\n理由: {reason}",
+                'body_en' => "Due to a serious violation related to our terms of service, an administrative restriction has been applied.\nDuring this period, posting limits equivalent to report-based restrictions will apply.\nRestriction ends at: {until}\nReason: {reason}",
+            ],
+            AdminUserEnforcement::TYPE_TEMPORARY_FREEZE => [
+                'title_ja' => '管理者による一時凍結のお知らせ',
+                'title_en' => 'Administrative Temporary Suspension Notice',
+                'body_ja' => "利用規約に関する重大な違反を確認したため、管理者によりアカウントを一時凍結しました。\n凍結期間中は閲覧以外の操作が制限されます。\n凍結終了予定日時: {until}\n理由: {reason}",
+                'body_en' => "Due to a serious violation related to our terms of service, your account has been temporarily suspended by the administration.\nDuring the suspension period, actions other than browsing are restricted.\nSuspension ends at: {until}\nReason: {reason}",
+            ],
+            AdminUserEnforcement::TYPE_PERMANENT_FREEZE => [
+                'title_ja' => '管理者による永久凍結のお知らせ',
+                'title_en' => 'Administrative Permanent Suspension Notice',
+                'body_ja' => "利用規約に関する重大な違反を確認したため、管理者によりアカウントを永久凍結しました。\n今後は閲覧のみ可能で、投稿や各種操作は行えません。\n理由: {reason}",
+                'body_en' => "Due to a serious violation related to our terms of service, your account has been permanently suspended by the administration.\nFrom now on, browsing is allowed, but posting and other actions are disabled.\nReason: {reason}",
+            ],
+        ];
+    }
+
+    private function sendManualEnforcementNotice(User $user, array $notice): void
     {
         $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
-        $untilText = $until ? $until->format($isEn ? 'Y-m-d H:i' : 'Y年m月d日 H:i') : '-';
-        $base = $isEn
-            ? "A manual administrative posting restriction has been applied to your account.\nDuring the period below, posting limits are restricted in the same way as report-based restrictions.\n\nRestriction ends at: {$untilText}"
-            : "あなたのアカウントに対し、管理者による手動制限を適用しました。\n下記期間中は、通報由来の制限と同じ投稿制限が適用されます。\n\n制限終了予定日時: {$untilText}";
-        if ($reason !== '') {
-            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
-        }
+        $titleJa = trim((string) ($notice['title_ja'] ?? ''));
+        $titleEn = trim((string) ($notice['title_en'] ?? ''));
+        $bodyJa = trim((string) ($notice['body_ja'] ?? ''));
+        $bodyEn = trim((string) ($notice['body_en'] ?? ''));
+
+        $title = $isEn ? ($titleEn !== '' ? $titleEn : ($titleJa !== '' ? $titleJa : 'Notification')) : ($titleJa !== '' ? $titleJa : ($titleEn !== '' ? $titleEn : 'お知らせ'));
+        $body = $isEn ? ($bodyEn !== '' ? $bodyEn : $bodyJa) : ($bodyJa !== '' ? $bodyJa : $bodyEn);
 
         AdminMessage::create([
-            'title' => $isEn ? 'Administrative Restriction Notice' : '管理者制限のお知らせ',
-            'body' => $base,
+            'title' => $title,
+            'body' => $body,
             'audience' => 'members',
             'user_id' => $user->user_id,
             'published_at' => now(),
@@ -2066,49 +2097,17 @@ class AdminController extends Controller
         ]);
     }
 
-    private function sendManualTemporaryFreezeNotice(User $user, ?\Carbon\Carbon $until, string $reason = ''): void
+    private function replaceManualNoticePlaceholders(array $notice, string $reason, ?\Carbon\Carbon $expiresAt): array
     {
-        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
-        $untilText = $until ? $until->format($isEn ? 'Y-m-d H:i' : 'Y年m月d日 H:i') : '-';
-        $base = $isEn
-            ? "Your account has been manually suspended by an administrator.\n\nSuspension ends at: {$untilText}\n\nDuring the suspension period, actions other than browsing are restricted."
-            : "あなたのアカウントは管理者により手動で凍結されました。\n\n凍結解除予定日時: {$untilText}\n\n凍結期間中は閲覧以外の操作が制限されます。";
-        if ($reason !== '') {
-            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
+        $replace = [
+            '{reason}' => $reason,
+            '{until}' => $expiresAt ? $expiresAt->format('Y-m-d H:i') : '-',
+        ];
+        foreach (['title_ja', 'title_en', 'body_ja', 'body_en'] as $key) {
+            $value = (string) ($notice[$key] ?? '');
+            $notice[$key] = strtr($value, $replace);
         }
-
-        AdminMessage::create([
-            'title' => $isEn ? 'Manual Account Suspension' : '手動アカウント凍結のお知らせ',
-            'body' => $base,
-            'audience' => 'members',
-            'user_id' => $user->user_id,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-            'is_auto_sent' => true,
-        ]);
-    }
-
-    private function sendManualPermanentFreezeNotice(User $user, string $reason = ''): void
-    {
-        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
-        $base = $isEn
-            ? "Your account has been manually permanently suspended by an administrator.\nYou can view content, but actions other than browsing are restricted."
-            : "あなたのアカウントは管理者により手動で永久凍結されました。\n閲覧はできますが、閲覧以外の操作は制限されます。";
-        if ($reason !== '') {
-            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
-        }
-
-        AdminMessage::create([
-            'title' => $isEn ? 'Manual Permanent Suspension' : '手動永久凍結のお知らせ',
-            'body' => $base,
-            'audience' => 'members',
-            'user_id' => $user->user_id,
-            'published_at' => now(),
-            'allows_reply' => false,
-            'reply_used' => false,
-            'is_auto_sent' => true,
-        ]);
+        return $notice;
     }
 
     /**

@@ -41,6 +41,19 @@
             <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_reason', $lang) }}</label>
             <textarea name="reason" rows="4" maxlength="1000" placeholder="{{ \App\Services\LanguageService::trans('admin_user_enforcement_reason_placeholder', $lang) }}">{{ old('reason') }}</textarea>
 
+            <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_title_ja', $lang) }}</label>
+            <input type="text" name="notice_title_ja" id="notice_title_ja" maxlength="255" value="{{ old('notice_title_ja') }}" placeholder="{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_title_ja_placeholder', $lang) }}">
+
+            <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_title_en', $lang) }}</label>
+            <input type="text" name="notice_title_en" id="notice_title_en" maxlength="255" value="{{ old('notice_title_en') }}" placeholder="{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_title_en_placeholder', $lang) }}">
+
+            <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_body_ja', $lang) }}</label>
+            <textarea name="notice_body_ja" id="notice_body_ja" rows="6" maxlength="10000" required placeholder="{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_body_ja_placeholder', $lang) }}">{{ old('notice_body_ja') }}</textarea>
+
+            <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_body_en', $lang) }}</label>
+            <textarea name="notice_body_en" id="notice_body_en" rows="6" maxlength="10000" placeholder="{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_body_en_placeholder', $lang) }}">{{ old('notice_body_en') }}</textarea>
+            <p class="admin-form-note">{{ \App\Services\LanguageService::trans('admin_user_enforcement_notice_placeholder_hint', $lang) }}</p>
+
             <div class="admin-messages-submit-container">
                 <button type="submit">{{ \App\Services\LanguageService::trans('admin_user_enforcement_apply', $lang) }}</button>
             </div>
@@ -125,15 +138,42 @@
 
 <script nonce="{{ $csp_nonce ?? '' }}">
     (function () {
+        const templates = @json($noticeTemplates ?? []);
+        const hasOldNotice = @json(
+            old('notice_title_ja') !== null
+            || old('notice_title_en') !== null
+            || old('notice_body_ja') !== null
+            || old('notice_body_en') !== null
+        );
         const typeEl = document.getElementById('enforcement_type_select');
         const durationWrap = document.getElementById('duration_hours_wrap');
+        const titleJa = document.getElementById('notice_title_ja');
+        const titleEn = document.getElementById('notice_title_en');
+        const bodyJa = document.getElementById('notice_body_ja');
+        const bodyEn = document.getElementById('notice_body_en');
+
+        function applyTemplate(type) {
+            const t = templates[type];
+            if (!t) return;
+            if (titleJa) titleJa.value = t.title_ja || '';
+            if (titleEn) titleEn.value = t.title_en || '';
+            if (bodyJa) bodyJa.value = t.body_ja || '';
+            if (bodyEn) bodyEn.value = t.body_en || '';
+        }
+
         function sync() {
             if (!typeEl || !durationWrap) return;
             durationWrap.style.display = (typeEl.value === 'restriction' || typeEl.value === 'temporary_freeze') ? 'block' : 'none';
         }
         if (typeEl) {
-            typeEl.addEventListener('change', sync);
+            typeEl.addEventListener('change', function () {
+                sync();
+                applyTemplate(typeEl.value);
+            });
             sync();
+            if (!hasOldNotice) {
+                applyTemplate(typeEl.value);
+            }
         }
     })();
 </script>
