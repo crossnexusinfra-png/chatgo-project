@@ -217,7 +217,8 @@ class NotificationsController extends Controller
             'title' => 'Re: ' . $parentTitle,
             'body' => $body,
             'audience' => 'members',
-            'user_id' => null, // 管理者向け（個人向けではない）
+            // 返信したユーザーを保持（管理者側の返信一覧で識別するため）
+            'user_id' => $userId,
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,

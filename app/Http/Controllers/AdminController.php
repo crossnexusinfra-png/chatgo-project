@@ -104,6 +104,67 @@ class AdminController extends Controller
             ->groupBy('thread_id', 'response_id')
             ->get();
 
+        $threadIds = $groups->pluck('thread_id')->filter()->unique()->values()->all();
+        $responseIds = $groups->pluck('response_id')->filter()->unique()->values()->all();
+
+        $detailReports = (clone $base)
+            ->select(['thread_id', 'response_id', 'user_id'])
+            ->get();
+
+        $reporterUserIdsByTarget = [];
+        foreach ($detailReports as $report) {
+            $targetKey = $report->thread_id ? ('thread:' . $report->thread_id) : ('response:' . $report->response_id);
+            if (!isset($reporterUserIdsByTarget[$targetKey])) {
+                $reporterUserIdsByTarget[$targetKey] = [];
+            }
+            if (!empty($report->user_id)) {
+                $reporterUserIdsByTarget[$targetKey][] = (int) $report->user_id;
+            }
+        }
+        foreach ($reporterUserIdsByTarget as $targetKey => $ids) {
+            $reporterUserIdsByTarget[$targetKey] = array_values(array_unique($ids));
+        }
+
+        $reportedUserIdByTarget = [];
+        if (!empty($threadIds)) {
+            $threads = Thread::withTrashed()
+                ->whereIn('thread_id', $threadIds)
+                ->get(['thread_id', 'user_id']);
+            foreach ($threads as $thread) {
+                $reportedUserIdByTarget['thread:' . $thread->thread_id] = $thread->user_id ? (int) $thread->user_id : null;
+            }
+        }
+        if (!empty($responseIds)) {
+            $responses = Response::withTrashed()
+                ->whereIn('response_id', $responseIds)
+                ->get(['response_id', 'user_id']);
+            foreach ($responses as $response) {
+                $reportedUserIdByTarget['response:' . $response->response_id] = $response->user_id ? (int) $response->user_id : null;
+            }
+        }
+
+        $allUserIds = [];
+        foreach ($reporterUserIdsByTarget as $ids) {
+            foreach ($ids as $id) {
+                $allUserIds[] = $id;
+            }
+        }
+        foreach ($reportedUserIdByTarget as $id) {
+            if (!empty($id)) {
+                $allUserIds[] = $id;
+            }
+        }
+        $allUserIds = array_values(array_unique($allUserIds));
+        $userIdentifierById = [];
+        if (!empty($allUserIds)) {
+            $users = User::query()
+                ->whereIn('user_id', $allUserIds)
+                ->get(['user_id', 'user_identifier']);
+            foreach ($users as $u) {
+                $userIdentifierById[(int) $u->user_id] = $u->user_identifier ?: (string) $u->user_id;
+            }
+        }
+
         $groups = ($sort === 'oldest')
             ? $groups->sortBy('last_reported_at')->values()
             : $groups->sortByDesc('last_reported_at')->values();
@@ -144,6 +205,9 @@ class AdminController extends Controller
             'showRejected' => $showRejected,
             'onlyFlagged' => $onlyFlagged,
             'sort' => $sort,
+            'reporterUserIdsByTarget' => $reporterUserIdsByTarget,
+            'reportedUserIdByTarget' => $reportedUserIdByTarget,
+            'userIdentifierById' => $userIdentifierById,
             'reportsSince' => $reportsSince,
             'newReportsCount' => $newReportsCount,
             'lang' => $lang,
@@ -361,7 +425,7 @@ class AdminController extends Controller
         $query = AdminMessage::query()
             ->whereNotNull('published_at')
             ->whereNotNull('parent_message_id')
-            ->with(['parentMessage', 'parentMessage.recipients']);
+            ->with(['user', 'parentMessage', 'parentMessage.recipients']);
 
         if (Schema::hasColumn('admin_messages', 'delivery_type')) {
             $allowedParentTypes = [AdminMessage::DELIVERY_TYPE_MANUAL];

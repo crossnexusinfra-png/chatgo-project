@@ -42,6 +42,8 @@
         <thead>
             <tr>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_target', $lang) }}</th>
+                <th>{{ \App\Services\LanguageService::trans('admin_reports_reporter_user_id', $lang) }}</th>
+                <th>{{ \App\Services\LanguageService::trans('admin_reports_reported_user_id', $lang) }}</th>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_count', $lang) }}</th>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_first', $lang) }}</th>
                 <th>{{ \App\Services\LanguageService::trans('admin_reports_last', $lang) }}</th>
@@ -53,6 +55,11 @@
         @forelse ($groups as $g)
             <tr>
                 <td>
+                    @php
+                        $targetKey = $g->thread_id ? ('thread:' . $g->thread_id) : ('response:' . $g->response_id);
+                        $reporterIds = $reporterUserIdsByTarget[$targetKey] ?? [];
+                        $reportedUserId = $reportedUserIdByTarget[$targetKey] ?? null;
+                    @endphp
                     @if ($g->thread_id)
                         {!! $g->any_flagged ? '★' : '☆' !!} {{ \App\Services\LanguageService::trans('admin_reports_thread_id', $lang) }}: {{ $g->thread_id }}
                         <div><a href="{{ route('admin.reports.thread', ['threadId' => $g->thread_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'sort' => request('sort')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
@@ -61,6 +68,28 @@
                         <div><a href="{{ route('admin.reports.response', ['responseId' => $g->response_id, 'show_approved' => request('show_approved'), 'show_rejected' => request('show_rejected'), 'only_flagged' => request('only_flagged'), 'sort' => request('sort')]) }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_reports_view_content', $lang) }}</a></div>
                     @else
                         {{ \App\Services\LanguageService::trans('admin_reports_unknown', $lang) }}
+                    @endif
+                </td>
+                <td>
+                    @if(!empty($reporterIds))
+                        @foreach($reporterIds as $rid)
+                            @php $token = $userIdentifierById[$rid] ?? (string) $rid; @endphp
+                            <div>
+                                <code class="admin-copy-token">{{ $token }}</code>
+                                <button type="button" class="admin-copy-btn" data-copy-text="{{ $token }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                            </div>
+                        @endforeach
+                    @else
+                        —
+                    @endif
+                </td>
+                <td>
+                    @if(!empty($reportedUserId))
+                        @php $reportedToken = $userIdentifierById[$reportedUserId] ?? (string) $reportedUserId; @endphp
+                        <code class="admin-copy-token">{{ $reportedToken }}</code>
+                        <button type="button" class="admin-copy-btn" data-copy-text="{{ $reportedToken }}">{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
+                    @else
+                        —
                     @endif
                 </td>
                 <td>{{ $g->reports_count }}</td>
@@ -113,7 +142,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6">{{ \App\Services\LanguageService::trans('admin_reports_no_reports', $lang) }}</td></tr>
+            <tr><td colspan="8">{{ \App\Services\LanguageService::trans('admin_reports_no_reports', $lang) }}</td></tr>
         @endforelse
         </tbody>
     </table>
@@ -133,6 +162,19 @@
         </div>
     @endif
 </div>
+<script nonce="{{ $csp_nonce ?? '' }}">
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.admin-copy-btn');
+    if (!btn) return;
+    const text = btn.getAttribute('data-copy-text') || '';
+    if (!text) return;
+    const originalText = btn.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = '{{ \App\Services\LanguageService::trans('copied', $lang) }}';
+        setTimeout(function() { btn.textContent = originalText; }, 1200);
+    });
+});
+</script>
 @endsection
 
 
