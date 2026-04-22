@@ -801,6 +801,10 @@ return [
     
     // Room Creation Limit
     'thread_creation_limit_exceeded' => 'You can only create up to 2 rooms per day.',
+    'thread_creation_limit_restricted_exceeded' => 'Due to report-based restrictions, you can only create up to 1 room per day.',
+    'report_restriction_file_limit_exceeded' => 'Due to report-based restrictions, file posts are limited to 5 per day.',
+    'report_restriction_url_limit_exceeded' => 'Due to report-based restrictions, posts containing URLs are limited to 5 per day.',
+    'profile_restricted_mark_title' => 'This profile is restricted due to reports.',
     
     // Room Reply Limit
     'thread_response_limit_reached' => 'This room has reached the maximum number of replies (500). You can request a continuation room.',
