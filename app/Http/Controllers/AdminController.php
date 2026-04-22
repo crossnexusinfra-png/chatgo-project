@@ -97,9 +97,10 @@ class AdminController extends Controller
                 DB::raw('COUNT(*) as reports_count'),
                 DB::raw('MIN(created_at) as first_reported_at'),
                 DB::raw('MAX(created_at) as last_reported_at'),
-                DB::raw('BOOL_OR(flagged) as any_flagged'),
-                DB::raw('BOOL_OR(approved_at IS NOT NULL AND is_approved IS TRUE) as any_approved'),
-                DB::raw('BOOL_OR(approved_at IS NOT NULL AND is_approved IS FALSE) as any_rejected'),
+                // DB方言差を避けるため BOOL_OR は使わず CASE + MAX で集計する
+                DB::raw('MAX(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) as any_flagged'),
+                DB::raw('MAX(CASE WHEN approved_at IS NOT NULL AND is_approved = 1 THEN 1 ELSE 0 END) as any_approved'),
+                DB::raw('MAX(CASE WHEN approved_at IS NOT NULL AND is_approved = 0 THEN 1 ELSE 0 END) as any_rejected'),
             ])
             ->groupBy('thread_id', 'response_id')
             ->get();
