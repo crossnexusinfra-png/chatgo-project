@@ -390,13 +390,24 @@ class AdminController extends Controller
             $query->whereNotNull('parent_message_id');
         }
 
-        if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
-            $query->excludingSystemAutoNotifications();
-        }
-        if (Schema::hasColumn('admin_messages', 'is_from_template') && !$includeTemplates) {
-            $query->where(function ($q) {
-                $q->whereNull('is_from_template')->orWhere('is_from_template', false);
-            });
+        if (Schema::hasColumn('admin_messages', 'delivery_type')) {
+            $allowedTypes = [\App\Models\AdminMessage::DELIVERY_TYPE_MANUAL];
+            if ($showAutoSent) {
+                $allowedTypes[] = \App\Models\AdminMessage::DELIVERY_TYPE_AUTO;
+            }
+            if ($includeTemplates) {
+                $allowedTypes[] = \App\Models\AdminMessage::DELIVERY_TYPE_TEMPLATE;
+            }
+            $query->whereIn('delivery_type', $allowedTypes);
+        } else {
+            if (Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent) {
+                $query->excludingSystemAutoNotifications();
+            }
+            if (Schema::hasColumn('admin_messages', 'is_from_template') && !$includeTemplates) {
+                $query->where(function ($q) {
+                    $q->whereNull('is_from_template')->orWhere('is_from_template', false);
+                });
+            }
         }
 
         if ($sort === 'oldest') {
@@ -509,6 +520,9 @@ class AdminController extends Controller
             'reply_used' => false,
             'coin_amount' => request('welcome_coin_amount') ? (int)request('welcome_coin_amount') : null,
             'is_auto_sent' => false,
+            'is_manual_sent' => false,
+            'is_from_template' => false,
+            'delivery_type' => AdminMessage::DELIVERY_TYPE_MANUAL,
         ]);
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_messages_welcome_set', $lang));
@@ -611,6 +625,9 @@ class AdminController extends Controller
             'is_auto_sent' => false,
             'is_manual_sent' => true,
             'is_from_template' => request()->filled('template_key'),
+            'delivery_type' => request()->filled('template_key')
+                ? AdminMessage::DELIVERY_TYPE_TEMPLATE
+                : AdminMessage::DELIVERY_TYPE_MANUAL,
         ]);
 
         foreach ($recipientUserIds as $uid) {

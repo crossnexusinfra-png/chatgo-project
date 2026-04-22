@@ -10,9 +10,13 @@ class AdminMessage extends Model
 {
     use HasFactory;
 
+    public const DELIVERY_TYPE_AUTO = 'auto';
+    public const DELIVERY_TYPE_TEMPLATE = 'template';
+    public const DELIVERY_TYPE_MANUAL = 'manual';
+
     protected $fillable = [
         'title_key', 'body_key', 'title', 'body', 'title_ja', 'title_en', 'body_ja', 'body_en', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount', 'is_auto_sent',
-        'is_manual_sent', 'is_from_template',
+        'is_manual_sent', 'is_from_template', 'delivery_type',
         'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 
@@ -24,30 +28,6 @@ class AdminMessage extends Model
         'report_restriction_review_title',
         'report_restriction_ack_title',
         'suggestion_received_title',
-    ];
-
-    /**
-     * 旧データ互換用: title_key が無い自動送信お知らせの固定タイトル
-     */
-    public const AUTO_SENT_LEGACY_TITLES = [
-        '通報内容の対応について',
-        '削除処理完了のお知らせ',
-        '改善要望の対応について',
-        '利用に関する警告',
-        'アカウント一時凍結のお知らせ',
-        'アカウント永久凍結のお知らせ',
-        'ルーム削除のお知らせ',
-        'リプライ削除のお知らせ',
-        'プロフィール削除のお知らせ',
-        'Update on Your Report',
-        'Deletion Completed',
-        'Update on Your Suggestion',
-        'Warning Notice',
-        'Temporary Account Suspension',
-        'Permanent Account Suspension',
-        'Room Deletion Notice',
-        'Reply Deletion Notice',
-        'Profile Deletion Notice',
     ];
 
     protected $casts = [
@@ -63,6 +43,36 @@ class AdminMessage extends Model
         'is_manual_sent' => 'boolean',
         'is_from_template' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $message): void {
+            if (empty($message->delivery_type)) {
+                if ($message->is_from_template) {
+                    $message->delivery_type = self::DELIVERY_TYPE_TEMPLATE;
+                } elseif ($message->is_auto_sent) {
+                    $message->delivery_type = self::DELIVERY_TYPE_AUTO;
+                } else {
+                    $message->delivery_type = self::DELIVERY_TYPE_MANUAL;
+                }
+            }
+
+            // 既存フラグとの整合も取る（新規作成時の取りこぼし防止）
+            if ($message->delivery_type === self::DELIVERY_TYPE_AUTO) {
+                $message->is_auto_sent = true;
+                $message->is_manual_sent = false;
+                $message->is_from_template = false;
+            } elseif ($message->delivery_type === self::DELIVERY_TYPE_TEMPLATE) {
+                $message->is_auto_sent = false;
+                $message->is_manual_sent = true;
+                $message->is_from_template = true;
+            } else {
+                $message->is_auto_sent = false;
+                $message->is_manual_sent = true;
+                $message->is_from_template = false;
+            }
+        });
+    }
     
     /**
      * このメッセージの送信先ユーザー（個人向けメッセージの場合・1名）
@@ -118,27 +128,12 @@ class AdminMessage extends Model
      */
     public function scopeExcludingSystemAutoNotifications(Builder $query): Builder
     {
-        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_manual_sent')) {
-            $keys = self::AUTO_SENT_TITLE_KEYS;
-            $legacyAutoTitles = self::AUTO_SENT_LEGACY_TITLES;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'delivery_type')) {
+            return $query->whereIn('delivery_type', [self::DELIVERY_TYPE_MANUAL, self::DELIVERY_TYPE_TEMPLATE]);
+        }
 
-            return $query->where(function (Builder $manual) use ($keys, $legacyAutoTitles) {
-                // 新仕様: 明示的に手動送信として保存されたもの
-                $manual->where('is_manual_sent', true)
-                    // 旧データ互換: is_manual_sent が未設定でも、自動送信条件に該当しない既存送信済みは手動扱いにする
-                    ->orWhere(function (Builder $legacy) use ($keys, $legacyAutoTitles) {
-                        $legacy->whereNull('is_manual_sent')
-                            ->where(function (Builder $w) {
-                                $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
-                            })
-                            ->where(function (Builder $w) use ($keys) {
-                                $w->whereNull('title_key')->orWhereNotIn('title_key', $keys);
-                            })
-                            ->where(function (Builder $w) use ($legacyAutoTitles) {
-                                $w->whereNull('title')->orWhereNotIn('title', $legacyAutoTitles);
-                            });
-                    });
-            });
+        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_manual_sent')) {
+            return $query->where('is_manual_sent', true);
         }
 
         $keys = self::AUTO_SENT_TITLE_KEYS;
