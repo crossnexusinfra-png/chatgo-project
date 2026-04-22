@@ -158,6 +158,11 @@
     <div class="filter-section">
         <h2 class="admin-messages-filter-title">{{ \App\Services\LanguageService::trans('admin_messages_sent_list', $lang) }}</h2>
         <p class="admin-messages-back-link">
+            <a href="{{ route('admin.messages.replies') }}" class="admin-link">
+                {{ \App\Services\LanguageService::trans('admin_messages_replies_button', $lang) }}
+            </a>
+        </p>
+        <p class="admin-messages-back-link">
             <a href="{{ route('admin.messages.history') }}" class="admin-link">
                 {{ \App\Services\LanguageService::trans('admin_messages_history_button', $lang) }}
             </a>

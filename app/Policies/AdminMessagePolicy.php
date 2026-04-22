@@ -59,6 +59,9 @@ class AdminMessagePolicy
         if ($message->recipients()->where('users.user_id', $user->user_id)->exists()) {
             return true;
         }
+        if ($message->audience === 'members') {
+            return true;
+        }
         return false;
     }
 

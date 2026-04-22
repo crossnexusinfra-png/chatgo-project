@@ -11,7 +11,6 @@
     let currentPage = config.currentPage || 1;
     let hasMorePages = config.hasMorePages || false;
     let isLoadingMore = false;
-    const showAutoSent = config.showAutoSent === true;
 
     // メッセージを開封済みとしてマークする関数
     async function markAsRead(messageId, element) {
@@ -591,8 +590,7 @@
         
         try {
             const nextPage = currentPage + 1;
-            const autoParam = showAutoSent ? '&show_auto_sent=1' : '';
-            const response = await fetch(`/notifications?page=${nextPage}${autoParam}`, {
+            const response = await fetch(`/notifications?page=${nextPage}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

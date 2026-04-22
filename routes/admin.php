@@ -34,6 +34,7 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         // お知らせ配信
         Route::get('/messages', [AdminController::class, 'messages'])->name('messages');
         Route::get('/messages/history', [AdminController::class, 'messagesHistory'])->name('messages.history');
+        Route::get('/messages/replies', [AdminController::class, 'messagesReplies'])->name('messages.replies');
         Route::post('/messages', [AdminController::class, 'messagesStore'])->name('messages.store');
         Route::post('/messages/templates/save', [AdminController::class, 'messagesTemplateSave'])->name('messages.templates.save');
         Route::post('/messages/templates/delete', [AdminController::class, 'messagesTemplateDelete'])->name('messages.templates.delete');

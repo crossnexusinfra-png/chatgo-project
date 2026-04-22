@@ -26,8 +26,6 @@
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_filter', $lang) }}</span>
                     <select name="filter" class="admin-messages-select">
                         <option value="all" {{ ($filter ?? 'all') === 'all' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_all', $lang) }}</option>
-                        <option value="report_auto_reply" {{ ($filter ?? '') === 'report_auto_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto_reply', $lang) }}</option>
-                        <option value="manual_reply" {{ ($filter ?? '') === 'manual_reply' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_manual_reply', $lang) }}</option>
                         <option value="report_auto" {{ ($filter ?? '') === 'report_auto' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_report_auto', $lang) }}</option>
                         <option value="members" {{ ($filter ?? '') === 'members' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_members', $lang) }}</option>
                         <option value="specific" {{ ($filter ?? '') === 'specific' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_messages_filter_specific', $lang) }}</option>
@@ -50,10 +48,6 @@
                 <label class="admin-messages-filter-checkbox-label">
                     <input type="checkbox" name="include_templates" value="1" {{ !empty($includeTemplates) ? 'checked' : '' }}>
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_include_templates', $lang) }}</span>
-                </label>
-                <label class="admin-messages-filter-checkbox-label">
-                    <input type="checkbox" name="reply_only" value="1" {{ !empty($replyOnly) ? 'checked' : '' }}>
-                    <span>{{ \App\Services\LanguageService::trans('admin_messages_filter_reply_only', $lang) }}</span>
                 </label>
                 <button type="submit" class="btn btn-primary admin-messages-filter-submit">{{ \App\Services\LanguageService::trans('admin_apply', $lang) }}</button>
             </form>

@@ -329,7 +329,6 @@ class AdminController extends Controller
         $filter = request('filter', 'all');
         $showAutoSent = request()->boolean('show_auto_sent', false);
         $includeTemplates = request()->boolean('include_templates', false);
-        $replyOnly = request()->boolean('reply_only', false);
         $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
         $with = ['parentMessage'];
         if (Schema::hasTable('admin_message_recipients')) {
@@ -344,18 +343,6 @@ class AdminController extends Controller
         }
 
         switch ($filter) {
-            case 'report_auto_reply':
-                $query->whereNotNull('parent_message_id')
-                    ->whereHas('parentMessage', function($q) {
-                        $q->whereNotNull('user_id');
-                    });
-                break;
-            case 'manual_reply':
-                $query->whereNotNull('parent_message_id')
-                    ->whereHas('parentMessage', function($q) {
-                        $q->whereNull('user_id');
-                    });
-                break;
             case 'report_auto':
                 $query->whereNotNull('user_id')
                     ->whereNull('parent_message_id');
@@ -386,9 +373,8 @@ class AdminController extends Controller
                 break;
         }
 
-        if ($replyOnly) {
-            $query->whereNotNull('parent_message_id');
-        }
+        // 過去お知らせ一覧は「親お知らせ」のみ表示（ユーザー返信は別ページ）
+        $query->whereNull('parent_message_id');
 
         if (Schema::hasColumn('admin_messages', 'delivery_type')) {
             $allowedTypes = [\App\Models\AdminMessage::DELIVERY_TYPE_MANUAL];
@@ -422,7 +408,52 @@ class AdminController extends Controller
 
         $lang = $this->getAdminLanguage();
 
-        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'replyOnly', 'sort', 'includeTemplates'));
+        return view('admin.messages-history', compact('messages', 'filter', 'lang', 'showAutoSent', 'sort', 'includeTemplates'));
+    }
+
+    /** ユーザーからの返信一覧（10件ずつページング） */
+    public function messagesReplies()
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageMessages($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $includeAutoReplies = request()->boolean('include_auto_replies', false);
+        $includeTemplateReplies = request()->boolean('include_template_replies', false);
+        $sort = request('sort', 'latest') === 'oldest' ? 'oldest' : 'latest';
+
+        $query = AdminMessage::query()
+            ->whereNotNull('published_at')
+            ->whereNotNull('parent_message_id')
+            ->with(['parentMessage', 'parentMessage.recipients']);
+
+        if (Schema::hasColumn('admin_messages', 'delivery_type')) {
+            $allowedParentTypes = [AdminMessage::DELIVERY_TYPE_MANUAL];
+            if ($includeAutoReplies) {
+                $allowedParentTypes[] = AdminMessage::DELIVERY_TYPE_AUTO;
+            }
+            if ($includeTemplateReplies) {
+                $allowedParentTypes[] = AdminMessage::DELIVERY_TYPE_TEMPLATE;
+            }
+            $query->whereHas('parentMessage', function ($q) use ($allowedParentTypes) {
+                $q->whereIn('delivery_type', $allowedParentTypes);
+            });
+        }
+
+        if ($sort === 'oldest') {
+            $query->orderBy('published_at')->orderBy('created_at');
+        } else {
+            $query->orderByDesc('published_at')->orderByDesc('created_at');
+        }
+
+        $messages = $query->paginate(10)->withQueryString();
+        $lang = $this->getAdminLanguage();
+
+        return view('admin.messages-replies', compact('messages', 'sort', 'lang', 'includeAutoReplies', 'includeTemplateReplies'));
     }
 
     /** お知らせテンプレートを作成/更新 */

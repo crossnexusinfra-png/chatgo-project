@@ -23,18 +23,13 @@ class NotificationsController extends Controller
         $user = auth()->user();
         $userId = $user->user_id;
 
-        $showAutoSent = request()->boolean('show_auto_sent', false);
-
         // 送信済み・親メッセージのみ・新しい順
         $baseQuery = AdminMessage::query()
             ->whereNotNull('published_at')
             ->whereNull('parent_message_id')
-            ->when(
-                Schema::hasColumn('admin_messages', 'is_auto_sent') && !$showAutoSent,
-                function ($q) {
-                    $q->excludingSystemAutoNotifications();
-                }
-            )
+            ->when(Schema::hasColumn('admin_messages', 'is_auto_sent'), function ($q) {
+                $q->excludingSystemAutoNotifications();
+            })
             ->orderByDesc('published_at')
             ->orderByDesc('created_at');
 
@@ -124,7 +119,7 @@ class NotificationsController extends Controller
             ]);
         }
         
-        return view('notifications.index', compact('messages', 'lang', 'showAutoSent'))->with('hideSearch', true);
+        return view('notifications.index', compact('messages', 'lang'))->with('hideSearch', true);
     }
 
     /**

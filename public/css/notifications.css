@@ -19,57 +19,6 @@
     margin: 0;
 }
 
-.notifications-auto-sent-form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 14px;
-    margin: 0 0 14px 0;
-    padding: 10px 14px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-.notifications-auto-sent-apply {
-    padding: 6px 14px;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 6px;
-    border: 1px solid #2563eb;
-    background: #2563eb;
-    color: #fff;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.notifications-auto-sent-apply:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-}
-
-.notifications-auto-sent-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #374151;
-    cursor: pointer;
-    user-select: none;
-}
-
-.notifications-auto-sent-label input[type="checkbox"] {
-    width: 1.125rem;
-    height: 1.125rem;
-    min-width: 1.125rem;
-    min-height: 1.125rem;
-    margin: 0;
-    flex-shrink: 0;
-    cursor: pointer;
-    accent-color: #2563eb;
-}
-
 .notifications-pagination-header {
     display: flex;
     align-items: center;
