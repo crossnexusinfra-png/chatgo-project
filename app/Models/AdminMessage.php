@@ -95,7 +95,22 @@ class AdminMessage extends Model
     public function scopeExcludingSystemAutoNotifications(Builder $query): Builder
     {
         if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'is_manual_sent')) {
-            return $query->where('is_manual_sent', true);
+            $keys = self::AUTO_SENT_TITLE_KEYS;
+
+            return $query->where(function (Builder $manual) use ($keys) {
+                // 新仕様: 明示的に手動送信として保存されたもの
+                $manual->where('is_manual_sent', true)
+                    // 旧データ互換: is_manual_sent が未設定でも、自動送信条件に該当しない既存送信済みは手動扱いにする
+                    ->orWhere(function (Builder $legacy) use ($keys) {
+                        $legacy->whereNull('is_manual_sent')
+                            ->where(function (Builder $w) {
+                                $w->whereNull('is_auto_sent')->orWhere('is_auto_sent', false);
+                            })
+                            ->where(function (Builder $w) use ($keys) {
+                                $w->whereNull('title_key')->orWhereNotIn('title_key', $keys);
+                            });
+                    });
+            });
         }
 
         $keys = self::AUTO_SENT_TITLE_KEYS;
