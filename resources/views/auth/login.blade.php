@@ -32,9 +32,9 @@
                     <p><a href="{{ route('login.password-reset') }}">{{ \App\Services\LanguageService::trans('login_password_reset_link', $lang) }}</a></p>
                 </div>
             @else
-                <div class="auth-buttons" style="margin-bottom: 1rem;">
+                <div class="auth-buttons auth-buttons--compact">
                     <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}?intent=login" class="auth-btn login-btn">
-                        <span class="btn-text">Googleでログイン</span>
+                        <span class="btn-text">{{ \App\Services\LanguageService::trans('login_google_button', $lang) }}</span>
                     </a>
                 </div>
                 @if ($isLocked && $lockExpiry)
@@ -58,7 +58,7 @@
                     @error('password')
                         <span class="error-message">{{ $message }}</span>
                     @enderror
-                    <p style="margin-top: 0.5rem;">
+                    <p class="auth-link-spacing-sm">
                         <a href="{{ route('login.password-reset') }}" class="back-link back-link--inline">{{ \App\Services\LanguageService::trans('login_forgot_password_link', $lang) }}</a>
                     </p>
                 </div>

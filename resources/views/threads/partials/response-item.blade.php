@@ -3,8 +3,10 @@
     $responseUser = $users->get($response->user_id);
     $isMyResponse = $currentUser && $responseUser && $currentUser->user_id === $response->user_id;
     
-    // ユーザー名を取得（削除されたユーザーの場合は「削除されたユーザー」を表示）
-    $username = $responseUser ? $responseUser->username : '削除されたユーザー';
+    // ユーザー名を取得（削除ユーザー時は翻訳テキストを表示）
+    $username = $responseUser
+        ? $responseUser->username
+        : \App\Services\LanguageService::trans('deleted_user', \App\Services\LanguageService::getCurrentLanguage());
     
     // 長過ぎるユーザー名は10文字でトリムして表示
     $baseName = mb_strlen($username) > 10
@@ -47,7 +49,7 @@
         }
         if ($countryCode === 'OTHER') {
             // 「その他」の場合は地球アイコンを表示
-            return '<span class="country-flag-other" title="その他">🌍</span>';
+            return '<span class="country-flag-other" title="' . e(\App\Services\LanguageService::trans('country_other_title', $lang)) . '">🌍</span>';
         }
         // 通常の国旗を表示
         return '<img src="' . $getCountryFlagUrl($countryCode) . '" alt="' . htmlspecialchars($countryCode) . '" class="country-flag-img" onerror="this.style.display=\'none\'">';
@@ -113,7 +115,7 @@
             $parentIsAcknowledged = session('acknowledged_response_' . $response->parentResponse->response_id);
             $canShowParentPreview = !$parentShouldBeHidden || $parentIsAcknowledged;
             $parentResponseUser = $users->get($response->parentResponse->user_id);
-            $parentUsername = $parentResponseUser ? $parentResponseUser->username : '削除されたユーザー';
+            $parentUsername = $parentResponseUser ? $parentResponseUser->username : \App\Services\LanguageService::trans('deleted_user', $lang);
             $parentBaseName = mb_strlen($parentUsername) > 10
                 ? mb_substr($parentUsername, 0, 10) . '…'
                 : $parentUsername;
@@ -141,8 +143,8 @@
                 ? session('acknowledged_response_' . $response->parent_original_response_id)
                 : false;
             $canShowSnapshotPreview = !$parentSnapshotShouldBeHidden || $parentSnapshotIsAcknowledged;
-            $deletedParentUsername = $response->parent_snapshot_username ?? '削除されたユーザー';
-            $deletedParentBody = $response->parent_snapshot_body ?? '（削除されたレスポンス）';
+            $deletedParentUsername = $response->parent_snapshot_username ?? \App\Services\LanguageService::trans('deleted_user', $lang);
+            $deletedParentBody = $response->parent_snapshot_body ?? \App\Services\LanguageService::trans('deleted_response_placeholder', $lang);
         @endphp
         <div class="reply-source reply-source-deleted" aria-disabled="true">
             @if($canShowSnapshotPreview)
@@ -152,7 +154,7 @@
                 <span class="reply-source-user">…</span>
                 <span class="reply-source-body">…</span>
             @endif
-            <span class="reply-source-deleted-label">（削除済み）</span>
+            <span class="reply-source-deleted-label">{{ \App\Services\LanguageService::trans('deleted_label', $lang) }}</span>
         </div>
     @endif
 

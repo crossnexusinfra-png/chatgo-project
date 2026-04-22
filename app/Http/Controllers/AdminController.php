@@ -2054,10 +2054,10 @@ class AdminController extends Controller
     {
         return [
             AdminUserEnforcement::TYPE_RESTRICTION => [
-                'title_ja' => '管理者による利用制限のお知らせ',
+                'title_ja' => '利用制限のお知らせ',
                 'title_en' => 'Administrative Restriction Notice',
-                'body_ja' => "利用規約に関する重大な違反を確認したため、管理者による利用制限を適用しました。\n制限期間中は、通報による制限と同等の投稿制限が適用されます。\n制限終了予定日時: {until}\n理由: {reason}",
-                'body_en' => "Due to a serious violation related to our terms of service, an administrative restriction has been applied.\nDuring this period, posting limits equivalent to report-based restrictions will apply.\nRestriction ends at: {until}\nReason: {reason}",
+                'body_ja' => "利用規約に関する重大な違反を確認したため、利用制限を適用しました。\n制限終了予定日時: {until}\n理由: {reason}",
+                'body_en' => "Due to a serious violation related to our terms of service, a restriction has been applied.\nRestriction ends at: {until}\nReason: {reason}",
             ],
             AdminUserEnforcement::TYPE_TEMPORARY_FREEZE => [
                 'title_ja' => '管理者による一時凍結のお知らせ',

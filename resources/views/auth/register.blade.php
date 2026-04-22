@@ -35,9 +35,9 @@
             @endif
 
             @if(empty($externalRegistration))
-                <div class="auth-buttons" style="margin-bottom: 1rem;">
+                <div class="auth-buttons auth-buttons--compact">
                     <a href="{{ route('auth.provider.redirect', ['provider' => 'google']) }}?intent=register" class="auth-btn login-btn">
-                        <span class="btn-text">Googleで登録</span>
+                        <span class="btn-text">{{ \App\Services\LanguageService::trans('register_google_button', $lang) }}</span>
                     </a>
                 </div>
             @endif
@@ -73,7 +73,7 @@
                     <label for="phone_country">
                         {{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }}
                         @if(!$isExternalRegistration)<span class="required">*</span>@endif
-                        @if($isExternalRegistration)<small>（任意）</small>@endif
+                        @if($isExternalRegistration)<small>{{ \App\Services\LanguageService::trans('register_optional_note', $lang) }}</small>@endif
                     </label>
                     @if($isExternalRegistration)
                         <x-country-select name="phone_country" value="{{ old('phone_country') }}" />
@@ -82,7 +82,7 @@
                     @endif
                     <small class="form-help">
                         {{ \App\Services\LanguageService::trans('register_phone_country_help', $lang) }}
-                        @if($isExternalRegistration) Google登録では未入力でも進めます。 @endif
+                        @if($isExternalRegistration) {{ \App\Services\LanguageService::trans('register_google_optional_phone_note', $lang) }} @endif
                     </small>
                     @error('phone_country')
                         <span class="error-message">{{ $message }}</span>
@@ -93,7 +93,7 @@
                     <label for="phone_local">
                         {{ \App\Services\LanguageService::trans('register_phone_local_label', $lang) }}
                         @if(!$isExternalRegistration)<span class="required">*</span>@endif
-                        @if($isExternalRegistration)<small>（任意）</small>@endif
+                        @if($isExternalRegistration)<small>{{ \App\Services\LanguageService::trans('register_optional_note', $lang) }}</small>@endif
                     </label>
                     <div class="phone-input-container">
                         <span id="country-code-display" class="country-code-display">+81</span>
@@ -239,61 +239,65 @@
         </div>
     </div>
     
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        window.authRegisterConfig = {
-            registering: '{{ \App\Services\LanguageService::trans("registering", $lang) }}',
-            examplePrefix: '{{ \App\Services\LanguageService::trans("example_prefix", $lang) }}',
-            defaultPhoneHelp: '{{ \App\Services\LanguageService::trans("register_phone_local_help", $lang) }}',
-            countryData: {
-                'US': { code: '+1', example: '555-123-4567', helpKey: 'register_phone_help_us' },
-                'CA': { code: '+1', example: '555-123-4567', helpKey: 'register_phone_help_ca' },
-                'GB': { code: '+44', example: '7123-456789', helpKey: 'register_phone_help_gb' },
-                'DE': { code: '+49', example: '151-12345678', helpKey: 'register_phone_help_de' },
-                'FR': { code: '+33', example: '06-12-34-56-78', helpKey: 'register_phone_help_fr' },
-                'NL': { code: '+31', example: '6-12345678', helpKey: 'register_phone_help_nl' },
-                'BE': { code: '+32', example: '470-12-34-56', helpKey: 'register_phone_help_be' },
-                'SE': { code: '+46', example: '70-123-4567', helpKey: 'register_phone_help_se' },
-                'FI': { code: '+358', example: '40-123-4567', helpKey: 'register_phone_help_fi' },
-                'DK': { code: '+45', example: '20-12-34-56', helpKey: 'register_phone_help_dk' },
-                'NO': { code: '+47', example: '412-34567', helpKey: 'register_phone_help_no' },
-                'IS': { code: '+354', example: '612-3456', helpKey: 'register_phone_help_is' },
-                'AT': { code: '+43', example: '664-123456', helpKey: 'register_phone_help_at' },
-                'CH': { code: '+41', example: '76-123-45-67', helpKey: 'register_phone_help_ch' },
-                'IE': { code: '+353', example: '85-123-4567', helpKey: 'register_phone_help_ie' },
-                'JP': { code: '+81', example: '90-1234-5678', helpKey: 'register_phone_help_jp' },
-                'KR': { code: '+82', example: '10-1234-5678', helpKey: 'register_phone_help_kr' },
-                'SG': { code: '+65', example: '8123-4567', helpKey: 'register_phone_help_sg' },
-                'AU': { code: '+61', example: '412-345-678', helpKey: 'register_phone_help_au' },
-                'NZ': { code: '+64', example: '21-123-4567', helpKey: 'register_phone_help_nz' }
-            },
-            helpTexts: {
-                @foreach(['US', 'CA', 'GB', 'DE', 'FR', 'NL', 'BE', 'SE', 'FI', 'DK', 'NO', 'IS', 'AT', 'CH', 'IE', 'JP', 'KR', 'SG', 'AU', 'NZ'] as $countryCode)
-                '{{ $countryCode }}': '{{ \App\Services\LanguageService::trans("register_phone_help_" . strtolower($countryCode), $lang) }}',
-                @endforeach
-            },
-            countryCodeMap: {
-                '+1': 'US',
-                '+44': 'GB',
-                '+49': 'DE',
-                '+33': 'FR',
-                '+31': 'NL',
-                '+32': 'BE',
-                '+46': 'SE',
-                '+358': 'FI',
-                '+45': 'DK',
-                '+47': 'NO',
-                '+354': 'IS',
-                '+43': 'AT',
-                '+41': 'CH',
-                '+353': 'IE',
-                '+81': 'JP',
-                '+82': 'KR',
-                '+65': 'SG',
-                '+61': 'AU',
-                '+64': 'NZ'
-            }
-        };
-    </script>
+    @php
+        $authRegisterCountryData = [
+            'US' => ['code' => '+1', 'example' => '555-123-4567', 'helpKey' => 'register_phone_help_us'],
+            'CA' => ['code' => '+1', 'example' => '555-123-4567', 'helpKey' => 'register_phone_help_ca'],
+            'GB' => ['code' => '+44', 'example' => '7123-456789', 'helpKey' => 'register_phone_help_gb'],
+            'DE' => ['code' => '+49', 'example' => '151-12345678', 'helpKey' => 'register_phone_help_de'],
+            'FR' => ['code' => '+33', 'example' => '06-12-34-56-78', 'helpKey' => 'register_phone_help_fr'],
+            'NL' => ['code' => '+31', 'example' => '6-12345678', 'helpKey' => 'register_phone_help_nl'],
+            'BE' => ['code' => '+32', 'example' => '470-12-34-56', 'helpKey' => 'register_phone_help_be'],
+            'SE' => ['code' => '+46', 'example' => '70-123-4567', 'helpKey' => 'register_phone_help_se'],
+            'FI' => ['code' => '+358', 'example' => '40-123-4567', 'helpKey' => 'register_phone_help_fi'],
+            'DK' => ['code' => '+45', 'example' => '20-12-34-56', 'helpKey' => 'register_phone_help_dk'],
+            'NO' => ['code' => '+47', 'example' => '412-34567', 'helpKey' => 'register_phone_help_no'],
+            'IS' => ['code' => '+354', 'example' => '612-3456', 'helpKey' => 'register_phone_help_is'],
+            'AT' => ['code' => '+43', 'example' => '664-123456', 'helpKey' => 'register_phone_help_at'],
+            'CH' => ['code' => '+41', 'example' => '76-123-45-67', 'helpKey' => 'register_phone_help_ch'],
+            'IE' => ['code' => '+353', 'example' => '85-123-4567', 'helpKey' => 'register_phone_help_ie'],
+            'JP' => ['code' => '+81', 'example' => '90-1234-5678', 'helpKey' => 'register_phone_help_jp'],
+            'KR' => ['code' => '+82', 'example' => '10-1234-5678', 'helpKey' => 'register_phone_help_kr'],
+            'SG' => ['code' => '+65', 'example' => '8123-4567', 'helpKey' => 'register_phone_help_sg'],
+            'AU' => ['code' => '+61', 'example' => '412-345-678', 'helpKey' => 'register_phone_help_au'],
+            'NZ' => ['code' => '+64', 'example' => '21-123-4567', 'helpKey' => 'register_phone_help_nz'],
+        ];
+        $authRegisterCountryCodeMap = [
+            '+1' => 'US',
+            '+44' => 'GB',
+            '+49' => 'DE',
+            '+33' => 'FR',
+            '+31' => 'NL',
+            '+32' => 'BE',
+            '+46' => 'SE',
+            '+358' => 'FI',
+            '+45' => 'DK',
+            '+47' => 'NO',
+            '+354' => 'IS',
+            '+43' => 'AT',
+            '+41' => 'CH',
+            '+353' => 'IE',
+            '+81' => 'JP',
+            '+82' => 'KR',
+            '+65' => 'SG',
+            '+61' => 'AU',
+            '+64' => 'NZ',
+        ];
+        $authRegisterHelpTexts = [];
+        foreach (array_keys($authRegisterCountryData) as $countryCode) {
+            $authRegisterHelpTexts[$countryCode] = \App\Services\LanguageService::trans('register_phone_help_' . strtolower($countryCode), $lang);
+        }
+    @endphp
+    <div
+        id="auth-register-config"
+        data-registering="{{ \App\Services\LanguageService::trans('registering', $lang) }}"
+        data-example-prefix="{{ \App\Services\LanguageService::trans('example_prefix', $lang) }}"
+        data-default-phone-help="{{ \App\Services\LanguageService::trans('register_phone_local_help', $lang) }}"
+        data-country-data="{{ e(json_encode($authRegisterCountryData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-help-texts="{{ e(json_encode($authRegisterHelpTexts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        data-country-code-map="{{ e(json_encode($authRegisterCountryCodeMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
+        hidden
+    ></div>
     <script src="{{ asset('js/auth-register.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 </body>
 </html>

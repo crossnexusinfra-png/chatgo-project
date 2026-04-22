@@ -1982,6 +1982,10 @@ form.form-submitting input[readonly] {
     margin-bottom: 30px;
 }
 
+.auth-buttons--compact {
+    margin-bottom: 1rem;
+}
+
 .auth-btn {
     display: flex;
     align-items: center;
@@ -2124,6 +2128,18 @@ form.form-submitting input[readonly] {
 .back-link.back-link--inline:hover {
     color: #667eea;
     text-decoration: underline;
+}
+
+.auth-link-spacing-sm {
+    margin-top: 0.5rem;
+}
+
+.auth-link-spacing-md {
+    margin-top: 1rem;
+}
+
+.auth-alert-top-spacing {
+    margin-top: 1rem;
 }
 
 .auth-inline-form-footer {

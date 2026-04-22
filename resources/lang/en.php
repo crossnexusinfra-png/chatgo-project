@@ -156,6 +156,9 @@ return [
     'created_at_label' => 'Created',
     'anonymous' => 'Anonymous',
     'unknown' => 'Unknown',
+    'deleted_user' => 'Deleted user',
+    'deleted_response_placeholder' => '(Deleted response)',
+    'deleted_label' => '(Deleted)',
     
     // Favorites & Recent Access
     'favorite_threads' => 'Favorite Rooms',
@@ -545,6 +548,9 @@ return [
     'register_submit' => 'Confirm Registration',
     'register_already_account' => 'Already have an account?',
     'register_back_to_terms' => '← Back to Terms',
+    'register_google_button' => 'Register with Google',
+    'register_optional_note' => '(Optional)',
+    'register_google_optional_phone_note' => 'With Google registration, you can continue without entering this field.',
     
     // Country Names
     'country_japan' => 'Japan',
@@ -644,6 +650,7 @@ return [
     'login_locked' => 'Login is temporarily locked until :time.',
     'login_captcha_notice' => 'Multiple failed attempts detected. You can reset your password using the link below.',
     'login_password_reset_link' => 'Reset password',
+    'login_google_button' => 'Login with Google',
     'login_reset_title' => 'Password Reset',
     'login_reset_enter_phone_email' => 'Enter your registered phone number and email address. After verification, you can change your password.',
     'login_reset_verify_sms_email' => 'Enter the verification codes sent by SMS and email.',

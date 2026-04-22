@@ -19,13 +19,13 @@
                 <p>{{ \App\Services\LanguageService::trans('auth_choice_subtitle', $lang) }}</p>
 
                 @if(session('success'))
-                    <div class="alert alert-success" style="margin-top: 1rem;">
+                    <div class="alert alert-success auth-alert-top-spacing">
                         {{ session('success') }}
                     </div>
                 @endif
 
                 @if(session('error'))
-                    <div class="alert alert-warning" style="margin-top: 1rem;">
+                    <div class="alert alert-warning auth-alert-top-spacing">
                         {{ session('error') }}
                     </div>
                 @endif

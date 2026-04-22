@@ -259,7 +259,7 @@
                                     @endphp
                                     @php
                                         $threadAuthorUser = $thread->user;
-                                        $threadAuthor = $threadAuthorUser ? $threadAuthorUser->username : '削除されたユーザー';
+                                        $threadAuthor = $threadAuthorUser ? $threadAuthorUser->username : \App\Services\LanguageService::trans('deleted_user', $lang);
                                         $threadAuthorDisplay = $threadAuthor;
                                         if ($threadAuthorUser) {
                                             // 長いユーザー名の場合は10文字に切り詰める

@@ -73,16 +73,14 @@
         </div>
     </div>
     
-    <script nonce="{{ $csp_nonce ?? '' }}">
-        window.authProfileEmailVerificationConfig = {
-            timeLeft: 600,
-            resendTimeLeft: 60,
-            translations: {
-                expiredAlert: '{{ \App\Services\LanguageService::trans('verification_code_expired_alert', $lang) }}',
-                resendButton: '{{ \App\Services\LanguageService::trans('resend_verification_code_button', $lang) }}'
-            }
-        };
-    </script>
+    <div
+        id="auth-profile-email-verification-config"
+        data-time-left="600"
+        data-resend-time-left="60"
+        data-expired-alert="{{ \App\Services\LanguageService::trans('verification_code_expired_alert', $lang) }}"
+        data-resend-button="{{ \App\Services\LanguageService::trans('resend_verification_code_button', $lang) }}"
+        hidden
+    ></div>
     <script src="{{ asset('js/auth-profile-email-verification.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 </body>
 </html>

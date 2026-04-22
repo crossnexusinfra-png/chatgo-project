@@ -62,7 +62,7 @@
                         @if($phoneIsRequired)
                             <span class="required">*</span>
                         @else
-                            <small>（任意）</small>
+                            <small>{{ \App\Services\LanguageService::trans('register_optional_note', $lang) }}</small>
                         @endif
                     </label>
                     <input type="tel" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" {{ $phoneIsRequired ? 'required' : '' }}>

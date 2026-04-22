@@ -45,21 +45,6 @@
             </div>
         </div>
     </div>
-    <script nonce="{{ $csp_nonce ?? '' }}">
-    (function() {
-        var sel = document.getElementById('phone_country');
-        var disp = document.getElementById('country-code-display');
-        function sync() {
-            if (!sel || !disp) return;
-            var opt = sel.options[sel.selectedIndex];
-            var code = opt && opt.getAttribute('data-country-code');
-            disp.textContent = code || '+81';
-        }
-        if (sel) {
-            sel.addEventListener('change', sync);
-            document.addEventListener('DOMContentLoaded', sync);
-        }
-    })();
-    </script>
+    <script src="{{ asset('js/auth-password-reset-phone.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 </body>
 </html>

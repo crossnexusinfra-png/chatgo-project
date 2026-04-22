@@ -4,13 +4,23 @@
 (function() {
     'use strict';
 
-    const config = window.authRegisterConfig || {};
-    const countryData = config.countryData || {};
-    const registeringText = config.registering || '登録中';
-    const helpTexts = config.helpTexts || {};
-    const countryCodeMap = config.countryCodeMap || {};
-    const examplePrefix = config.examplePrefix || '例:';
-    const defaultPhoneHelp = config.defaultPhoneHelp || '';
+    const configElement = document.getElementById('auth-register-config');
+    const parseJsonDataset = function(value, fallback) {
+        if (!value) {
+            return fallback;
+        }
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            return fallback;
+        }
+    };
+    const countryData = parseJsonDataset(configElement ? configElement.dataset.countryData : '', {});
+    const registeringText = configElement ? (configElement.dataset.registering || '登録中') : '登録中';
+    const helpTexts = parseJsonDataset(configElement ? configElement.dataset.helpTexts : '', {});
+    const countryCodeMap = parseJsonDataset(configElement ? configElement.dataset.countryCodeMap : '', {});
+    const examplePrefix = configElement ? (configElement.dataset.examplePrefix || '例:') : '例:';
+    const defaultPhoneHelp = configElement ? (configElement.dataset.defaultPhoneHelp || '') : '';
 
     const countrySelect = document.getElementById('phone_country');
     const phoneLocalInput = document.getElementById('phone_local');

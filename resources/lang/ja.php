@@ -156,6 +156,9 @@ return [
     'created_at_label' => '作成日時',
     'anonymous' => '匿名',
     'unknown' => '不明',
+    'deleted_user' => '削除されたユーザー',
+    'deleted_response_placeholder' => '（削除されたレスポンス）',
+    'deleted_label' => '（削除済み）',
     
     // お気に入り・最近アクセス
     'favorite_threads' => 'お気に入りのルーム',
@@ -539,6 +542,9 @@ return [
     'register_submit' => '登録情報を確認',
     'register_already_account' => 'すでにアカウントをお持ちの方は',
     'register_back_to_terms' => '← 利用規約に戻る',
+    'register_google_button' => 'Googleで登録',
+    'register_optional_note' => '（任意）',
+    'register_google_optional_phone_note' => 'Google登録では未入力でも進めます。',
     
     // 国名
     'country_japan' => '日本',
@@ -638,6 +644,7 @@ return [
     'login_locked' => 'ログインは :time まで一時的に制限されています。',
     'login_captcha_notice' => '複数回の失敗が検知されました。下記のリンクからパスワードを初期化できます。',
     'login_password_reset_link' => 'パスワードを初期化する',
+    'login_google_button' => 'Googleでログイン',
     'login_reset_title' => 'パスワード初期化',
     'login_reset_enter_phone_email' => '登録済みの電話番号とメールアドレスを入力してください。認証後、パスワードを変更できます。',
     'login_reset_verify_sms_email' => 'SMSとメールで送信された認証コードを入力してください。',

@@ -61,7 +61,7 @@
                 <div class="meta-item">
                     @php
                         $threadUser = $users->get($thread->user_id);
-                        $threadUsername = $threadUser ? $threadUser->username : '削除されたユーザー';
+                        $threadUsername = $threadUser ? $threadUser->username : \App\Services\LanguageService::trans('deleted_user', $lang);
                         $threadDisplayUserName = $threadUsername;
                         if ($threadUser && $threadUser->user_identifier) {
                             $threadDisplayUserName = $threadUsername . '@' . $threadUser->user_identifier;

@@ -4,12 +4,17 @@
 (function() {
     'use strict';
 
-    const config = window.authProfileSmsVerificationConfig || {};
-    const translations = config.translations || {};
+    const configElement = document.getElementById('auth-profile-sms-verification-config');
+    const translations = {
+        expiredAlert: configElement ? (configElement.dataset.expiredAlert || '') : '',
+        resendButton: configElement ? (configElement.dataset.resendButton || '') : ''
+    };
+    const timeLeft = configElement ? Number(configElement.dataset.timeLeft || 300) : 300;
+    const resendTimeLeft = configElement ? Number(configElement.dataset.resendTimeLeft || 60) : 60;
 
     window.initAuthTimer({
-        timeLeft: config.timeLeft || 300, // 5分
-        resendTimeLeft: config.resendTimeLeft || 60, // 1分
+        timeLeft: timeLeft, // 5分
+        resendTimeLeft: resendTimeLeft, // 1分
         timerElementId: 'timer',
         resendTimerElementId: 'resendTimer',
         resendBtnId: 'resendBtn',

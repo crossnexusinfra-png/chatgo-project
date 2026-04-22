@@ -160,7 +160,7 @@
             @endphp
             @php
                 $threadAuthorUser = $thread->user;
-                $threadAuthor = $threadAuthorUser ? $threadAuthorUser->username : '削除されたユーザー';
+                $threadAuthor = $threadAuthorUser ? $threadAuthorUser->username : \App\Services\LanguageService::trans('deleted_user', $lang);
                 $threadAuthorDisplay = $threadAuthor;
                 if ($threadAuthorUser) {
                     $trimmedAuthor = mb_strlen($threadAuthor) > 10 ? mb_substr($threadAuthor, 0, 10) . '…' : $threadAuthor;
