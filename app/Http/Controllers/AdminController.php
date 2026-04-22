@@ -8,6 +8,7 @@ use App\Models\Suggestion;
 use App\Models\Thread;
 use App\Models\Response;
 use App\Models\User;
+use App\Models\AdminUserEnforcement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -728,6 +729,133 @@ class AdminController extends Controller
             'newFreezeAppeals' => $newFreezeAppeals,
             'lang' => $lang,
         ]);
+    }
+
+    /**
+     * 管理者手動制限・凍結（通報由来とは完全に分離）
+     */
+    public function userEnforcements()
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $enforcements = AdminUserEnforcement::query()
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        $lang = $this->getAdminLanguage();
+
+        return view('admin.user-enforcements', [
+            'enforcements' => $enforcements,
+            'lang' => $lang,
+        ]);
+    }
+
+    public function userEnforcementsStore(Request $request)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $lang = $this->getAdminLanguage();
+        $validated = $request->validate([
+            'target_user' => 'required|string|max:255',
+            'enforcement_type' => 'required|in:warning,temporary_freeze,permanent_freeze',
+            'duration_hours' => 'nullable|integer|min:1|max:8760',
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $targetToken = trim((string) $validated['target_user']);
+        $targetUser = User::query()
+            ->where('user_identifier', $targetToken)
+            ->when(ctype_digit($targetToken), function ($q) use ($targetToken) {
+                $q->orWhere('user_id', (int) $targetToken);
+            })
+            ->first();
+
+        if (!$targetUser) {
+            return back()->withErrors([
+                'target_user' => \App\Services\LanguageService::trans('admin_user_enforcement_target_not_found', $lang),
+            ])->withInput();
+        }
+
+        $type = (string) $validated['enforcement_type'];
+        $reason = trim((string) ($validated['reason'] ?? ''));
+        $expiresAt = null;
+
+        if ($type === AdminUserEnforcement::TYPE_TEMPORARY_FREEZE) {
+            $hours = (int) ($validated['duration_hours'] ?? 0);
+            if ($hours <= 0) {
+                return back()->withErrors([
+                    'duration_hours' => \App\Services\LanguageService::trans('admin_user_enforcement_duration_required', $lang),
+                ])->withInput();
+            }
+            $expiresAt = now()->addHours($hours);
+        }
+
+        DB::transaction(function () use ($targetUser, $type, $reason, $expiresAt) {
+            if (in_array($type, [AdminUserEnforcement::TYPE_TEMPORARY_FREEZE, AdminUserEnforcement::TYPE_PERMANENT_FREEZE], true)) {
+                AdminUserEnforcement::query()
+                    ->where('user_id', $targetUser->user_id)
+                    ->activeBlocking()
+                    ->update(['released_at' => now()]);
+            }
+
+            AdminUserEnforcement::create([
+                'user_id' => $targetUser->user_id,
+                'enforcement_type' => $type,
+                'reason' => ($reason !== '') ? $reason : null,
+                'started_at' => now(),
+                'expires_at' => $expiresAt,
+            ]);
+        });
+
+        if ($type === AdminUserEnforcement::TYPE_WARNING) {
+            $this->sendManualWarningNotice($targetUser, $reason);
+        } elseif ($type === AdminUserEnforcement::TYPE_PERMANENT_FREEZE) {
+            $this->sendManualPermanentFreezeNotice($targetUser, $reason);
+        } else {
+            $this->sendManualTemporaryFreezeNotice($targetUser, $expiresAt, $reason);
+        }
+
+        return redirect()
+            ->route('admin.user-enforcements')
+            ->with('success', \App\Services\LanguageService::trans('admin_user_enforcement_saved', $lang));
+    }
+
+    public function userEnforcementsRelease(AdminUserEnforcement $enforcement)
+    {
+        $user = Auth::user();
+        if ($user) {
+            $policy = new AdminPolicy();
+            if (!$policy->manageReports($user)) {
+                abort(403, 'この操作を実行する権限がありません');
+            }
+        }
+
+        $lang = $this->getAdminLanguage();
+
+        if ($enforcement->released_at) {
+            return back();
+        }
+
+        $enforcement->released_at = now();
+        $enforcement->save();
+
+        return redirect()
+            ->route('admin.user-enforcements')
+            ->with('success', \App\Services\LanguageService::trans('admin_user_enforcement_released', $lang));
     }
 
     // 詳細ページ（スレッド単位）
@@ -1908,6 +2036,73 @@ class AdminController extends Controller
             'body' => $bodyJa,
             'audience' => 'members',
             'user_id' => $userId,
+            'published_at' => now(),
+            'allows_reply' => false,
+            'reply_used' => false,
+            'is_auto_sent' => true,
+        ]);
+    }
+
+    private function sendManualWarningNotice(User $user, string $reason = ''): void
+    {
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $base = $isEn
+            ? "A manual administrative restriction has been applied to your account.\nPlease ensure future use complies with our terms of service."
+            : "あなたのアカウントに対し、管理者による手動制限を適用しました。\n今後は利用規約を遵守したご利用をお願いします。";
+        if ($reason !== '') {
+            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
+        }
+
+        AdminMessage::create([
+            'title' => $isEn ? 'Administrative Restriction Notice' : '管理者制限のお知らせ',
+            'body' => $base,
+            'audience' => 'members',
+            'user_id' => $user->user_id,
+            'published_at' => now(),
+            'allows_reply' => false,
+            'reply_used' => false,
+            'is_auto_sent' => true,
+        ]);
+    }
+
+    private function sendManualTemporaryFreezeNotice(User $user, ?\Carbon\Carbon $until, string $reason = ''): void
+    {
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $untilText = $until ? $until->format($isEn ? 'Y-m-d H:i' : 'Y年m月d日 H:i') : '-';
+        $base = $isEn
+            ? "Your account has been manually suspended by an administrator.\n\nSuspension ends at: {$untilText}\n\nDuring the suspension period, actions other than browsing are restricted."
+            : "あなたのアカウントは管理者により手動で凍結されました。\n\n凍結解除予定日時: {$untilText}\n\n凍結期間中は閲覧以外の操作が制限されます。";
+        if ($reason !== '') {
+            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
+        }
+
+        AdminMessage::create([
+            'title' => $isEn ? 'Manual Account Suspension' : '手動アカウント凍結のお知らせ',
+            'body' => $base,
+            'audience' => 'members',
+            'user_id' => $user->user_id,
+            'published_at' => now(),
+            'allows_reply' => false,
+            'reply_used' => false,
+            'is_auto_sent' => true,
+        ]);
+    }
+
+    private function sendManualPermanentFreezeNotice(User $user, string $reason = ''): void
+    {
+        $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $base = $isEn
+            ? "Your account has been manually permanently suspended by an administrator.\nYou can view content, but actions other than browsing are restricted."
+            : "あなたのアカウントは管理者により手動で永久凍結されました。\n閲覧はできますが、閲覧以外の操作は制限されます。";
+        if ($reason !== '') {
+            $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
+        }
+
+        AdminMessage::create([
+            'title' => $isEn ? 'Manual Permanent Suspension' : '手動永久凍結のお知らせ',
+            'body' => $base,
+            'audience' => 'members',
+            'user_id' => $user->user_id,
             'published_at' => now(),
             'allows_reply' => false,
             'reply_used' => false,

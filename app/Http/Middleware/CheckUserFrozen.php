@@ -43,6 +43,9 @@ class CheckUserFrozen
         $user = Auth::user();
         // セッション上のモデルが古い場合があるため DB の最新状態で凍結を判定する
         $user->refresh();
+        $manualBlocking = $user->activeBlockingAdminEnforcement();
+        $manualPermanent = $manualBlocking && $manualBlocking->enforcement_type === \App\Models\AdminUserEnforcement::TYPE_PERMANENT_FREEZE;
+        $manualTemporary = $manualBlocking && $manualBlocking->enforcement_type === \App\Models\AdminUserEnforcement::TYPE_TEMPORARY_FREEZE;
 
         // アウト数の時効（表示・凍結判定の整合用）
         // 毎リクエスト更新は重いため、一定間隔で1回のみ実行する
@@ -56,7 +59,13 @@ class CheckUserFrozen
 
         if ($user->isFrozen()) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
-            if ($user->is_permanently_banned) {
+            if ($manualPermanent) {
+                $uiMessage = \App\Services\LanguageService::trans('user_manually_permanently_banned_message', $lang);
+            } elseif ($manualTemporary && $manualBlocking->expires_at) {
+                $uiMessage = \App\Services\LanguageService::trans('user_manually_temporarily_frozen_message', $lang, [
+                    'until' => $manualBlocking->expires_at->format('Y-m-d H:i'),
+                ]);
+            } elseif ($user->is_permanently_banned) {
                 $uiMessage = \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
             } elseif ($user->frozen_until && $user->frozen_until->isFuture()) {
                 $uiMessage = \App\Services\LanguageService::trans('user_temporarily_frozen_message', $lang, [
@@ -65,13 +74,16 @@ class CheckUserFrozen
             } else {
                 $uiMessage = \App\Services\LanguageService::trans('user_frozen_message', $lang);
             }
-            if (!$user->freeze_period_started_at) {
+            if (!$manualBlocking && !$user->freeze_period_started_at) {
                 $user->freeze_period_started_at = now();
                 $user->save();
             }
-            $canSubmitAppeal = !FreezeAppeal::where('user_id', $user->user_id)
-                ->where('freeze_period_started_at', $user->freeze_period_started_at)
-                ->exists();
+            $canSubmitAppeal = false;
+            if (!$manualBlocking && $user->freeze_period_started_at) {
+                $canSubmitAppeal = !FreezeAppeal::where('user_id', $user->user_id)
+                    ->where('freeze_period_started_at', $user->freeze_period_started_at)
+                    ->exists();
+            }
             View::share([
                 'viewerAccountFrozen' => true,
                 'viewerFrozenUiMessage' => $uiMessage,
@@ -83,7 +95,7 @@ class CheckUserFrozen
         if ($user->isFrozen()) {
             $routeName = $request->route()?->getName();
             // 永久凍結の場合、閲覧は許可しつつ、ログアウト以外の非GET操作を禁止
-            if ($user->is_permanently_banned) {
+            if ($manualPermanent || $user->is_permanently_banned) {
                 $allowedNonGetRoutes = [
                     'logout',
                     // 閲覧専用の継続のため、警告/R18確認の了承は許可
@@ -99,14 +111,16 @@ class CheckUserFrozen
                 $isAllowedNonGet = in_array($routeName, $allowedNonGetRoutes, true) || $request->is('logout');
                 if (!$request->isMethod('GET') && !$isAllowedNonGet) {
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
-                    $message = \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
+                    $message = $manualPermanent
+                        ? \App\Services\LanguageService::trans('user_manually_permanently_banned_message', $lang)
+                        : \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
 
                     return back()->withErrors(['frozen' => $message]);
                 }
             } else {
                 // 一時凍結の場合
                 // 凍結期間が過ぎている場合は解除
-                if ($user->frozen_until && $user->frozen_until->isPast()) {
+                if (!$manualBlocking && $user->frozen_until && $user->frozen_until->isPast()) {
                     $user->frozen_until = null;
                     $user->freeze_period_started_at = null;
                     $user->save();
@@ -137,9 +151,15 @@ class CheckUserFrozen
                     // 許可されたルート以外は拒否
                     if (!$request->isMethod('GET') && !in_array($routeName, $allowedNonGetRoutes, true)) {
                         $lang = \App\Services\LanguageService::getCurrentLanguage();
-                        $message = \App\Services\LanguageService::trans('user_temporarily_frozen_message', $lang, [
-                            'until' => $user->frozen_until->format('Y-m-d H:i')
-                        ]);
+                        if ($manualTemporary && $manualBlocking->expires_at) {
+                            $message = \App\Services\LanguageService::trans('user_manually_temporarily_frozen_message', $lang, [
+                                'until' => $manualBlocking->expires_at->format('Y-m-d H:i'),
+                            ]);
+                        } else {
+                            $message = \App\Services\LanguageService::trans('user_temporarily_frozen_message', $lang, [
+                                'until' => $user->frozen_until?->format('Y-m-d H:i') ?? '',
+                            ]);
+                        }
 
                         return back()->withErrors(['frozen' => $message]);
                     }

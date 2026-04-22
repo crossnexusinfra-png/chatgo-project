@@ -40,6 +40,7 @@
                     <span class="admin-new-badge">NEW {{ $newFreezeAppeals }}</span>
                 @endif
             </li>
+            <li><a href="{{ route('admin.user-enforcements') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_user_enforcements', $lang) }}</a></li>
             <li><a href="{{ route('admin.messages') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_messages', $lang) }}</a></li>
             <li><a href="{{ route('admin.logs') }}" class="admin-link">{{ \App\Services\LanguageService::trans('admin_index_logs', $lang) }}</a></li>
         </ul>

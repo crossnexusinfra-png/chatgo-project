@@ -292,6 +292,26 @@ class User extends Authenticatable
     }
 
     /**
+     * 管理者が手動で付与した制限・凍結履歴
+     */
+    public function adminEnforcements()
+    {
+        return $this->hasMany(AdminUserEnforcement::class, 'user_id', 'user_id');
+    }
+
+    /**
+     * 現在有効な管理者手動凍結（通報由来とは別枠）
+     */
+    public function activeBlockingAdminEnforcement(): ?AdminUserEnforcement
+    {
+        return AdminUserEnforcement::query()
+            ->where('user_id', $this->user_id)
+            ->activeBlocking()
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
      * 現在のアウト数を計算（1年以内の承認済み通報のアウト数の合計）
      * 
      * @return float
@@ -358,6 +378,10 @@ class User extends Authenticatable
      */
     public function isFrozen(): bool
     {
+        if ($this->activeBlockingAdminEnforcement()) {
+            return true;
+        }
+
         // 永久凍結の場合
         if ($this->is_permanently_banned) {
             return true;
@@ -377,6 +401,19 @@ class User extends Authenticatable
     public function frozenPostDeniedMessage(?string $lang = null): string
     {
         $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+        $manual = $this->activeBlockingAdminEnforcement();
+        if ($manual) {
+            if ($manual->enforcement_type === AdminUserEnforcement::TYPE_PERMANENT_FREEZE) {
+                return \App\Services\LanguageService::trans('user_manually_permanently_banned_message', $lang);
+            }
+            if ($manual->enforcement_type === AdminUserEnforcement::TYPE_TEMPORARY_FREEZE && $manual->expires_at) {
+                return \App\Services\LanguageService::trans('user_manually_temporarily_frozen_message', $lang, [
+                    'until' => $manual->expires_at->format('Y-m-d H:i'),
+                ]);
+            }
+            return \App\Services\LanguageService::trans('user_manually_frozen_message', $lang);
+        }
+
         if ($this->is_permanently_banned) {
             return \App\Services\LanguageService::trans('user_permanently_banned_message', $lang);
         }

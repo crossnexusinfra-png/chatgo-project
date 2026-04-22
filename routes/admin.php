@@ -49,6 +49,9 @@ Route::middleware(['web', 'admin.basic', 'admin.visit'])
         Route::post('/freeze-appeals/{freezeAppeal}/approve', [AdminController::class, 'approveFreezeAppeal'])->name('freeze-appeals.approve');
         Route::post('/freeze-appeals/{freezeAppeal}/reject', [AdminController::class, 'rejectFreezeAppeal'])->name('freeze-appeals.reject');
         Route::get('/freeze-appeals/user/{userId}/report-history', [AdminController::class, 'freezeAppealUserReportHistory'])->name('freeze-appeals.user-reports');
+        Route::get('/user-enforcements', [AdminController::class, 'userEnforcements'])->name('user-enforcements');
+        Route::post('/user-enforcements', [AdminController::class, 'userEnforcementsStore'])->name('user-enforcements.store');
+        Route::post('/user-enforcements/{enforcement}/release', [AdminController::class, 'userEnforcementsRelease'])->name('user-enforcements.release');
 
         // ログ管理
         Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
