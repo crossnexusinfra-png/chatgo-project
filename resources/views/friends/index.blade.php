@@ -77,7 +77,7 @@
                 <button
                     type="button"
                     class="btn btn-primary js-copy-invite-code"
-                    data-copied-label="{{ \App\Services\LanguageService::trans('invite_code_copied', $lang) }}"
+                    data-copied-label="{{ \App\Services\LanguageService::trans('copied', $lang) }}"
                 >{{ \App\Services\LanguageService::trans('copy', $lang) }}</button>
             </div>
             <p class="invite-code-help">{{ \App\Services\LanguageService::trans('invite_code_help', $lang) }}</p>
