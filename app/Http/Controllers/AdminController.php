@@ -282,6 +282,7 @@ class AdminController extends Controller
             })
             ->values();
 
+        $editableTemplates = collect();
         if (Schema::hasTable('admin_message_templates')) {
             $dbTemplates = AdminMessageTemplate::query()
                 ->orderByDesc('created_at')
@@ -299,6 +300,9 @@ class AdminController extends Controller
                     ];
                 })
                 ->values();
+            $editableTemplates = AdminMessageTemplate::query()
+                ->orderByDesc('created_at')
+                ->get();
             $templates = $dbTemplates->concat($templates)->values();
         }
 
@@ -308,7 +312,7 @@ class AdminController extends Controller
             $welcomeMessage = AdminMessage::where('is_welcome', true)->whereNull('published_at')->first();
         }
 
-        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage', 'templates'));
+        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage', 'templates', 'editableTemplates'));
     }
 
     /** 過去のお知らせ一覧（10件ずつページング） */
@@ -433,6 +437,52 @@ class AdminController extends Controller
         return redirect()
             ->route('admin.messages')
             ->with('success', \App\Services\LanguageService::trans('admin_messages_template_created', $lang));
+    }
+
+    /** お知らせテンプレートを更新 */
+    public function messagesTemplateUpdate(AdminMessageTemplate $template)
+    {
+        $lang = $this->getAdminLanguage();
+        if (!Schema::hasTable('admin_message_templates')) {
+            return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
+        }
+
+        request()->validate([
+            'template_name' => 'required|string|max:255',
+            'template_title_ja' => 'nullable|string|max:255',
+            'template_title_en' => 'nullable|string|max:255',
+            'template_body_ja' => 'required|string|max:10000',
+            'template_body_en' => 'nullable|string|max:10000',
+            'template_coin_amount' => 'nullable|integer|min:0',
+        ]);
+
+        $template->update([
+            'name' => request('template_name'),
+            'title_ja' => request('template_title_ja'),
+            'title_en' => request('template_title_en'),
+            'body_ja' => request('template_body_ja'),
+            'body_en' => request('template_body_en'),
+            'coin_amount' => request()->filled('template_coin_amount') ? (int) request('template_coin_amount') : null,
+        ]);
+
+        return redirect()
+            ->route('admin.messages')
+            ->with('success', \App\Services\LanguageService::trans('admin_messages_template_updated', $lang));
+    }
+
+    /** お知らせテンプレートを削除 */
+    public function messagesTemplateDelete(AdminMessageTemplate $template)
+    {
+        $lang = $this->getAdminLanguage();
+        if (!Schema::hasTable('admin_message_templates')) {
+            return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
+        }
+
+        $template->delete();
+
+        return redirect()
+            ->route('admin.messages')
+            ->with('success', \App\Services\LanguageService::trans('admin_messages_template_deleted', $lang));
     }
 
     /** 初回登録時お知らせテンプレートを設定 */

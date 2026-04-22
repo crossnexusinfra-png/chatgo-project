@@ -362,6 +362,27 @@
     display: block;
 }
 
+.admin-template-divider {
+    margin: 18px 0;
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-template-edit-form {
+    margin: 12px 0 16px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.admin-template-edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
 .admin-messages-reply-limit-section {
     display: none;
     margin-left: 20px;

@@ -112,6 +112,34 @@
                     <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
                 </div>
             </form>
+            @if(($editableTemplates ?? collect())->isNotEmpty())
+                <hr class="admin-template-divider">
+                <h3 class="admin-messages-section-title">{{ \App\Services\LanguageService::trans('admin_messages_template_edit_list_title', $lang) }}</h3>
+                @foreach($editableTemplates as $template)
+                    <form method="post" action="{{ route('admin.messages.templates.update', $template) }}" class="admin-template-edit-form">
+                        @csrf
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_template_name', $lang) }}</label>
+                        <input type="text" name="template_name" value="{{ $template->name }}" required maxlength="255">
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（日本語）</label>
+                        <input type="text" name="template_title_ja" value="{{ $template->title_ja }}" maxlength="255">
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（英語）</label>
+                        <input type="text" name="template_title_en" value="{{ $template->title_en }}" maxlength="255">
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（日本語）</label>
+                        <textarea name="template_body_ja" rows="3" required>{{ $template->body_ja }}</textarea>
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（英語）</label>
+                        <textarea name="template_body_en" rows="3">{{ $template->body_en }}</textarea>
+                        <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
+                        <input type="number" name="template_coin_amount" min="0" value="{{ $template->coin_amount }}">
+                        <div class="admin-template-edit-actions">
+                            <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang) }}</button>
+                        </div>
+                    </form>
+                            <form method="post" action="{{ route('admin.messages.templates.delete', $template) }}" onsubmit="return confirm('{{ \App\Services\LanguageService::trans('admin_messages_template_delete_confirm', $lang) }}');">
+                                @csrf
+                                <button type="submit" class="admin-messages-cancel-button">{{ \App\Services\LanguageService::trans('admin_messages_template_delete_submit', $lang) }}</button>
+                            </form>
+                @endforeach
+            @endif
         </div>
     </div>
 

@@ -93,10 +93,15 @@ class AdminMessage extends Model
     {
         $keys = self::AUTO_SENT_TITLE_KEYS;
 
-        return $query->whereNot(function (Builder $auto) use ($keys) {
-            $auto->where('is_auto_sent', true)
-                ->orWhereIn('title_key', $keys);
-        });
+        return $query
+            ->where(function (Builder $q) {
+                $q->whereNull('is_auto_sent')
+                    ->orWhere('is_auto_sent', false);
+            })
+            ->where(function (Builder $q) use ($keys) {
+                $q->whereNull('title_key')
+                    ->orWhereNotIn('title_key', $keys);
+            });
     }
 
     /**
