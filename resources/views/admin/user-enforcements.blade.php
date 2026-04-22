@@ -28,7 +28,7 @@
 
             <label>{{ \App\Services\LanguageService::trans('admin_user_enforcement_type', $lang) }}</label>
             <select name="enforcement_type" id="enforcement_type_select" required>
-                <option value="warning" {{ old('enforcement_type') === 'warning' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_user_enforcement_type_warning', $lang) }}</option>
+                <option value="restriction" {{ old('enforcement_type') === 'restriction' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_user_enforcement_type_restriction', $lang) }}</option>
                 <option value="temporary_freeze" {{ old('enforcement_type') === 'temporary_freeze' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_user_enforcement_type_temp', $lang) }}</option>
                 <option value="permanent_freeze" {{ old('enforcement_type') === 'permanent_freeze' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('admin_user_enforcement_type_permanent', $lang) }}</option>
             </select>
@@ -69,8 +69,8 @@
                     </div>
                 </td>
                 <td>
-                    @if($e->enforcement_type === 'warning')
-                        {{ \App\Services\LanguageService::trans('admin_user_enforcement_type_warning', $lang) }}
+                    @if($e->enforcement_type === 'restriction')
+                        {{ \App\Services\LanguageService::trans('admin_user_enforcement_type_restriction', $lang) }}
                     @elseif($e->enforcement_type === 'temporary_freeze')
                         {{ \App\Services\LanguageService::trans('admin_user_enforcement_type_temp', $lang) }}
                     @else
@@ -90,7 +90,7 @@
                     @endif
                 </td>
                 <td>
-                    @if(!$e->released_at && in_array($e->enforcement_type, ['temporary_freeze', 'permanent_freeze'], true))
+                    @if(!$e->released_at && in_array($e->enforcement_type, ['restriction', 'temporary_freeze', 'permanent_freeze'], true))
                         <form method="post" action="{{ route('admin.user-enforcements.release', $e->id) }}" class="admin-form-inline">
                             @csrf
                             <button type="submit">{{ \App\Services\LanguageService::trans('admin_user_enforcement_release', $lang) }}</button>
@@ -129,7 +129,7 @@
         const durationWrap = document.getElementById('duration_hours_wrap');
         function sync() {
             if (!typeEl || !durationWrap) return;
-            durationWrap.style.display = typeEl.value === 'temporary_freeze' ? 'block' : 'none';
+            durationWrap.style.display = (typeEl.value === 'restriction' || typeEl.value === 'temporary_freeze') ? 'block' : 'none';
         }
         if (typeEl) {
             typeEl.addEventListener('change', sync);

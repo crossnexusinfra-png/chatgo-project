@@ -771,7 +771,7 @@ class AdminController extends Controller
         $lang = $this->getAdminLanguage();
         $validated = $request->validate([
             'target_user' => 'required|string|max:255',
-            'enforcement_type' => 'required|in:warning,temporary_freeze,permanent_freeze',
+            'enforcement_type' => 'required|in:restriction,temporary_freeze,permanent_freeze',
             'duration_hours' => 'nullable|integer|min:1|max:8760',
             'reason' => 'nullable|string|max:1000',
         ]);
@@ -794,7 +794,7 @@ class AdminController extends Controller
         $reason = trim((string) ($validated['reason'] ?? ''));
         $expiresAt = null;
 
-        if ($type === AdminUserEnforcement::TYPE_TEMPORARY_FREEZE) {
+        if (in_array($type, [AdminUserEnforcement::TYPE_RESTRICTION, AdminUserEnforcement::TYPE_TEMPORARY_FREEZE], true)) {
             $hours = (int) ($validated['duration_hours'] ?? 0);
             if ($hours <= 0) {
                 return back()->withErrors([
@@ -821,8 +821,8 @@ class AdminController extends Controller
             ]);
         });
 
-        if ($type === AdminUserEnforcement::TYPE_WARNING) {
-            $this->sendManualWarningNotice($targetUser, $reason);
+        if ($type === AdminUserEnforcement::TYPE_RESTRICTION) {
+            $this->sendManualRestrictionNotice($targetUser, $expiresAt, $reason);
         } elseif ($type === AdminUserEnforcement::TYPE_PERMANENT_FREEZE) {
             $this->sendManualPermanentFreezeNotice($targetUser, $reason);
         } else {
@@ -2043,12 +2043,13 @@ class AdminController extends Controller
         ]);
     }
 
-    private function sendManualWarningNotice(User $user, string $reason = ''): void
+    private function sendManualRestrictionNotice(User $user, ?\Carbon\Carbon $until, string $reason = ''): void
     {
         $isEn = strtoupper((string) ($user->language ?? 'JA')) === 'EN';
+        $untilText = $until ? $until->format($isEn ? 'Y-m-d H:i' : 'Y年m月d日 H:i') : '-';
         $base = $isEn
-            ? "A manual administrative restriction has been applied to your account.\nPlease ensure future use complies with our terms of service."
-            : "あなたのアカウントに対し、管理者による手動制限を適用しました。\n今後は利用規約を遵守したご利用をお願いします。";
+            ? "A manual administrative posting restriction has been applied to your account.\nDuring the period below, posting limits are restricted in the same way as report-based restrictions.\n\nRestriction ends at: {$untilText}"
+            : "あなたのアカウントに対し、管理者による手動制限を適用しました。\n下記期間中は、通報由来の制限と同じ投稿制限が適用されます。\n\n制限終了予定日時: {$untilText}";
         if ($reason !== '') {
             $base .= $isEn ? "\n\nReason:\n{$reason}" : "\n\n理由:\n{$reason}";
         }

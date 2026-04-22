@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdminUserEnforcement extends Model
 {
-    public const TYPE_WARNING = 'warning';
+    public const TYPE_RESTRICTION = 'restriction';
     public const TYPE_TEMPORARY_FREEZE = 'temporary_freeze';
     public const TYPE_PERMANENT_FREEZE = 'permanent_freeze';
 
@@ -52,6 +52,15 @@ class AdminUserEnforcement extends Model
                             ->where('expires_at', '>', now());
                     });
             });
+    }
+
+    public function scopeActiveRestriction(Builder $query): Builder
+    {
+        return $query
+            ->where('enforcement_type', self::TYPE_RESTRICTION)
+            ->whereNull('released_at')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>', now());
     }
 }
 

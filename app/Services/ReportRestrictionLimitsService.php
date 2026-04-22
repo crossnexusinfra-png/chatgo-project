@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AdminUserEnforcement;
 use App\Models\Response;
 use App\Models\Thread;
 
@@ -11,6 +12,13 @@ class ReportRestrictionLimitsService
     {
         if (!$userId) {
             return false;
+        }
+        $hasManualRestriction = AdminUserEnforcement::query()
+            ->where('user_id', $userId)
+            ->activeRestriction()
+            ->exists();
+        if ($hasManualRestriction) {
+            return true;
         }
         $restrictionService = app(ReportRestrictionService::class);
         return $restrictionService->isUserRestrictedNow($userId);
