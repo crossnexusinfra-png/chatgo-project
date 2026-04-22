@@ -61,7 +61,7 @@
                     </button>
                 </div>
             </div>
-        @elseif(isset($m->allows_reply) && $m->allows_reply && (($m->unlimited_reply ?? false) || !($m->reply_used ?? false)))
+        @elseif(isset($m->allows_reply) && $m->allows_reply && (($m->unlimited_reply ?? false) || !($m->reply_used_by_user ?? false)))
             <div class="reply-section" data-message-id="{{ $m->id }}">
                 <form class="reply-form" data-message-id="{{ $m->id }}">
                     @csrf

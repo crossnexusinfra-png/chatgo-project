@@ -78,6 +78,12 @@ class NotificationsController extends Controller
             foreach ($messages as $message) {
                 $message->is_read = in_array($message->id, $readMessageIds);
                 $message->has_received_coin = in_array($message->id, $receivedCoinMessageIds);
+                $message->reply_used_by_user = false;
+                if ($message->allows_reply && !$message->unlimited_reply) {
+                    $message->reply_used_by_user = AdminMessage::where('parent_message_id', $message->id)
+                        ->where('user_id', $userId)
+                        ->exists();
+                }
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
                 $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
@@ -86,6 +92,7 @@ class NotificationsController extends Controller
             foreach ($messages as $message) {
                 $message->is_read = false;
                 $message->has_received_coin = false;
+                $message->reply_used_by_user = false;
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
                 $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
@@ -103,6 +110,7 @@ class NotificationsController extends Controller
                     'allows_reply' => ($m->allows_reply ?? false),
                     'unlimited_reply' => ($m->unlimited_reply ?? false),
                     'reply_used' => ($m->reply_used ?? false),
+                    'reply_used_by_user' => ($m->reply_used_by_user ?? false),
                     'coin_amount' => $m->coin_amount ?? null,
                     'has_received_coin' => ($m->has_received_coin ?? false),
                     'title_key' => $m->title_key ?? null,
@@ -183,8 +191,13 @@ class NotificationsController extends Controller
         }
         
         // 既に返信済みかチェック（unlimited_replyがfalseの場合のみ）
-        if (!$message->unlimited_reply && $message->reply_used) {
-            return response()->json(['error' => \App\Services\LanguageService::trans('message_reply_already_sent', $lang)], 403);
+        if (!$message->unlimited_reply) {
+            $alreadyRepliedByUser = AdminMessage::where('parent_message_id', $message->id)
+                ->where('user_id', $userId)
+                ->exists();
+            if ($alreadyRepliedByUser) {
+                return response()->json(['error' => \App\Services\LanguageService::trans('message_reply_already_sent', $lang)], 403);
+            }
         }
         
         // IDOR防止: メッセージに返信する権限をチェック
@@ -225,12 +238,6 @@ class NotificationsController extends Controller
             'parent_message_id' => $message->id,
             'is_auto_sent' => false,
         ]);
-        
-        // 元のメッセージを返信済みにマーク（unlimited_replyがfalseの場合のみ）
-        if (!$message->unlimited_reply) {
-            $message->reply_used = true;
-            $message->save();
-        }
         
         return response()->json(['success' => true]);
         } finally {

@@ -1,5 +1,8 @@
 @php
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $reporterUserIdsByTarget = $reporterUserIdsByTarget ?? [];
+    $reportedUserIdByTarget = $reportedUserIdByTarget ?? [];
+    $userIdentifierById = $userIdentifierById ?? [];
 @endphp
 @extends('layouts.app')
 
