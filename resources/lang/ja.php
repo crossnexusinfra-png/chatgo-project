@@ -36,7 +36,7 @@ return [
     'thread_deleted' => 'ルームを削除しました',
     'image_help' => '未選択の場合はサンプル画像が使用されます。',
     'image_aspect_ratio' => '16:9でトリミング',
-    'thread_body_coin_per_100' => 'ごとに1コイン消費',
+    'thread_body_coin_per_100' => '100文字ごとに1コイン消費',
     'thread_coin_room' => 'ルーム',
     'thread_coin_first_reply' => '1リプライ目',
     'thread_create_first_reply_label' => '1リプライ目（任意）',
