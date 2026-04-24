@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\File;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Services\ObservabilityLogService;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -67,6 +70,36 @@ Artisan::command('admin:url', function () {
     $this->line('.env を変更した場合は php artisan config:clear を実行してください。');
 })->purpose('管理者画面のURLを表示します（APP_URL + ADMIN_PREFIX）');
 
+Artisan::command('db:wal:snapshot {reason=scheduled}', function (string $reason) {
+    $driver = (string) config('database.default');
+    $dbName = (string) config("database.connections.{$driver}.database");
+    $eventId = (string) Str::uuid();
+
+    $walLsn = null;
+    $txid = null;
+    if ($driver === 'pgsql') {
+        $row = DB::selectOne('SELECT pg_current_wal_lsn() AS wal_lsn, txid_current() AS txid');
+        $walLsn = $row?->wal_lsn;
+        $txid = isset($row?->txid) ? (string) $row->txid : null;
+    }
+
+    ObservabilityLogService::recordWalSnapshot([
+        'event_id' => $eventId,
+        'request_id' => null,
+        'database_driver' => $driver,
+        'database_name' => $dbName,
+        'wal_lsn' => $walLsn,
+        'transaction_id' => $txid,
+        'snapshot_reason' => $reason,
+        'metadata' => [
+            'captured_at' => now()->toDateTimeString(),
+            'app_env' => config('app.env'),
+        ],
+    ]);
+
+    $this->info("WAL snapshot saved. event_id={$eventId}");
+})->purpose('DB復元用のWALスナップショットログを保存');
+
 // ログファイルの自動削除（毎日実行）
 Schedule::call(function () {
     $logsDir = storage_path('logs');
@@ -113,3 +146,7 @@ Schedule::call(function () {
         }
     }
 })->daily();
+
+Schedule::command('db:wal:snapshot scheduled')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

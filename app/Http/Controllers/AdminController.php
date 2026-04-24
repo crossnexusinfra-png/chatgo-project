@@ -9,6 +9,9 @@ use App\Models\Thread;
 use App\Models\Response;
 use App\Models\User;
 use App\Models\AdminUserEnforcement;
+use App\Models\ErrorLog;
+use App\Models\EventLog;
+use App\Models\WalRecoveryLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -1563,6 +1566,40 @@ class AdminController extends Controller
     public function logs()
     {
         $lang = $this->getAdminLanguage();
+        $requestId = trim((string) request()->get('request_id', ''));
+        $eventId = trim((string) request()->get('event_id', ''));
+        $statusCode = request()->integer('status_code', 0);
+
+        $errorQuery = ErrorLog::query()->orderByDesc('created_at');
+        if ($requestId !== '') {
+            $errorQuery->where('request_id', $requestId);
+        }
+        if ($eventId !== '') {
+            $errorQuery->where('event_id', $eventId);
+        }
+        if ($statusCode > 0) {
+            $errorQuery->where('status_code', $statusCode);
+        }
+        $errorLogs = $errorQuery->limit(100)->get();
+
+        $eventLogs = EventLog::query()
+            ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
+            ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        $accessLogs = \App\Models\AccessLog::query()
+            ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
+            ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        $walLogs = WalRecoveryLog::query()
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
         
         // ログファイルのパスを取得（ログローテーション対応）
         $logPath = $this->getLogFilePath();
@@ -1638,6 +1675,13 @@ class AdminController extends Controller
             'logPath' => $logPath,
             'lang' => $lang,
             'searchKeyword' => $searchKeyword,
+            'errorLogs' => $errorLogs,
+            'eventLogs' => $eventLogs,
+            'accessLogs' => $accessLogs,
+            'walLogs' => $walLogs,
+            'requestId' => $requestId,
+            'eventId' => $eventId,
+            'statusCode' => $statusCode,
         ]);
     }
 

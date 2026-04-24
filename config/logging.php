@@ -157,6 +157,22 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'server_error_log' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/server-error.log'),
+            'level' => 'error',
+            'days' => env('LOG_SERVER_ERROR_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
+        'infra_log' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/infrastructure.log'),
+            'level' => 'info',
+            'days' => env('LOG_INFRA_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

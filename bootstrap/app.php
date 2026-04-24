@@ -6,6 +6,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use App\Services\ObservabilityLogService;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
@@ -181,6 +183,8 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(\App\Http\Middleware\RequestCorrelationId::class);
+
         // リプライ・ルーム1リプライ目のコイン計算は先頭末尾の空白・改行も1文字と数える（フロントと一致させる）
         $middleware->trimStrings(except: [
             'body',
@@ -236,8 +240,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // 異常ログを記録（エラー以上）
         $exceptions->report(function (\Throwable $e) {
             try {
+                $req = request();
+                $requestId = ObservabilityLogService::requestId($req);
+                $eventId = ObservabilityLogService::eventId($req);
+
                 if (class_exists(\App\Services\LogService::class)) {
-                    \App\Services\LogService::logException($e);
+                    \App\Services\LogService::logException($e, [
+                        'request_id' => $requestId,
+                        'event_id' => $eventId,
+                    ]);
                 } else {
                     // LogServiceが存在しない場合は直接ログに記録
                     \Log::channel('error_file')->error('Exception occurred', [
@@ -249,8 +260,28 @@ return Application::configure(basePath: dirname(__DIR__))
                         'method' => request()->method(),
                         'ip' => request()->ip(),
                         'user_id' => auth()->id(),
+                        'request_id' => $requestId,
+                        'event_id' => $eventId,
                     ]);
                 }
+
+                ObservabilityLogService::recordError([
+                    'error_id' => (string) Str::uuid(),
+                    'request_id' => $requestId,
+                    'event_id' => $eventId,
+                    'source' => 'server',
+                    'status_code' => null,
+                    'error_type' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'path' => $req?->path(),
+                    'method' => $req?->method(),
+                    'ip' => $req?->ip(),
+                    'user_id' => auth()->id(),
+                    'context' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                ]);
                 
                 // Cloudflare異常検出
                 // 環境変数を直接チェック（app()は依存性注入のコンテキストで問題を起こす可能性があるため）

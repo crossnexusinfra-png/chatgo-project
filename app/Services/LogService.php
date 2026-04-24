@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
+use App\Services\ObservabilityLogService;
 
 class LogService
 {
@@ -17,6 +18,8 @@ class LogService
     public static function logError(string $message, array $context = [], string $level = 'error'): void
     {
         $context['timestamp'] = now()->toDateTimeString();
+        $context['request_id'] = $context['request_id'] ?? ObservabilityLogService::requestId();
+        $context['event_id'] = $context['event_id'] ?? ObservabilityLogService::eventId();
         
         // HTTPリクエストのコンテキストが利用可能な場合のみ追加
         try {
@@ -51,6 +54,8 @@ class LogService
     public static function logWarning(string $message, array $context = []): void
     {
         $context['timestamp'] = now()->toDateTimeString();
+        $context['request_id'] = $context['request_id'] ?? ObservabilityLogService::requestId();
+        $context['event_id'] = $context['event_id'] ?? ObservabilityLogService::eventId();
         
         // HTTPリクエストのコンテキストが利用可能な場合のみ追加
         try {

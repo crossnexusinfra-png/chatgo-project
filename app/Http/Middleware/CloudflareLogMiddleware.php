@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Services\CloudflareLogService;
+use App\Services\ObservabilityLogService;
 
 class CloudflareLogMiddleware
 {
@@ -30,6 +31,8 @@ class CloudflareLogMiddleware
 
         // アクセスログを保存
         CloudflareLogService::saveAccessLog([
+            'request_id' => ObservabilityLogService::requestId($request),
+            'event_id' => ObservabilityLogService::eventId($request),
             'method' => $request->method(),
             'url' => $request->fullUrl(),
             'ip' => $request->ip(),
@@ -41,6 +44,20 @@ class CloudflareLogMiddleware
 
         // エラーレスポンスの場合は異常検出
         if ($response->getStatusCode() >= 500) {
+            ObservabilityLogService::recordError([
+                'error_id' => (string) \Illuminate\Support\Str::uuid(),
+                'request_id' => ObservabilityLogService::requestId($request),
+                'event_id' => ObservabilityLogService::eventId($request),
+                'source' => 'infrastructure',
+                'status_code' => $response->getStatusCode(),
+                'error_type' => 'http_5xx',
+                'message' => 'Cloudflare middleware detected 5xx response',
+                'path' => $request->path(),
+                'method' => $request->method(),
+                'ip' => $request->ip(),
+                'user_id' => auth()->id(),
+                'context' => ['url' => $request->fullUrl()],
+            ]);
             CloudflareLogService::detectAnomaly('Server error detected', [
                 'status_code' => $response->getStatusCode(),
                 'url' => $request->fullUrl(),

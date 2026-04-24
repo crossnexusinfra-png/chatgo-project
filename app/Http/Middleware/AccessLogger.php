@@ -5,31 +5,49 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\AccessLog;
+use App\Services\ObservabilityLogService;
 
 class AccessLogger
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // 未ログインかつGETのアクセスのみ簡易記録
-        if (!auth()->check() && $request->isMethod('GET')) {
-            // 管理者エリア自身は除外（任意）
-            $adminPrefix = trim((string) config('admin.prefix'), '/');
-            if (!$adminPrefix || !str_starts_with(trim($request->path(), '/'), $adminPrefix)) {
-                try {
-                    AccessLog::create([
-                        'type' => 'guest_visit',
-                        'user_id' => null,
-                        'path' => $request->path(),
-                        'ip' => $request->ip(),
-                    ]);
-                } catch (\Throwable $e) {
-                    // ログ保存失敗は無視
-                }
+        $response = $next($request);
+        $adminPrefix = trim((string) config('admin.prefix'), '/');
+        $isAdminPath = $adminPrefix && str_starts_with(trim($request->path(), '/'), $adminPrefix);
+
+        if (!$isAdminPath) {
+            try {
+                ObservabilityLogService::recordEvent([
+                    'event_id' => ObservabilityLogService::eventId($request),
+                    'request_id' => ObservabilityLogService::requestId($request),
+                    'event_type' => 'http_request_handled',
+                    'source' => 'server',
+                    'user_id' => auth()->id(),
+                    'path' => $request->path(),
+                    'ip' => $request->ip(),
+                    'payload' => [
+                        'method' => $request->method(),
+                        'status_code' => $response->getStatusCode(),
+                    ],
+                ]);
+
+                ObservabilityLogService::recordAccess([
+                    'request_id' => ObservabilityLogService::requestId($request),
+                    'event_id' => ObservabilityLogService::eventId($request),
+                    'type' => auth()->check() ? 'member_visit' : 'guest_visit',
+                    'method' => $request->method(),
+                    'status_code' => $response->getStatusCode(),
+                    'source' => 'server',
+                    'user_id' => auth()->id(),
+                    'path' => $request->path(),
+                    'ip' => $request->ip(),
+                ]);
+            } catch (\Throwable $e) {
+                // ログ保存失敗は本処理へ影響させない
             }
         }
 
-        return $next($request);
+        return $response;
     }
 }
 

@@ -64,6 +64,12 @@
                             <input type="number" name="lines" id="lines" value="{{ request('lines', 1000) }}" min="100" max="10000" step="100">
                             <label for="search" class="admin-logs-search-label">{{ \App\Services\LanguageService::trans('admin_logs_search', $lang) }}:</label>
                             <input type="text" name="search" id="search" value="{{ request('search', '') }}" placeholder="{{ \App\Services\LanguageService::trans('admin_logs_search_placeholder', $lang) }}" class="admin-logs-search-input">
+                            <label for="request_id" class="admin-logs-search-label">Request ID:</label>
+                            <input type="text" name="request_id" id="request_id" value="{{ $requestId ?? '' }}" class="admin-logs-search-input" placeholder="uuid">
+                            <label for="event_id" class="admin-logs-search-label">Event ID:</label>
+                            <input type="text" name="event_id" id="event_id" value="{{ $eventId ?? '' }}" class="admin-logs-search-input" placeholder="uuid">
+                            <label for="status_code" class="admin-logs-search-label">Status:</label>
+                            <input type="number" name="status_code" id="status_code" value="{{ $statusCode > 0 ? $statusCode : '' }}" min="100" max="599" style="width: 90px;">
                             <button type="submit" class="btn btn-secondary">{{ \App\Services\LanguageService::trans('admin_logs_update_button', $lang) }}</button>
                         </div>
                     </form>
@@ -92,6 +98,61 @@
                     <div class="admin-logs-empty-state">
                         {{ \App\Services\LanguageService::trans('admin_logs_empty', $lang) }}
                     </div>
+                @endif
+
+                <hr>
+                <h2>相関調査ログ（簡易表示）</h2>
+
+                <h3>サーバーエラー</h3>
+                @if(($errorLogs ?? collect())->count() > 0)
+                    <div class="admin-logs-log-container">
+                        @foreach($errorLogs as $err)
+                            <div class="log-line log-error">
+                                {{ $err->created_at }} | status={{ $err->status_code ?? '-' }} | request_id={{ $err->request_id ?? '-' }} | event_id={{ $err->event_id ?? '-' }} | source={{ $err->source }} | {{ $err->message }}
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="admin-logs-empty-state">一致するサーバーエラーはありません</div>
+                @endif
+
+                <h3>イベントログ</h3>
+                @if(($eventLogs ?? collect())->count() > 0)
+                    <div class="admin-logs-log-container">
+                        @foreach($eventLogs as $event)
+                            <div class="log-line log-info">
+                                {{ $event->created_at }} | event_type={{ $event->event_type }} | request_id={{ $event->request_id ?? '-' }} | event_id={{ $event->event_id }} | path={{ $event->path ?? '-' }}
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="admin-logs-empty-state">一致するイベントログはありません</div>
+                @endif
+
+                <h3>アクセスログ</h3>
+                @if(($accessLogs ?? collect())->count() > 0)
+                    <div class="admin-logs-log-container">
+                        @foreach($accessLogs as $access)
+                            <div class="log-line log-debug">
+                                {{ $access->created_at }} | type={{ $access->type }} | status={{ $access->status_code ?? '-' }} | request_id={{ $access->request_id ?? '-' }} | event_id={{ $access->event_id ?? '-' }} | {{ $access->method }} {{ $access->path }}
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="admin-logs-empty-state">一致するアクセスログはありません</div>
+                @endif
+
+                <h3>WAL復元ログ</h3>
+                @if(($walLogs ?? collect())->count() > 0)
+                    <div class="admin-logs-log-container">
+                        @foreach($walLogs as $wal)
+                            <div class="log-line log-info">
+                                {{ $wal->created_at }} | db={{ $wal->database_driver }} | wal_lsn={{ $wal->wal_lsn ?? '-' }} | txid={{ $wal->transaction_id ?? '-' }} | reason={{ $wal->snapshot_reason }} | event_id={{ $wal->event_id }}
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="admin-logs-empty-state">WAL復元ログはまだありません</div>
                 @endif
             @else
                 <div class="admin-logs-empty-state">
