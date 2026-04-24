@@ -257,7 +257,8 @@ Artisan::command('db:backup:s3 {--label=}', function () {
     return 0;
 })->purpose('DBダンプをS3へ保存');
 
-Artisan::command('db:backup:pull {s3_key}', function (string $s3Key) {
+Artisan::command('db:backup:pull {s3_key}', function () {
+    $s3Key = (string) $this->argument('s3_key');
     if (! Storage::disk('s3')->exists($s3Key)) {
         $this->error("S3にファイルが存在しません: {$s3Key}");
         return 1;
