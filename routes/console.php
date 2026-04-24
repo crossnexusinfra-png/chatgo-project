@@ -4,6 +4,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Process;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -149,4 +151,135 @@ Schedule::call(function () {
 
 Schedule::command('db:wal:snapshot scheduled')
     ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+Artisan::command('db:backup:s3 {--label=}', function () {
+    $driver = (string) config('database.default');
+    $conn = (array) config("database.connections.{$driver}");
+    $timestamp = now()->format('Ymd_His');
+    $label = trim((string) $this->option('label'));
+    $suffix = $label !== '' ? ('_' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $label)) : '';
+
+    $tmpDir = storage_path('app/private/backups/tmp');
+    if (! File::exists($tmpDir)) {
+        File::makeDirectory($tmpDir, 0755, true);
+    }
+
+    $baseName = "db_{$driver}_{$timestamp}{$suffix}";
+    $localPath = match ($driver) {
+        'pgsql' => "{$tmpDir}/{$baseName}.dump",
+        'mysql', 'mariadb' => "{$tmpDir}/{$baseName}.sql",
+        default => "{$tmpDir}/{$baseName}.sqlite",
+    };
+
+    if ($driver === 'sqlite') {
+        $dbPath = (string) ($conn['database'] ?? '');
+        if ($dbPath === '' || ! File::exists($dbPath)) {
+            $this->error('SQLite DBファイルが見つかりません。');
+            return 1;
+        }
+        File::copy($dbPath, $localPath);
+    } elseif ($driver === 'pgsql') {
+        $host = (string) ($conn['host'] ?? '127.0.0.1');
+        $port = (string) ($conn['port'] ?? '5432');
+        $database = (string) ($conn['database'] ?? '');
+        $username = (string) ($conn['username'] ?? '');
+        $password = (string) ($conn['password'] ?? '');
+
+        $result = Process::env(['PGPASSWORD' => $password])->run([
+            'pg_dump',
+            '--host=' . $host,
+            '--port=' . $port,
+            '--username=' . $username,
+            '--format=custom',
+            '--no-owner',
+            '--no-privileges',
+            '--file=' . $localPath,
+            $database,
+        ]);
+
+        if (! $result->successful()) {
+            $this->error("pg_dump 失敗: {$result->errorOutput()}");
+            return 1;
+        }
+    } elseif (in_array($driver, ['mysql', 'mariadb'], true)) {
+        $host = (string) ($conn['host'] ?? '127.0.0.1');
+        $port = (string) ($conn['port'] ?? '3306');
+        $database = (string) ($conn['database'] ?? '');
+        $username = (string) ($conn['username'] ?? '');
+        $password = (string) ($conn['password'] ?? '');
+
+        $result = Process::run([
+            'mysqldump',
+            '--host=' . $host,
+            '--port=' . $port,
+            '--user=' . $username,
+            '--password=' . $password,
+            '--single-transaction',
+            '--quick',
+            '--routines',
+            '--triggers',
+            '--result-file=' . $localPath,
+            $database,
+        ]);
+
+        if (! $result->successful()) {
+            $this->error("mysqldump 失敗: {$result->errorOutput()}");
+            return 1;
+        }
+    } else {
+        $this->error("未対応のDBドライバです: {$driver}");
+        return 1;
+    }
+
+    $prefix = trim((string) env('DB_BACKUP_S3_PREFIX', 'db-backups'), '/');
+    $remotePath = "{$prefix}/{$driver}/" . basename($localPath);
+
+    $stream = fopen($localPath, 'r');
+    if ($stream === false) {
+        $this->error('バックアップファイルを開けませんでした。');
+        return 1;
+    }
+
+    $uploaded = Storage::disk('s3')->put($remotePath, $stream);
+    fclose($stream);
+
+    if (! $uploaded) {
+        $this->error('S3へのアップロードに失敗しました。');
+        return 1;
+    }
+
+    if (! (bool) env('DB_BACKUP_KEEP_LOCAL', false)) {
+        File::delete($localPath);
+    }
+
+    $this->info("S3バックアップ完了: {$remotePath}");
+    return 0;
+})->purpose('DBダンプをS3へ保存');
+
+Artisan::command('db:backup:pull {s3_key}', function (string $s3Key) {
+    if (! Storage::disk('s3')->exists($s3Key)) {
+        $this->error("S3にファイルが存在しません: {$s3Key}");
+        return 1;
+    }
+
+    $restoreDir = storage_path('app/private/backups/restore');
+    if (! File::exists($restoreDir)) {
+        File::makeDirectory($restoreDir, 0755, true);
+    }
+
+    $localPath = "{$restoreDir}/" . basename($s3Key);
+    $content = Storage::disk('s3')->get($s3Key);
+    File::put($localPath, $content);
+
+    $this->info("復元用ダンプを取得しました: {$localPath}");
+    $this->line('必要に応じて以下を実行してください:');
+    $this->line('- PostgreSQL: pg_restore --clean --if-exists --no-owner --no-privileges --dbname=<DB名> <ダンプファイル>');
+    $this->line('- MySQL: mysql -h <host> -P <port> -u <user> -p <DB名> < <ダンプファイル>');
+    $this->line('- SQLite: 既存DBを退避後、ダンプファイルで置換');
+    return 0;
+})->purpose('S3上のDBバックアップをローカルへ取得');
+
+Schedule::command('db:backup:s3')
+    ->dailyAt(env('DB_BACKUP_SCHEDULE_AT', '03:30'))
     ->withoutOverlapping();
