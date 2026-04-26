@@ -1831,7 +1831,7 @@ class AdminController extends Controller
             ->get();
         $critical4xxRows = \App\Models\AccessLog::query()
             ->where('created_at', '>=', $since)
-            ->whereIn('status_code', [401, 403, 404, 422])
+            ->whereIn('status_code', [401, 403, 422])
             ->orderByDesc('created_at')
             ->get()
             ->filter(fn ($r) => $isImportantPath($r->path))
@@ -1952,7 +1952,7 @@ class AdminController extends Controller
             ->get();
         $critical4xxRows = \App\Models\AccessLog::query()
             ->where('created_at', '>=', $singleWindowSince)
-            ->whereIn('status_code', [401, 403, 404, 422])
+            ->whereIn('status_code', [401, 403, 422])
             ->orderByDesc('created_at')
             ->get()
             ->filter(fn ($r) => $isImportantPath($r->path))
@@ -2031,12 +2031,12 @@ class AdminController extends Controller
             [
                 'id' => 'critical_4xx_single',
                 'label' => '重要導線の4xx',
-                'description' => 'ログイン/投稿/通知など重要導線での4xxは単発でも調査対象です。',
+                'description' => 'ログイン/投稿/通知など重要導線の 401/403/422 は単発でも調査対象です。',
                 'count' => $critical4xxRows->count(),
                 'window_minutes' => max(1, $minutes),
                 'threshold' => 1,
                 'trigger_mode' => 'single_critical',
-                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上（status=401/403/404/422）',
+                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上（status=401/403/422）',
                 'is_triggered' => $critical4xxRows->count() >= 1,
                 'severity' => 'high',
                 'examples' => $toAccessExamples($critical4xxRows),

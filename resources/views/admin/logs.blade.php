@@ -43,6 +43,8 @@
             @if($fileExists)
                 @php
                     $unconfirmedTriggers = collect($unconfirmedSingleCriticalTriggers ?? [])->filter(fn($t) => ($t['count'] ?? 0) > 0)->values();
+                    $singleCriticalTriggers = collect($operationalTriggers ?? [])->filter(fn($t) => ($t['trigger_mode'] ?? '') === 'single_critical')->values();
+                    $recurrentTriggers = collect($operationalTriggers ?? [])->filter(fn($t) => ($t['trigger_mode'] ?? '') === 'recurrent')->values();
                 @endphp
                 <h2>0. 未確認の単発重大（前回確認以降）</h2>
                 <div class="admin-logs-inline-help">前回ログ確認（{{ optional($unconfirmedSince ?? null)->format('Y-m-d H:i:s') ?? '-' }}）以降の単発重大です。見落とし防止のため最優先で確認してください。</div>
@@ -79,21 +81,51 @@
                     <div class="admin-logs-empty-state">未確認の単発重大はありません。</div>
                 @endif
 
-                <h2>1. 運用トリガー確認（直近5分）</h2>
-                <div class="admin-logs-inline-help">件数がある項目のサンプル行から `request_id / event_id / status` をクリックすると、下の調査フィルタに反映して再検索します。</div>
-                <div class="admin-muted">※ WAL関連は定期記録が含まれるため、運用トリガー一覧には出さず、相関ログ詳細で確認する構成です。</div>
-                @foreach(($operationalTriggers ?? []) as $trigger)
+                <h2>1. 単発重大トリガー（直近5分）</h2>
+                <div class="admin-logs-inline-help">1件でも対応対象です。サンプルのIDクリックで絞り込みできます。</div>
+                @foreach($singleCriticalTriggers as $trigger)
                     <div class="admin-ops-trigger-card">
                         <div class="admin-ops-trigger-title">
                             <strong>{{ $trigger['label'] ?? '-' }}</strong>
                             <span class="admin-ops-trigger-count">{{ $trigger['count'] ?? 0 }}件</span>
-                            @if(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'single_critical')
+                            @if(($trigger['is_triggered'] ?? false))
                                 <span class="admin-new-inline">単発重大</span>
-                            @elseif(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'recurrent')
-                                <span class="admin-new-inline">連発判定</span>
-                            @endif
-                            @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['is_triggered'] ?? false))
                                 <span class="admin-new-inline">優先調査</span>
+                            @endif
+                        </div>
+                        <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
+                        <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
+                        @php $examples = array_slice($trigger['examples'] ?? [], 0, 2); @endphp
+                        @if(!empty($examples))
+                            <div class="admin-logs-log-container">
+                                @foreach($examples as $example)
+                                    <div class="log-line">
+                                        {{ $example['created_at'] ?? '-' }} |
+                                        @if(!empty($example['status_code']))
+                                            status=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="status_code" data-filter-value="{{ $example['status_code'] }}">{{ $example['status_code'] }}</button> |
+                                        @endif
+                                        request_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $example['request_id'] ?? '' }}">{{ $example['request_id'] ?? '-' }}</button> |
+                                        event_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $example['event_id'] ?? '' }}">{{ $example['event_id'] ?? '-' }}</button>
+                                        @if(!empty($example['message']))
+                                            | {{ $example['message'] }}
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+
+                <h2>2. 連発判定トリガー</h2>
+                <div class="admin-logs-inline-help">閾値を超えたときに対応対象です（404はここで判定）。</div>
+                @foreach($recurrentTriggers as $trigger)
+                    <div class="admin-ops-trigger-card">
+                        <div class="admin-ops-trigger-title">
+                            <strong>{{ $trigger['label'] ?? '-' }}</strong>
+                            <span class="admin-ops-trigger-count">{{ $trigger['count'] ?? 0 }}件</span>
+                            @if(($trigger['is_triggered'] ?? false))
+                                <span class="admin-new-inline">連発判定</span>
+                                <span class="admin-new-inline">要確認</span>
                             @endif
                         </div>
                         <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
@@ -121,7 +153,7 @@
 
                 <div class="admin-collapsible-card">
                     <button type="button" class="admin-collapsible-toggle" data-target-id="adminFilterPanel" aria-expanded="true">
-                        <span>2. 調査フィルタ（相関ID / ステータス）</span>
+                        <span>3. 調査フィルタ（相関ID / ステータス）</span>
                         <span class="admin-collapsible-arrow" aria-hidden="true">▼</span>
                     </button>
                     <div id="adminFilterPanel" class="admin-collapsible-panel is-open">
@@ -148,7 +180,7 @@
 
                 <div class="admin-collapsible-card">
                     <button type="button" class="admin-collapsible-toggle" data-target-id="adminCorrelationPanel" aria-expanded="true">
-                        <span>3. 相関ログ詳細（絞り込み結果）</span>
+                        <span>4. 相関ログ詳細（絞り込み結果）</span>
                         <span class="admin-collapsible-arrow" aria-hidden="true">▼</span>
                     </button>
                     <div id="adminCorrelationPanel" class="admin-collapsible-panel is-open">
@@ -221,7 +253,7 @@
 
                 <div class="admin-collapsible-card">
                     <button type="button" class="admin-collapsible-toggle" data-target-id="adminLogFilePanel" aria-expanded="false">
-                        <span>4. {{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}</span>
+                        <span>5. {{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}</span>
                         <span class="admin-collapsible-arrow" aria-hidden="true">▼</span>
                     </button>
                     <div id="adminLogFilePanel" class="admin-collapsible-panel">
