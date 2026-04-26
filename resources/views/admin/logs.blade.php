@@ -39,6 +39,7 @@
             @if($fileExists)
                 <h2>1. 運用トリガー確認（直近5分）</h2>
                 <div class="admin-logs-inline-help">件数がある項目のサンプル行から `request_id / event_id / status` をクリックすると、下の調査フィルタに反映して再検索します。</div>
+                <div class="admin-muted">※ WAL関連は定期記録が含まれるため、運用トリガー一覧には出さず、相関ログ詳細で確認する構成です。</div>
                 @foreach(($operationalTriggers ?? []) as $trigger)
                     <div class="admin-ops-trigger-card">
                         <div class="admin-ops-trigger-title">

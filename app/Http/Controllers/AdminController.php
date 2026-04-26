@@ -1810,12 +1810,6 @@ class AdminController extends Controller
             ->limit(5)
             ->get();
 
-        $walRecoveryRows = WalRecoveryLog::query()
-            ->where('created_at', '>=', $since)
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
-
         return [
             [
                 'id' => 'server_5xx',
@@ -1875,21 +1869,6 @@ class AdminController extends Controller
                     'event_id' => $r->event_id,
                     'path' => $r->path,
                     'message' => mb_strimwidth((string) $r->message, 0, 180, '...'),
-                ])->all(),
-            ],
-            [
-                'id' => 'wal_recovery',
-                'label' => 'WAL復元発生',
-                'description' => 'DB整合性維持のための復元処理が動作した記録です。',
-                'count' => $walRecoveryRows->count(),
-                'severity' => 'medium',
-                'examples' => $walRecoveryRows->map(fn ($r) => [
-                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
-                    'status_code' => null,
-                    'request_id' => $r->request_id,
-                    'event_id' => $r->event_id,
-                    'path' => null,
-                    'message' => trim('reason=' . $r->snapshot_reason . ' db=' . $r->database_driver . ' wal_lsn=' . ($r->wal_lsn ?? '-')),
                 ])->all(),
             ],
         ];
