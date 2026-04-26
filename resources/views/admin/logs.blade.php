@@ -95,7 +95,7 @@
                         </div>
                         <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
                         <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
-                        @php $examples = array_slice($trigger['examples'] ?? [], 0, 2); @endphp
+                        @php $examples = $trigger['examples'] ?? []; @endphp
                         @if(!empty($examples))
                             <div class="admin-logs-log-container">
                                 @foreach($examples as $example)
@@ -130,7 +130,7 @@
                         </div>
                         <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
                         <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
-                        @php $examples = array_slice($trigger['examples'] ?? [], 0, 2); @endphp
+                        @php $examples = $trigger['examples'] ?? []; @endphp
                         @if(!empty($examples))
                             <div class="admin-logs-log-container">
                                 @foreach($examples as $example)
