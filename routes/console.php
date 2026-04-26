@@ -259,7 +259,9 @@ Artisan::command('db:backup:s3 {--label=}', function () {
 
 Artisan::command('db:backup:pull {s3_key}', function () {
     $s3Key = (string) $this->argument('s3_key');
-    if (! Storage::disk('s3')->exists($s3Key)) {
+    $disk = Storage::disk('s3');
+
+    if (! $disk->exists($s3Key)) {
         $this->error("S3にファイルが存在しません: {$s3Key}");
         return 1;
     }
@@ -270,8 +272,24 @@ Artisan::command('db:backup:pull {s3_key}', function () {
     }
 
     $localPath = "{$restoreDir}/" . basename($s3Key);
-    $content = Storage::disk('s3')->get($s3Key);
-    File::put($localPath, $content);
+    $readStream = $disk->readStream($s3Key);
+    if ($readStream === false) {
+        $this->error("S3からファイルを読み取れませんでした: {$s3Key}");
+        return 1;
+    }
+
+    $writeStream = fopen($localPath, 'w');
+    if ($writeStream === false) {
+        if (is_resource($readStream)) {
+            fclose($readStream);
+        }
+        $this->error("ローカルファイルを作成できませんでした: {$localPath}");
+        return 1;
+    }
+
+    stream_copy_to_stream($readStream, $writeStream);
+    fclose($readStream);
+    fclose($writeStream);
 
     $this->info("復元用ダンプを取得しました: {$localPath}");
     $this->line('必要に応じて以下を実行してください:');
