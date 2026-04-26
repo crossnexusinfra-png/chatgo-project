@@ -39,6 +39,28 @@
             return;
         }
 
+        function navigateWithSingleCorrelationFilter(filterType, filterValue) {
+            const params = new URLSearchParams();
+            const linesInput = document.getElementById('lines');
+            const linesValue = linesInput ? String(linesInput.value || '').trim() : '';
+            if (linesValue !== '') {
+                params.set('lines', linesValue);
+            }
+
+            if (filterType === 'request_id') {
+                params.set('request_id', filterValue);
+            } else if (filterType === 'event_id') {
+                params.set('event_id', filterValue);
+            } else if (filterType === 'status_code') {
+                params.set('status_code', filterValue);
+            } else {
+                return;
+            }
+
+            const actionUrl = form.getAttribute('action') || window.location.pathname;
+            window.location.assign(actionUrl + '?' + params.toString());
+        }
+
         document.querySelectorAll('.js-log-filter').forEach(function(button) {
             button.addEventListener('click', function() {
                 const filterType = button.dataset.filterType;
@@ -63,7 +85,7 @@
 
                 openLogFilePanel();
                 openWalPanel();
-                form.submit();
+                navigateWithSingleCorrelationFilter(filterType, filterValue);
             });
         });
     }
