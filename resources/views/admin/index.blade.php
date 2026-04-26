@@ -44,9 +44,15 @@
                 <div class="admin-ops-trigger-row">
                     <strong>{{ $trigger['label'] ?? '-' }}</strong>:
                     <span>{{ $trigger['count'] ?? 0 }}件</span>
-                    @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['count'] ?? 0) > 0)
+                    @if(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'single_critical')
+                        <span class="admin-new-inline">単発重大</span>
+                    @elseif(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'recurrent')
+                        <span class="admin-new-inline">連発判定</span>
+                    @endif
+                    @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['is_triggered'] ?? false))
                         <span class="admin-new-inline">優先調査</span>
                     @endif
+                    <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
                     <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
                 </div>
             @endforeach

@@ -20,15 +20,19 @@
             <h1 class="admin-logs-title">{{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}</h1>
             <div class="admin-ops-guide">
                 <h2 class="admin-ops-guide-title">操作ガイド（異常検知→原因特定）</h2>
+                <div class="admin-muted">
+                    <strong>単発重大:</strong> 5xx / 未処理例外 / 重要導線4xx / 重要導線timeout は1件でも対応対象です。<br>
+                    <strong>連発判定:</strong> 4xx連発・timeout連発は、判定条件を超えたら対応対象です。
+                </div>
                 <ol class="admin-ops-guide-list">
-                    <li><strong>1. トリガー確認：</strong>「運用トリガー（直近5分）」で件数が0でない項目を確認。</li>
-                    <li><strong>2. クリック調査：</strong>サンプル行の <code>request_id</code> / <code>event_id</code> / <code>status</code> をクリック。</li>
-                    <li><strong>3. 相関確認：</strong>「相関ログ詳細」でサーバーエラー→イベント→アクセス→WALの順で同一IDを確認。</li>
-                    <li><strong>4. 生ログ確認：</strong>必要時のみ「ログファイル表示」を開いて詳細を確認。</li>
+                    <li><strong>サーバーエラー(5xx):</strong> status か request_id をクリック → 「サーバーエラー」→「イベントログ」→「アクセスログ」の順で同ID確認。</li>
+                    <li><strong>未処理例外:</strong> request_id / event_id をクリック → 「サーバーエラー」の例外メッセージ確認 → 同IDのイベント・アクセスで発生経路確認。</li>
+                    <li><strong>重要導線4xx:</strong> status=401/403/404/422 か request_id をクリック → 「アクセスログ」の path/method を確認 → 同IDイベントで直前処理確認。</li>
+                    <li><strong>タイムアウト/接続失敗:</strong> request_id をクリック → 「サーバーエラー」の message を確認 → 同IDイベントで外部依存・処理段階を確認。</li>
+                    <li><strong>WAL確認（必要時）:</strong> 上記IDで「WAL復元ログ」を開き、reason / wal_lsn / txid を確認。</li>
                 </ol>
                 <div class="admin-muted">
-                    例: 404を調べる場合は <code>status=404</code> をクリックし、<code>path</code> と <code>method</code>、
-                    さらに同じ <code>request_id</code> のイベントを確認します。
+                    重要: <code>request_id / event_id / status</code> が3つ全部一致する必要はありません。まず <code>request_id</code> で相関追跡してください。
                 </div>
             </div>
 
@@ -37,6 +41,44 @@
             @endif
 
             @if($fileExists)
+                @php
+                    $unconfirmedTriggers = collect($unconfirmedSingleCriticalTriggers ?? [])->filter(fn($t) => ($t['count'] ?? 0) > 0)->values();
+                @endphp
+                <h2>0. 未確認の単発重大（前回確認以降）</h2>
+                <div class="admin-logs-inline-help">前回ログ確認（{{ optional($unconfirmedSince ?? null)->format('Y-m-d H:i:s') ?? '-' }}）以降の単発重大です。見落とし防止のため最優先で確認してください。</div>
+                @if($unconfirmedTriggers->count() > 0)
+                    @foreach($unconfirmedTriggers as $trigger)
+                        <div class="admin-ops-trigger-card">
+                            <div class="admin-ops-trigger-title">
+                                <strong>{{ $trigger['label'] ?? '-' }}</strong>
+                                <span class="admin-ops-trigger-count">{{ $trigger['count'] ?? 0 }}件</span>
+                                <span class="admin-new-inline">未確認</span>
+                                <span class="admin-new-inline">優先調査</span>
+                            </div>
+                            @php $examples = array_slice($trigger['examples'] ?? [], 0, 3); @endphp
+                            @if(!empty($examples))
+                                <div class="admin-logs-log-container">
+                                    @foreach($examples as $example)
+                                        <div class="log-line">
+                                            {{ $example['created_at'] ?? '-' }} |
+                                            @if(!empty($example['status_code']))
+                                                status=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="status_code" data-filter-value="{{ $example['status_code'] }}">{{ $example['status_code'] }}</button> |
+                                            @endif
+                                            request_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $example['request_id'] ?? '' }}">{{ $example['request_id'] ?? '-' }}</button> |
+                                            event_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $example['event_id'] ?? '' }}">{{ $example['event_id'] ?? '-' }}</button>
+                                            @if(!empty($example['message']))
+                                                | {{ $example['message'] }}
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                @else
+                    <div class="admin-logs-empty-state">未確認の単発重大はありません。</div>
+                @endif
+
                 <h2>1. 運用トリガー確認（直近5分）</h2>
                 <div class="admin-logs-inline-help">件数がある項目のサンプル行から `request_id / event_id / status` をクリックすると、下の調査フィルタに反映して再検索します。</div>
                 <div class="admin-muted">※ WAL関連は定期記録が含まれるため、運用トリガー一覧には出さず、相関ログ詳細で確認する構成です。</div>
@@ -45,10 +87,16 @@
                         <div class="admin-ops-trigger-title">
                             <strong>{{ $trigger['label'] ?? '-' }}</strong>
                             <span class="admin-ops-trigger-count">{{ $trigger['count'] ?? 0 }}件</span>
-                            @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['count'] ?? 0) > 0)
+                            @if(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'single_critical')
+                                <span class="admin-new-inline">単発重大</span>
+                            @elseif(($trigger['is_triggered'] ?? false) && ($trigger['trigger_mode'] ?? '') === 'recurrent')
+                                <span class="admin-new-inline">連発判定</span>
+                            @endif
+                            @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['is_triggered'] ?? false))
                                 <span class="admin-new-inline">優先調査</span>
                             @endif
                         </div>
+                        <div class="admin-muted">判定条件: {{ $trigger['rule_text'] ?? '-' }}</div>
                         <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
                         @php $examples = array_slice($trigger['examples'] ?? [], 0, 2); @endphp
                         @if(!empty($examples))

@@ -1644,6 +1644,11 @@ class AdminController extends Controller
         $requestId = trim((string) request()->get('request_id', ''));
         $eventId = trim((string) request()->get('event_id', ''));
         $statusCode = request()->integer('status_code', 0);
+        $prevLogsVisit = \App\Models\AccessLog::query()
+            ->where('type', 'admin_logs_visit')
+            ->orderByDesc('created_at')
+            ->first();
+        $unconfirmedSince = $prevLogsVisit?->created_at ?? now()->subDay();
 
         $errorQuery = ErrorLog::query()->orderByDesc('created_at');
         if ($requestId !== '') {
@@ -1745,6 +1750,16 @@ class AdminController extends Controller
         }
 
         $operationalTriggers = $this->buildOperationalTriggers(5);
+        $unconfirmedSingleCriticalTriggers = $this->buildUnconfirmedSingleCriticalTriggers($unconfirmedSince);
+
+        try {
+            \App\Models\AccessLog::create([
+                'type' => 'admin_logs_visit',
+                'user_id' => null,
+                'path' => request()->path(),
+                'ip' => request()->ip(),
+            ]);
+        } catch (\Throwable $e) {}
         
         return view('admin.logs', [
             'lines' => $lines,
@@ -1762,7 +1777,118 @@ class AdminController extends Controller
             'eventId' => $eventId,
             'statusCode' => $statusCode,
             'operationalTriggers' => $operationalTriggers,
+            'unconfirmedSince' => $unconfirmedSince,
+            'unconfirmedSingleCriticalTriggers' => $unconfirmedSingleCriticalTriggers,
         ]);
+    }
+
+    /**
+     * 前回ログ確認以降の未確認「単発重大」トリガー
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildUnconfirmedSingleCriticalTriggers(\Illuminate\Support\Carbon $since): array
+    {
+        $importantPathPatterns = [
+            'login', 'register', 'password', 'notifications', 'threads',
+            'responses', 'reports', 'profile', 'coins', 'admin/messages',
+        ];
+        $isImportantPath = function (?string $path) use ($importantPathPatterns): bool {
+            $normalized = strtolower(trim((string) $path, '/'));
+            if ($normalized === '') {
+                return false;
+            }
+            foreach ($importantPathPatterns as $pattern) {
+                if (str_contains($normalized, $pattern)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        $isTimeoutRow = function ($row): bool {
+            $message = strtolower((string) ($row->message ?? ''));
+            $errorType = strtolower((string) ($row->error_type ?? ''));
+            return str_contains($message, 'timeout')
+                || str_contains($message, 'timed out')
+                || str_contains($message, 'cURL error 28')
+                || str_contains($errorType, 'timeout')
+                || str_contains($errorType, 'connection');
+        };
+
+        $server5xxRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('status_code')
+            ->where('status_code', '>=', 500)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+        $exceptionRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNull('status_code')
+            ->whereNotNull('error_type')
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+        $critical4xxRows = \App\Models\AccessLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereIn('status_code', [401, 403, 404, 422])
+            ->orderByDesc('created_at')
+            ->get()
+            ->filter(fn ($r) => $isImportantPath($r->path))
+            ->take(10)
+            ->values();
+        $criticalTimeoutRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->get()
+            ->filter($isTimeoutRow)
+            ->filter(fn ($r) => $isImportantPath($r->path))
+            ->take(10)
+            ->values();
+
+        $toErrorExamples = fn ($rows) => $rows->map(fn ($r) => [
+            'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+            'status_code' => $r->status_code,
+            'request_id' => $r->request_id,
+            'event_id' => $r->event_id,
+            'path' => $r->path,
+            'message' => mb_strimwidth(($r->error_type ? '[' . $r->error_type . '] ' : '') . (string) $r->message, 0, 180, '...'),
+        ])->all();
+        $toAccessExamples = fn ($rows) => $rows->map(fn ($r) => [
+            'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+            'status_code' => $r->status_code,
+            'request_id' => $r->request_id,
+            'event_id' => $r->event_id,
+            'path' => $r->path,
+            'message' => trim(($r->method ? $r->method . ' ' : '') . ($r->path ?? '')),
+        ])->all();
+
+        return [
+            [
+                'id' => 'server_5xx_unconfirmed',
+                'label' => '未確認: サーバーエラー(5xx)',
+                'count' => $server5xxRows->count(),
+                'examples' => $toErrorExamples($server5xxRows),
+            ],
+            [
+                'id' => 'exceptions_unconfirmed',
+                'label' => '未確認: 未処理例外',
+                'count' => $exceptionRows->count(),
+                'examples' => $toErrorExamples($exceptionRows),
+            ],
+            [
+                'id' => 'critical_4xx_unconfirmed',
+                'label' => '未確認: 重要導線の4xx',
+                'count' => $critical4xxRows->count(),
+                'examples' => $toAccessExamples($critical4xxRows),
+            ],
+            [
+                'id' => 'critical_timeout_unconfirmed',
+                'label' => '未確認: 重要導線のタイムアウト/接続失敗',
+                'count' => $criticalTimeoutRows->count(),
+                'examples' => $toErrorExamples($criticalTimeoutRows),
+            ],
+        ];
     }
 
     /**
@@ -1772,104 +1898,187 @@ class AdminController extends Controller
      */
     private function buildOperationalTriggers(int $minutes = 5): array
     {
-        $since = now()->subMinutes(max(1, $minutes));
+        $importantPathPatterns = [
+            'login',
+            'register',
+            'password',
+            'notifications',
+            'threads',
+            'responses',
+            'reports',
+            'profile',
+            'coins',
+            'admin/messages',
+        ];
+        $isImportantPath = function (?string $path) use ($importantPathPatterns): bool {
+            $normalized = strtolower(trim((string) $path, '/'));
+            if ($normalized === '') {
+                return false;
+            }
+            foreach ($importantPathPatterns as $pattern) {
+                if (str_contains($normalized, $pattern)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        $isTimeoutRow = function ($row): bool {
+            $message = strtolower((string) ($row->message ?? ''));
+            $errorType = strtolower((string) ($row->error_type ?? ''));
+            return str_contains($message, 'timeout')
+                || str_contains($message, 'timed out')
+                || str_contains($message, 'cURL error 28')
+                || str_contains($errorType, 'timeout')
+                || str_contains($errorType, 'connection');
+        };
+
+        $singleWindowSince = now()->subMinutes(max(1, $minutes));
+        $recurrent4xxSince = now()->subMinutes(15);
+        $recurrentTimeoutSince = now()->subMinutes(10);
 
         $server5xxRows = ErrorLog::query()
-            ->where('created_at', '>=', $since)
+            ->where('created_at', '>=', $singleWindowSince)
             ->whereNotNull('status_code')
             ->where('status_code', '>=', 500)
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
-
         $exceptionRows = ErrorLog::query()
-            ->where('created_at', '>=', $since)
+            ->where('created_at', '>=', $singleWindowSince)
             ->whereNull('status_code')
             ->whereNotNull('error_type')
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
+        $critical4xxRows = \App\Models\AccessLog::query()
+            ->where('created_at', '>=', $singleWindowSince)
+            ->whereIn('status_code', [401, 403, 404, 422])
+            ->orderByDesc('created_at')
+            ->get()
+            ->filter(fn ($r) => $isImportantPath($r->path))
+            ->take(5)
+            ->values();
+        $timeoutRows = ErrorLog::query()
+            ->where('created_at', '>=', $singleWindowSince)
+            ->orderByDesc('created_at')
+            ->get()
+            ->filter($isTimeoutRow)
+            ->take(5)
+            ->values();
+        $criticalTimeoutRows = $timeoutRows
+            ->filter(fn ($r) => $isImportantPath($r->path))
+            ->values();
 
-        $client4xxRows = \App\Models\AccessLog::query()
-            ->where('created_at', '>=', $since)
+        $recurrent4xxAll = \App\Models\AccessLog::query()
+            ->where('created_at', '>=', $recurrent4xxSince)
             ->whereBetween('status_code', [400, 499])
             ->orderByDesc('created_at')
-            ->limit(5)
             ->get();
+        $recurrent4xxCount = $recurrent4xxAll->count();
 
-        $timeoutRows = ErrorLog::query()
-            ->where('created_at', '>=', $since)
-            ->where(function ($q) {
-                $q->where('message', 'like', '%timeout%')
-                    ->orWhere('message', 'like', '%timed out%')
-                    ->orWhere('message', 'like', '%cURL error 28%')
-                    ->orWhere('error_type', 'like', '%Timeout%')
-                    ->orWhere('error_type', 'like', '%Connection%');
-            })
+        $recurrentTimeoutAll = ErrorLog::query()
+            ->where('created_at', '>=', $recurrentTimeoutSince)
             ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
+            ->get()
+            ->filter($isTimeoutRow)
+            ->values();
+        $recurrentTimeoutCount = $recurrentTimeoutAll->count();
+
+        $toErrorExamples = fn ($rows) => $rows->map(fn ($r) => [
+            'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+            'status_code' => $r->status_code,
+            'request_id' => $r->request_id,
+            'event_id' => $r->event_id,
+            'path' => $r->path,
+            'message' => mb_strimwidth(($r->error_type ? '[' . $r->error_type . '] ' : '') . (string) $r->message, 0, 180, '...'),
+        ])->all();
+        $toAccessExamples = fn ($rows) => $rows->map(fn ($r) => [
+            'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+            'status_code' => $r->status_code,
+            'request_id' => $r->request_id,
+            'event_id' => $r->event_id,
+            'path' => $r->path,
+            'message' => trim(($r->method ? $r->method . ' ' : '') . ($r->path ?? '')),
+        ])->all();
 
         return [
             [
                 'id' => 'server_5xx',
                 'label' => 'サーバーエラー(5xx)',
-                'description' => 'アプリまたはインフラが500系で失敗した状態です。',
+                'description' => '単発でも重大。即時対応対象です。',
                 'count' => $server5xxRows->count(),
+                'window_minutes' => max(1, $minutes),
+                'threshold' => 1,
+                'trigger_mode' => 'single_critical',
+                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上',
+                'is_triggered' => $server5xxRows->count() >= 1,
                 'severity' => 'high',
-                'examples' => $server5xxRows->map(fn ($r) => [
-                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
-                    'status_code' => $r->status_code,
-                    'request_id' => $r->request_id,
-                    'event_id' => $r->event_id,
-                    'path' => $r->path,
-                    'message' => mb_strimwidth((string) $r->message, 0, 180, '...'),
-                ])->all(),
+                'examples' => $toErrorExamples($server5xxRows),
             ],
             [
                 'id' => 'exceptions',
                 'label' => '未処理例外',
-                'description' => 'HTTPコードに出ない内部例外を含みます。',
+                'description' => '単発でも重大。HTTPコードに出ない内部例外です。',
                 'count' => $exceptionRows->count(),
+                'window_minutes' => max(1, $minutes),
+                'threshold' => 1,
+                'trigger_mode' => 'single_critical',
+                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上',
+                'is_triggered' => $exceptionRows->count() >= 1,
                 'severity' => 'high',
-                'examples' => $exceptionRows->map(fn ($r) => [
-                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
-                    'status_code' => $r->status_code,
-                    'request_id' => $r->request_id,
-                    'event_id' => $r->event_id,
-                    'path' => $r->path,
-                    'message' => mb_strimwidth(($r->error_type ? '[' . $r->error_type . '] ' : '') . (string) $r->message, 0, 180, '...'),
-                ])->all(),
+                'examples' => $toErrorExamples($exceptionRows),
             ],
             [
-                'id' => 'client_4xx',
-                'label' => 'クライアントエラー(4xx)',
-                'description' => '認証切れ・不正リクエスト・権限エラー増加の兆候です。',
-                'count' => $client4xxRows->count(),
-                'severity' => 'medium',
-                'examples' => $client4xxRows->map(fn ($r) => [
-                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
-                    'status_code' => $r->status_code,
-                    'request_id' => $r->request_id,
-                    'event_id' => $r->event_id,
-                    'path' => $r->path,
-                    'message' => trim(($r->method ? $r->method . ' ' : '') . ($r->path ?? '')),
-                ])->all(),
+                'id' => 'critical_4xx_single',
+                'label' => '重要導線の4xx',
+                'description' => 'ログイン/投稿/通知など重要導線での4xxは単発でも調査対象です。',
+                'count' => $critical4xxRows->count(),
+                'window_minutes' => max(1, $minutes),
+                'threshold' => 1,
+                'trigger_mode' => 'single_critical',
+                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上（status=401/403/404/422）',
+                'is_triggered' => $critical4xxRows->count() >= 1,
+                'severity' => 'high',
+                'examples' => $toAccessExamples($critical4xxRows),
             ],
             [
-                'id' => 'timeouts',
-                'label' => 'タイムアウト/接続失敗',
-                'description' => '外部APIやDB接続の遅延・失敗の兆候です。',
-                'count' => $timeoutRows->count(),
+                'id' => 'critical_timeout_single',
+                'label' => '重要導線のタイムアウト/接続失敗',
+                'description' => '重要導線のtimeout/connection失敗は単発でも重大です。',
+                'count' => $criticalTimeoutRows->count(),
+                'window_minutes' => max(1, $minutes),
+                'threshold' => 1,
+                'trigger_mode' => 'single_critical',
+                'rule_text' => '直近' . max(1, $minutes) . '分で1件以上',
+                'is_triggered' => $criticalTimeoutRows->count() >= 1,
+                'severity' => 'high',
+                'examples' => $toErrorExamples($criticalTimeoutRows),
+            ],
+            [
+                'id' => 'client_4xx_recurrent',
+                'label' => 'クライアントエラー(4xx)連発',
+                'description' => '認証切れやルート不整合の連発兆候です。',
+                'count' => $recurrent4xxCount,
+                'window_minutes' => 15,
+                'threshold' => 15,
+                'trigger_mode' => 'recurrent',
+                'rule_text' => '直近15分で15件以上',
+                'is_triggered' => $recurrent4xxCount >= 15,
+                'severity' => $recurrent4xxCount >= 15 ? 'high' : 'medium',
+                'examples' => $toAccessExamples($recurrent4xxAll->take(5)),
+            ],
+            [
+                'id' => 'timeouts_recurrent',
+                'label' => 'タイムアウト/接続失敗 連発',
+                'description' => '外部APIやDB接続の不安定化兆候です。',
+                'count' => $recurrentTimeoutCount,
+                'window_minutes' => 10,
+                'threshold' => 3,
+                'trigger_mode' => 'recurrent',
+                'rule_text' => '直近10分で3件以上',
+                'is_triggered' => $recurrentTimeoutCount >= 3,
                 'severity' => 'medium',
-                'examples' => $timeoutRows->map(fn ($r) => [
-                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
-                    'status_code' => $r->status_code,
-                    'request_id' => $r->request_id,
-                    'event_id' => $r->event_id,
-                    'path' => $r->path,
-                    'message' => mb_strimwidth((string) $r->message, 0, 180, '...'),
-                ])->all(),
+                'examples' => $toErrorExamples($recurrentTimeoutAll->take(5)),
             ],
         ];
     }
