@@ -8,6 +8,13 @@
         }
     }
 
+    function resetCorrelationFiltersExceptLines() {
+        setInputValue('search', '');
+        setInputValue('request_id', '');
+        setInputValue('event_id', '');
+        setInputValue('status_code', '');
+    }
+
     function openLogFilePanel() {
         const panel = document.getElementById('adminLogFilePanel');
         const toggle = document.querySelector('[data-target-id="adminLogFilePanel"]');
@@ -39,6 +46,10 @@
                 if (!filterValue || filterValue === '-') {
                     return;
                 }
+
+                // 相関IDクリック時は既存条件とのANDを避けるため、
+                // 行数指定以外のフィルタをいったんクリアしてから設定する。
+                resetCorrelationFiltersExceptLines();
 
                 if (filterType === 'request_id') {
                     setInputValue('request_id', filterValue);

@@ -16,10 +16,12 @@ class AccessLogger
         $isAdminPath = $adminPrefix && str_starts_with(trim($request->path(), '/'), $adminPrefix);
 
         if (!$isAdminPath) {
+            $requestId = ObservabilityLogService::requestId($request);
+            $eventId = ObservabilityLogService::eventId($request);
             try {
                 ObservabilityLogService::recordEvent([
-                    'event_id' => ObservabilityLogService::eventId($request),
-                    'request_id' => ObservabilityLogService::requestId($request),
+                    'event_id' => $eventId,
+                    'request_id' => $requestId,
                     'event_type' => 'http_request_handled',
                     'source' => 'server',
                     'user_id' => auth()->id(),
@@ -30,10 +32,14 @@ class AccessLogger
                         'status_code' => $response->getStatusCode(),
                     ],
                 ]);
+            } catch (\Throwable $e) {
+                // ログ保存失敗は本処理へ影響させない
+            }
 
+            try {
                 ObservabilityLogService::recordAccess([
-                    'request_id' => ObservabilityLogService::requestId($request),
-                    'event_id' => ObservabilityLogService::eventId($request),
+                    'request_id' => $requestId,
+                    'event_id' => $eventId,
                     'type' => auth()->check() ? 'member_visit' : 'guest_visit',
                     'method' => $request->method(),
                     'status_code' => $response->getStatusCode(),

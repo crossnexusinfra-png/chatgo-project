@@ -1644,6 +1644,7 @@ class AdminController extends Controller
         $requestId = trim((string) request()->get('request_id', ''));
         $eventId = trim((string) request()->get('event_id', ''));
         $statusCode = request()->integer('status_code', 0);
+        $hasCorrelationFilter = ($requestId !== '' || $eventId !== '');
         $prevLogsVisit = \App\Models\AccessLog::query()
             ->where('type', 'admin_logs_visit')
             ->orderByDesc('created_at')
@@ -1660,28 +1661,41 @@ class AdminController extends Controller
         if ($statusCode > 0) {
             $errorQuery->where('status_code', $statusCode);
         }
-        $errorLogs = $errorQuery->limit(100)->get();
+        if (!$hasCorrelationFilter) {
+            $errorQuery->limit(100);
+        }
+        $errorLogs = $errorQuery->get();
 
-        $eventLogs = EventLog::query()
+        $eventLogsQuery = EventLog::query()
             ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
             ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
-            ->orderByDesc('created_at')
-            ->limit(100)
-            ->get();
+            ->when(($requestId !== '' || $eventId !== ''), function ($q) {
+                $q->where('event_type', '!=', 'admin_visit');
+            })
+            ->orderByDesc('created_at');
+        if (!$hasCorrelationFilter) {
+            $eventLogsQuery->limit(100);
+        }
+        $eventLogs = $eventLogsQuery->get();
 
-        $accessLogs = \App\Models\AccessLog::query()
+        $accessLogsQuery = \App\Models\AccessLog::query()
             ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
             ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
-            ->orderByDesc('created_at')
-            ->limit(100)
-            ->get();
+            ->when($statusCode > 0, fn ($q) => $q->where('status_code', $statusCode))
+            ->orderByDesc('created_at');
+        if (!$hasCorrelationFilter) {
+            $accessLogsQuery->limit(100);
+        }
+        $accessLogs = $accessLogsQuery->get();
 
-        $walLogs = WalRecoveryLog::query()
+        $walLogsQuery = WalRecoveryLog::query()
             ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
             ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
-            ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+            ->orderByDesc('created_at');
+        if (!$hasCorrelationFilter) {
+            $walLogsQuery->limit(50);
+        }
+        $walLogs = $walLogsQuery->get();
         
         // ログファイルのパスを取得（ログローテーション対応）
         $logPath = $this->getLogFilePath();
