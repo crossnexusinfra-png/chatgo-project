@@ -26,37 +26,6 @@
             @endif
             
             @if($fileExists)
-                <div class="admin-logs-info-bar">
-                    <div class="admin-logs-info-item">
-                        <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_file', $lang) }}:</span>
-                        <span class="admin-logs-info-value">{{ basename($logPath ?? '') }}</span>
-                    </div>
-                    @if($logPath)
-                        <div class="admin-logs-info-item">
-                            <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_last_updated', $lang) }}:</span>
-                            <span class="admin-logs-info-value">{{ date('Y-m-d H:i:s', filemtime($logPath)) }}</span>
-                        </div>
-                    @endif
-                    <div class="admin-logs-info-item">
-                        <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_file_size', $lang) }}:</span>
-                        <span class="admin-logs-info-value">{{ str_replace(':size', number_format($fileSize / 1024, 2), \App\Services\LanguageService::trans('admin_logs_file_size_kb', $lang)) }}</span>
-                    </div>
-                    <div class="admin-logs-info-item">
-                        <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_total_lines', $lang) }}:</span>
-                        <span class="admin-logs-info-value">{{ $totalLines > 0 ? number_format($totalLines) : \App\Services\LanguageService::trans('admin_logs_calculating', $lang) }}</span>
-                    </div>
-                    <div class="admin-logs-info-item">
-                        <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_display_lines', $lang) }}:</span>
-                        <span class="admin-logs-info-value">{{ count($lines) }}</span>
-                    </div>
-                </div>
-                
-                @if($fileSize > 10 * 1024 * 1024)
-                    <div class="alert alert-warning">
-                        {{ str_replace(':size', number_format($fileSize / 1024 / 1024, 2), \App\Services\LanguageService::trans('admin_logs_large_file_warning', $lang)) }}
-                    </div>
-                @endif
-
                 <hr>
                 <h2>相関調査ログ（簡易表示）</h2>
 
@@ -101,7 +70,8 @@
 
                 <div class="admin-collapsible-card">
                     <button type="button" class="admin-collapsible-toggle" data-target-id="adminWalLogsPanel" aria-expanded="false">
-                        WAL復元ログ
+                        <span>WAL復元ログ</span>
+                        <span class="admin-collapsible-arrow" aria-hidden="true">▼</span>
                     </button>
                     <div id="adminWalLogsPanel" class="admin-collapsible-panel">
                         @if(($walLogs ?? collect())->count() > 0)
@@ -120,9 +90,41 @@
 
                 <div class="admin-collapsible-card">
                     <button type="button" class="admin-collapsible-toggle" data-target-id="adminLogFilePanel" aria-expanded="false">
-                        {{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}
+                        <span>{{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}</span>
+                        <span class="admin-collapsible-arrow" aria-hidden="true">▼</span>
                     </button>
                     <div id="adminLogFilePanel" class="admin-collapsible-panel">
+                        <div class="admin-logs-info-bar">
+                            <div class="admin-logs-info-item">
+                                <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_file', $lang) }}:</span>
+                                <span class="admin-logs-info-value">{{ basename($logPath ?? '') }}</span>
+                            </div>
+                            @if($logPath)
+                                <div class="admin-logs-info-item">
+                                    <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_last_updated', $lang) }}:</span>
+                                    <span class="admin-logs-info-value">{{ date('Y-m-d H:i:s', filemtime($logPath)) }}</span>
+                                </div>
+                            @endif
+                            <div class="admin-logs-info-item">
+                                <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_file_size', $lang) }}:</span>
+                                <span class="admin-logs-info-value">{{ str_replace(':size', number_format($fileSize / 1024, 2), \App\Services\LanguageService::trans('admin_logs_file_size_kb', $lang)) }}</span>
+                            </div>
+                            <div class="admin-logs-info-item">
+                                <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_total_lines', $lang) }}:</span>
+                                <span class="admin-logs-info-value">{{ $totalLines > 0 ? number_format($totalLines) : \App\Services\LanguageService::trans('admin_logs_calculating', $lang) }}</span>
+                            </div>
+                            <div class="admin-logs-info-item">
+                                <span class="admin-logs-info-label">{{ \App\Services\LanguageService::trans('admin_logs_display_lines', $lang) }}:</span>
+                                <span class="admin-logs-info-value">{{ count($lines) }}</span>
+                            </div>
+                        </div>
+
+                        @if($fileSize > 10 * 1024 * 1024)
+                            <div class="alert alert-warning">
+                                {{ str_replace(':size', number_format($fileSize / 1024 / 1024, 2), \App\Services\LanguageService::trans('admin_logs_large_file_warning', $lang)) }}
+                            </div>
+                        @endif
+
                         <div class="admin-logs-actions">
                             <form method="GET" action="{{ route('admin.logs') }}" class="admin-form-inline">
                                 <div class="admin-logs-form-group">
@@ -181,8 +183,5 @@
     </div>
 </div>
 @endsection
-
-@push('scripts')
 <script src="{{ asset('js/admin-logs.js') }}?v={{ @filemtime(public_path('js/admin-logs.js')) ?: time() }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@endpush
 
