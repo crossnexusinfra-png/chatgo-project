@@ -20,6 +20,36 @@
             <div class="admin-index-access-record-title">{{ \App\Services\LanguageService::trans('admin_index_last_access', $lang) }}</div>
             <div>{{ \App\Services\LanguageService::trans('admin_index_last_guest', $lang) }}: {{ optional($lastGuest?->created_at)->format('Y-m-d H:i:s') ?? '—' }}</div>
             <div>{{ \App\Services\LanguageService::trans('admin_index_last_login', $lang) }}: {{ optional($lastLogin?->created_at)->format('Y-m-d H:i:s') ?? '—' }}</div>
+            <div class="admin-index-ops-status">
+                <div>
+                    直近5分のサーバーエラー(5xx): <strong>{{ $recentServerErrorCount ?? 0 }}</strong>
+                    @if(($recentServerErrorCount ?? 0) > 0)
+                        <span class="admin-new-inline">要確認</span>
+                    @endif
+                </div>
+                <div>
+                    異常通知設定:
+                    @if($cloudflareAlertsEnabled ?? false)
+                        <strong>有効</strong>
+                        （Webhook: {{ ($cloudflareWebhookConfigured ?? false) ? '設定済み' : '未設定' }} / Email: {{ ($cloudflareEmailConfigured ?? false) ? '設定済み' : '未設定' }}）
+                    @else
+                        <strong>無効</strong>
+                    @endif
+                </div>
+            </div>
+        </div>
+        <div class="admin-index-access-record">
+            <div class="admin-index-access-record-title">運用トリガー（直近5分）</div>
+            @foreach(($operationalTriggers ?? []) as $trigger)
+                <div class="admin-ops-trigger-row">
+                    <strong>{{ $trigger['label'] ?? '-' }}</strong>:
+                    <span>{{ $trigger['count'] ?? 0 }}件</span>
+                    @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['count'] ?? 0) > 0)
+                        <span class="admin-new-inline">優先調査</span>
+                    @endif
+                    <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
+                </div>
+            @endforeach
         </div>
         <ul class="admin-index-menu">
             <li>

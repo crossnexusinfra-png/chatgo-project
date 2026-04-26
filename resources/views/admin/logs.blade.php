@@ -27,14 +27,59 @@
             
             @if($fileExists)
                 <hr>
+                <h2>運用トリガー（直近5分）</h2>
+                <div class="admin-logs-inline-help">件数が0でない項目は、下のサンプル行の request_id / event_id / status をクリックして即調査できます。</div>
+                @foreach(($operationalTriggers ?? []) as $trigger)
+                    <div class="admin-ops-trigger-card">
+                        <div class="admin-ops-trigger-title">
+                            <strong>{{ $trigger['label'] ?? '-' }}</strong>
+                            <span class="admin-ops-trigger-count">{{ $trigger['count'] ?? 0 }}件</span>
+                            @if(($trigger['severity'] ?? 'medium') === 'high' && ($trigger['count'] ?? 0) > 0)
+                                <span class="admin-new-inline">優先調査</span>
+                            @endif
+                        </div>
+                        <div class="admin-muted">{{ $trigger['description'] ?? '' }}</div>
+                        @if(!empty($trigger['examples']))
+                            <div class="admin-logs-log-container">
+                                @foreach($trigger['examples'] as $example)
+                                    <div class="log-line">
+                                        {{ $example['created_at'] ?? '-' }} |
+                                        @if(!empty($example['status_code']))
+                                            status=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="status_code" data-filter-value="{{ $example['status_code'] }}">{{ $example['status_code'] }}</button> |
+                                        @endif
+                                        request_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $example['request_id'] ?? '' }}">{{ $example['request_id'] ?? '-' }}</button> |
+                                        event_id=<button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $example['event_id'] ?? '' }}">{{ $example['event_id'] ?? '-' }}</button>
+                                        @if(!empty($example['path']))
+                                            | path={{ $example['path'] }}
+                                        @endif
+                                        @if(!empty($example['message']))
+                                            | {{ $example['message'] }}
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="admin-logs-empty-state">直近5分では検出されていません。</div>
+                        @endif
+                    </div>
+                @endforeach
+
+                <hr>
                 <h2>相関調査ログ（簡易表示）</h2>
 
                 <h3>サーバーエラー</h3>
+                <div class="admin-logs-inline-help">request_id / event_id をクリックすると絞り込みます。</div>
                 @if(($errorLogs ?? collect())->count() > 0)
                     <div class="admin-logs-log-container">
                         @foreach($errorLogs as $err)
                             <div class="log-line log-error">
-                                {{ $err->created_at }} | status={{ $err->status_code ?? '-' }} | request_id={{ $err->request_id ?? '-' }} | event_id={{ $err->event_id ?? '-' }} | source={{ $err->source }} | {{ $err->message }}
+                                {{ $err->created_at }} | status=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="status_code" data-filter-value="{{ $err->status_code ?? '' }}">{{ $err->status_code ?? '-' }}</button> |
+                                request_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $err->request_id ?? '' }}">{{ $err->request_id ?? '-' }}</button> |
+                                event_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $err->event_id ?? '' }}">{{ $err->event_id ?? '-' }}</button> |
+                                source={{ $err->source }} | {{ $err->message }}
                             </div>
                         @endforeach
                     </div>
@@ -47,7 +92,12 @@
                     <div class="admin-logs-log-container">
                         @foreach($eventLogs as $event)
                             <div class="log-line log-info">
-                                {{ $event->created_at }} | event_type={{ $event->event_type }} | request_id={{ $event->request_id ?? '-' }} | event_id={{ $event->event_id }} | path={{ $event->path ?? '-' }}
+                                {{ $event->created_at }} | event_type={{ $event->event_type }} |
+                                request_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $event->request_id ?? '' }}">{{ $event->request_id ?? '-' }}</button> |
+                                event_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $event->event_id ?? '' }}">{{ $event->event_id ?? '-' }}</button> |
+                                path={{ $event->path ?? '-' }}
                             </div>
                         @endforeach
                     </div>
@@ -60,7 +110,13 @@
                     <div class="admin-logs-log-container">
                         @foreach($accessLogs as $access)
                             <div class="log-line log-debug">
-                                {{ $access->created_at }} | type={{ $access->type }} | status={{ $access->status_code ?? '-' }} | request_id={{ $access->request_id ?? '-' }} | event_id={{ $access->event_id ?? '-' }} | {{ $access->method }} {{ $access->path }}
+                                {{ $access->created_at }} | type={{ $access->type }} | status=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="status_code" data-filter-value="{{ $access->status_code ?? '' }}">{{ $access->status_code ?? '-' }}</button> |
+                                request_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $access->request_id ?? '' }}">{{ $access->request_id ?? '-' }}</button> |
+                                event_id=
+                                <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $access->event_id ?? '' }}">{{ $access->event_id ?? '-' }}</button> |
+                                {{ $access->method }} {{ $access->path }}
                             </div>
                         @endforeach
                     </div>
@@ -78,7 +134,11 @@
                             <div class="admin-logs-log-container">
                                 @foreach($walLogs as $wal)
                                     <div class="log-line log-info">
-                                        {{ $wal->created_at }} | db={{ $wal->database_driver }} | wal_lsn={{ $wal->wal_lsn ?? '-' }} | txid={{ $wal->transaction_id ?? '-' }} | reason={{ $wal->snapshot_reason }} | event_id={{ $wal->event_id }}
+                                        {{ $wal->created_at }} | db={{ $wal->database_driver }} | wal_lsn={{ $wal->wal_lsn ?? '-' }} | txid={{ $wal->transaction_id ?? '-' }} | reason={{ $wal->snapshot_reason }} |
+                                        request_id=
+                                        <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="request_id" data-filter-value="{{ $wal->request_id ?? '' }}">{{ $wal->request_id ?? '-' }}</button> |
+                                        event_id=
+                                        <button type="button" class="admin-logs-filter-chip js-log-filter" data-filter-type="event_id" data-filter-value="{{ $wal->event_id ?? '' }}">{{ $wal->event_id ?? '-' }}</button>
                                     </div>
                                 @endforeach
                             </div>
@@ -126,7 +186,7 @@
                         @endif
 
                         <div class="admin-logs-actions">
-                            <form method="GET" action="{{ route('admin.logs') }}" class="admin-form-inline">
+                            <form method="GET" action="{{ route('admin.logs') }}" class="admin-form-inline" id="adminLogsFilterForm">
                                 <div class="admin-logs-form-group">
                                     <label for="lines">{{ \App\Services\LanguageService::trans('admin_logs_lines_label', $lang) }}:</label>
                                     <input type="number" name="lines" id="lines" value="{{ request('lines', 1000) }}" min="100" max="10000" step="100">

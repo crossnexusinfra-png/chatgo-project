@@ -770,6 +770,16 @@ class AdminController extends Controller
         $newFreezeAppeals = FreezeAppeal::where('status', 'pending')
             ->where('created_at', '>', $since)
             ->count();
+        $recentServerErrorCount = ErrorLog::query()
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->where(function ($q) {
+                $q->whereNull('status_code')->orWhere('status_code', '>=', 500);
+            })
+            ->count();
+        $cloudflareAlertsEnabled = (bool) config('cloudflare.alerts.enabled');
+        $cloudflareWebhookConfigured = !empty((string) config('cloudflare.alerts.webhook_url'));
+        $cloudflareEmailConfigured = !empty((string) config('cloudflare.alerts.email'));
+        $operationalTriggers = $this->buildOperationalTriggers(5);
 
         // 今回のダッシュボード訪問を記録（集計後に記録）
         try {
@@ -790,6 +800,11 @@ class AdminController extends Controller
             'newReports' => $newReports,
             'newSuggestions' => $newSuggestions,
             'newFreezeAppeals' => $newFreezeAppeals,
+            'recentServerErrorCount' => $recentServerErrorCount,
+            'cloudflareAlertsEnabled' => $cloudflareAlertsEnabled,
+            'cloudflareWebhookConfigured' => $cloudflareWebhookConfigured,
+            'cloudflareEmailConfigured' => $cloudflareEmailConfigured,
+            'operationalTriggers' => $operationalTriggers,
             'lang' => $lang,
         ]);
     }
@@ -1657,6 +1672,8 @@ class AdminController extends Controller
             ->get();
 
         $walLogs = WalRecoveryLog::query()
+            ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
+            ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
             ->orderByDesc('created_at')
             ->limit(50)
             ->get();
@@ -1726,6 +1743,8 @@ class AdminController extends Controller
                 $lines = $filteredLines;
             }
         }
+
+        $operationalTriggers = $this->buildOperationalTriggers(5);
         
         return view('admin.logs', [
             'lines' => $lines,
@@ -1742,7 +1761,138 @@ class AdminController extends Controller
             'requestId' => $requestId,
             'eventId' => $eventId,
             'statusCode' => $statusCode,
+            'operationalTriggers' => $operationalTriggers,
         ]);
+    }
+
+    /**
+     * 運用トリガー（直近N分）を集計し、原因特定向けのサンプルを返す
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildOperationalTriggers(int $minutes = 5): array
+    {
+        $since = now()->subMinutes(max(1, $minutes));
+
+        $server5xxRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNotNull('status_code')
+            ->where('status_code', '>=', 500)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        $exceptionRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereNull('status_code')
+            ->whereNotNull('error_type')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        $client4xxRows = \App\Models\AccessLog::query()
+            ->where('created_at', '>=', $since)
+            ->whereBetween('status_code', [400, 499])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        $timeoutRows = ErrorLog::query()
+            ->where('created_at', '>=', $since)
+            ->where(function ($q) {
+                $q->where('message', 'like', '%timeout%')
+                    ->orWhere('message', 'like', '%timed out%')
+                    ->orWhere('message', 'like', '%cURL error 28%')
+                    ->orWhere('error_type', 'like', '%Timeout%')
+                    ->orWhere('error_type', 'like', '%Connection%');
+            })
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        $walRecoveryRows = WalRecoveryLog::query()
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        return [
+            [
+                'id' => 'server_5xx',
+                'label' => 'サーバーエラー(5xx)',
+                'description' => 'アプリまたはインフラが500系で失敗した状態です。',
+                'count' => $server5xxRows->count(),
+                'severity' => 'high',
+                'examples' => $server5xxRows->map(fn ($r) => [
+                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+                    'status_code' => $r->status_code,
+                    'request_id' => $r->request_id,
+                    'event_id' => $r->event_id,
+                    'path' => $r->path,
+                    'message' => mb_strimwidth((string) $r->message, 0, 180, '...'),
+                ])->all(),
+            ],
+            [
+                'id' => 'exceptions',
+                'label' => '未処理例外',
+                'description' => 'HTTPコードに出ない内部例外を含みます。',
+                'count' => $exceptionRows->count(),
+                'severity' => 'high',
+                'examples' => $exceptionRows->map(fn ($r) => [
+                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+                    'status_code' => $r->status_code,
+                    'request_id' => $r->request_id,
+                    'event_id' => $r->event_id,
+                    'path' => $r->path,
+                    'message' => mb_strimwidth(($r->error_type ? '[' . $r->error_type . '] ' : '') . (string) $r->message, 0, 180, '...'),
+                ])->all(),
+            ],
+            [
+                'id' => 'client_4xx',
+                'label' => 'クライアントエラー(4xx)',
+                'description' => '認証切れ・不正リクエスト・権限エラー増加の兆候です。',
+                'count' => $client4xxRows->count(),
+                'severity' => 'medium',
+                'examples' => $client4xxRows->map(fn ($r) => [
+                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+                    'status_code' => $r->status_code,
+                    'request_id' => $r->request_id,
+                    'event_id' => $r->event_id,
+                    'path' => $r->path,
+                    'message' => trim(($r->method ? $r->method . ' ' : '') . ($r->path ?? '')),
+                ])->all(),
+            ],
+            [
+                'id' => 'timeouts',
+                'label' => 'タイムアウト/接続失敗',
+                'description' => '外部APIやDB接続の遅延・失敗の兆候です。',
+                'count' => $timeoutRows->count(),
+                'severity' => 'medium',
+                'examples' => $timeoutRows->map(fn ($r) => [
+                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+                    'status_code' => $r->status_code,
+                    'request_id' => $r->request_id,
+                    'event_id' => $r->event_id,
+                    'path' => $r->path,
+                    'message' => mb_strimwidth((string) $r->message, 0, 180, '...'),
+                ])->all(),
+            ],
+            [
+                'id' => 'wal_recovery',
+                'label' => 'WAL復元発生',
+                'description' => 'DB整合性維持のための復元処理が動作した記録です。',
+                'count' => $walRecoveryRows->count(),
+                'severity' => 'medium',
+                'examples' => $walRecoveryRows->map(fn ($r) => [
+                    'created_at' => optional($r->created_at)->format('Y-m-d H:i:s'),
+                    'status_code' => null,
+                    'request_id' => $r->request_id,
+                    'event_id' => $r->event_id,
+                    'path' => null,
+                    'message' => trim('reason=' . $r->snapshot_reason . ' db=' . $r->database_driver . ' wal_lsn=' . ($r->wal_lsn ?? '-')),
+                ])->all(),
+            ],
+        ];
     }
 
     /**
