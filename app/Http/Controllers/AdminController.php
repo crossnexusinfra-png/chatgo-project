@@ -1644,6 +1644,19 @@ class AdminController extends Controller
         $requestId = trim((string) request()->get('request_id', ''));
         $eventId = trim((string) request()->get('event_id', ''));
         $statusCode = request()->integer('status_code', 0);
+        $filterMode = trim((string) request()->get('filter_mode', ''));
+
+        // クリック検索時は filter_mode を優先し、意図しないAND条件を防ぐ
+        if ($filterMode === 'request_id') {
+            $eventId = '';
+            $statusCode = 0;
+        } elseif ($filterMode === 'event_id') {
+            $requestId = '';
+            $statusCode = 0;
+        } elseif ($filterMode === 'status_code') {
+            $requestId = '';
+            $eventId = '';
+        }
         $hasCorrelationFilter = ($requestId !== '' || $eventId !== '');
         $prevLogsVisit = \App\Models\AccessLog::query()
             ->where('type', 'admin_logs_visit')
@@ -1790,6 +1803,7 @@ class AdminController extends Controller
             'requestId' => $requestId,
             'eventId' => $eventId,
             'statusCode' => $statusCode,
+            'filterMode' => $filterMode,
             'operationalTriggers' => $operationalTriggers,
             'unconfirmedSince' => $unconfirmedSince,
             'unconfirmedSingleCriticalTriggers' => $unconfirmedSingleCriticalTriggers,

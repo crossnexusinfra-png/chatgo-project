@@ -46,6 +46,7 @@
             if (linesValue !== '') {
                 params.set('lines', linesValue);
             }
+            params.set('filter_mode', filterType);
 
             if (filterType === 'request_id') {
                 params.set('request_id', filterValue);
