@@ -339,13 +339,30 @@ class AdminController extends Controller
             $templates = $dbTemplates->concat($templates)->values();
         }
 
-        // 初回登録時お知らせテンプレート（1件のみ・カラム存在時のみ）
-        $welcomeMessage = null;
+        // 初回登録時お知らせテンプレート（登録種別ごと）
+        $welcomeMessages = [
+            'normal' => null,
+            'google' => null,
+            'phone' => null,
+        ];
         if (Schema::hasColumn('admin_messages', 'is_welcome')) {
-            $welcomeMessage = AdminMessage::where('is_welcome', true)->whereNull('published_at')->first();
+            $welcomeQuery = AdminMessage::where('is_welcome', true)
+                ->whereNull('published_at')
+                ->whereNull('parent_message_id');
+
+            if (Schema::hasColumn('admin_messages', 'welcome_type')) {
+                $welcomeMessages = [
+                    'normal' => (clone $welcomeQuery)->where('welcome_type', 'normal')->first(),
+                    'google' => (clone $welcomeQuery)->where('welcome_type', 'google')->first(),
+                    'phone' => (clone $welcomeQuery)->where('welcome_type', 'phone')->first(),
+                ];
+            } else {
+                $legacy = $welcomeQuery->first();
+                $welcomeMessages['normal'] = $legacy;
+            }
         }
 
-        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessage', 'templates', 'editableTemplates'));
+        return view('admin.messages', compact('messages', 'filter', 'lang', 'welcomeMessages', 'templates', 'editableTemplates'));
     }
 
     /** 過去のお知らせ一覧（10件ずつページング） */
@@ -525,37 +542,80 @@ class AdminController extends Controller
             return back()->withErrors(['error' => 'マイグレーションを実行してください。']);
         }
         $lang = $this->getAdminLanguage();
-        request()->validate([
-            'welcome_title_ja' => 'nullable|string|max:255',
-            'welcome_title_en' => 'nullable|string|max:255',
-            'welcome_body_ja' => 'required|string|max:10000',
-            'welcome_body_en' => 'nullable|string|max:10000',
-            'welcome_coin_amount' => 'nullable|integer|min:0',
+        $payload = request()->validate([
+            'welcome_templates.normal.title_ja' => 'nullable|string|max:255',
+            'welcome_templates.normal.title_en' => 'nullable|string|max:255',
+            'welcome_templates.normal.body_ja' => 'required|string|max:10000',
+            'welcome_templates.normal.body_en' => 'nullable|string|max:10000',
+            'welcome_templates.normal.coin_amount' => 'nullable|integer|min:0',
+            'welcome_templates.google.title_ja' => 'nullable|string|max:255',
+            'welcome_templates.google.title_en' => 'nullable|string|max:255',
+            'welcome_templates.google.body_ja' => 'required|string|max:10000',
+            'welcome_templates.google.body_en' => 'nullable|string|max:10000',
+            'welcome_templates.google.coin_amount' => 'nullable|integer|min:0',
+            'welcome_templates.phone.title_ja' => 'nullable|string|max:255',
+            'welcome_templates.phone.title_en' => 'nullable|string|max:255',
+            'welcome_templates.phone.body_ja' => 'required|string|max:10000',
+            'welcome_templates.phone.body_en' => 'nullable|string|max:10000',
+            'welcome_templates.phone.coin_amount' => 'nullable|integer|min:0',
         ]);
 
-        // 既存の welcome を解除
-        AdminMessage::where('is_welcome', true)->update(['is_welcome' => false]);
+        $welcomeTemplates = $payload['welcome_templates'] ?? [];
+        $types = ['normal', 'google', 'phone'];
+        $supportsWelcomeType = Schema::hasColumn('admin_messages', 'welcome_type');
 
-        AdminMessage::create([
-            'title_ja' => request('welcome_title_ja'),
-            'title_en' => request('welcome_title_en'),
-            'body_ja' => request('welcome_body_ja'),
-            'body_en' => request('welcome_body_en'),
-            // 既存ロジック互換のため、従来カラムにも保存
-            'title' => request('welcome_title_ja'),
-            'body' => request('welcome_body_ja'),
-            'audience' => 'members',
-            'published_at' => null,
-            'is_welcome' => true,
-            'allows_reply' => false,
-            'unlimited_reply' => false,
-            'reply_used' => false,
-            'coin_amount' => request('welcome_coin_amount') ? (int)request('welcome_coin_amount') : null,
-            'is_auto_sent' => false,
-            'is_manual_sent' => false,
-            'is_from_template' => false,
-            'delivery_type' => AdminMessage::DELIVERY_TYPE_MANUAL,
-        ]);
+        foreach ($types as $type) {
+            $data = $welcomeTemplates[$type] ?? [];
+            $titleJa = (string) ($data['title_ja'] ?? '');
+            $titleEn = (string) ($data['title_en'] ?? '');
+            $bodyJa = (string) ($data['body_ja'] ?? '');
+            $bodyEn = (string) ($data['body_en'] ?? '');
+            $coinAmount = array_key_exists('coin_amount', $data) && $data['coin_amount'] !== null && $data['coin_amount'] !== ''
+                ? (int) $data['coin_amount']
+                : null;
+
+            $query = AdminMessage::where('is_welcome', true)
+                ->whereNull('published_at')
+                ->whereNull('parent_message_id');
+
+            if ($supportsWelcomeType) {
+                $query->where('welcome_type', $type);
+            } elseif ($type !== 'normal') {
+                // 旧スキーマでは normal 以外は保存不可
+                continue;
+            }
+
+            $record = $query->first();
+            $attributes = [
+                'title_ja' => $titleJa !== '' ? $titleJa : null,
+                'title_en' => $titleEn !== '' ? $titleEn : null,
+                'body_ja' => $bodyJa,
+                'body_en' => $bodyEn !== '' ? $bodyEn : null,
+                // 既存ロジック互換のため、従来カラムにも保存
+                'title' => $titleJa !== '' ? $titleJa : null,
+                'body' => $bodyJa,
+                'audience' => 'members',
+                'published_at' => null,
+                'is_welcome' => true,
+                'allows_reply' => false,
+                'unlimited_reply' => false,
+                'reply_used' => false,
+                'coin_amount' => $coinAmount,
+                'is_auto_sent' => false,
+                'is_manual_sent' => false,
+                'is_from_template' => false,
+                'delivery_type' => AdminMessage::DELIVERY_TYPE_MANUAL,
+            ];
+            if ($supportsWelcomeType) {
+                $attributes['welcome_type'] = $type;
+            }
+
+            if ($record) {
+                $record->update($attributes);
+            } else {
+                AdminMessage::create($attributes);
+            }
+        }
 
         return back()->with('success', \App\Services\LanguageService::trans('admin_messages_welcome_set', $lang));
     }

@@ -7,15 +7,41 @@ use App\Models\User;
 
 class WelcomeNotificationService
 {
+    public const WELCOME_TYPE_NORMAL = 'normal';
+    public const WELCOME_TYPE_GOOGLE = 'google';
+    public const WELCOME_TYPE_PHONE = 'phone';
+
     /**
      * 初回登録時お知らせテンプレートが設定されていれば、該当ユーザーに送信する
      */
-    public static function sendWelcomeTo(User $user): void
+    public static function sendWelcomeTo(User $user, string $welcomeType = self::WELCOME_TYPE_NORMAL): void
     {
-        $template = AdminMessage::where('is_welcome', true)
+        $welcomeType = in_array($welcomeType, [
+            self::WELCOME_TYPE_NORMAL,
+            self::WELCOME_TYPE_GOOGLE,
+            self::WELCOME_TYPE_PHONE,
+        ], true) ? $welcomeType : self::WELCOME_TYPE_NORMAL;
+
+        $base = AdminMessage::where('is_welcome', true)
             ->whereNull('published_at')
-            ->whereNull('parent_message_id')
+            ->whereNull('parent_message_id');
+
+        $template = (clone $base)
+            ->where('welcome_type', $welcomeType)
             ->first();
+
+        if (!$template) {
+            $template = (clone $base)
+                ->where('welcome_type', self::WELCOME_TYPE_NORMAL)
+                ->first();
+        }
+
+        if (!$template) {
+            // 旧データ互換: welcome_type 未設定の単一テンプレートを利用
+            $template = (clone $base)
+                ->whereNull('welcome_type')
+                ->first();
+        }
 
         if (!$template) {
             return;

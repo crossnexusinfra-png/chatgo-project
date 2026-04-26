@@ -17,7 +17,7 @@ class AdminMessage extends Model
     protected $fillable = [
         'title_key', 'body_key', 'title', 'body', 'title_ja', 'title_en', 'body_ja', 'body_en', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount', 'is_auto_sent',
         'is_manual_sent', 'is_from_template', 'delivery_type',
-        'is_welcome', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
+        'is_welcome', 'welcome_type', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
     ];
 
     /**

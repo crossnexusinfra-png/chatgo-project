@@ -136,18 +136,31 @@
             ▼ {{ \App\Services\LanguageService::trans('admin_messages_welcome_title', $lang) }}
         </button>
         <div id="adminWelcomeSettingPanel" class="admin-collapsible-panel">
+            @php
+                $welcomeMessages = $welcomeMessages ?? ['normal' => null, 'google' => null, 'phone' => null];
+            @endphp
             <form method="post" action="{{ route('admin.messages.set-welcome') }}">
                 @csrf
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
-                <input type="text" name="welcome_title_ja" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
-                <input type="text" name="welcome_title_en" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_en', $lang) }}">
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
-                <textarea name="welcome_body_ja" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
-                <textarea name="welcome_body_en" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                <input type="number" name="welcome_coin_amount" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
+                @foreach ([
+                    'normal' => 'admin_messages_welcome_section_normal',
+                    'google' => 'admin_messages_welcome_section_google',
+                    'phone' => 'admin_messages_welcome_section_phone',
+                ] as $welcomeType => $sectionLabelKey)
+                    @php
+                        $welcomeMessage = $welcomeMessages[$welcomeType] ?? null;
+                    @endphp
+                    <h3>{{ \App\Services\LanguageService::trans($sectionLabelKey, $lang) }}</h3>
+                    <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
+                    <input type="text" name="welcome_templates[{{ $welcomeType }}][title_ja]" value="{{ optional($welcomeMessage)->getAttributeValue('title_ja') ?? optional($welcomeMessage)->getAttributeValue('title') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_ja', $lang) }}">
+                    <label>{{ \App\Services\LanguageService::trans('admin_messages_title_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+                    <input type="text" name="welcome_templates[{{ $welcomeType }}][title_en]" value="{{ optional($welcomeMessage)->getAttributeValue('title_en') ?? '' }}" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_title_placeholder_en', $lang) }}">
+                    <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_ja', $lang) }}）</label>
+                    <textarea name="welcome_templates[{{ $welcomeType }}][body_ja]" rows="4" required>{{ optional($welcomeMessage)->getAttributeValue('body_ja') ?? optional($welcomeMessage)->getAttributeValue('body') ?? '' }}</textarea>
+                    <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
+                    <textarea name="welcome_templates[{{ $welcomeType }}][body_en]" rows="4">{{ optional($welcomeMessage)->getAttributeValue('body_en') ?? '' }}</textarea>
+                    <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
+                    <input type="number" name="welcome_templates[{{ $welcomeType }}][coin_amount]" min="0" value="{{ optional($welcomeMessage)->coin_amount ?? 0 }}" placeholder="0">
+                @endforeach
                 <div class="admin-messages-submit-container">
                     <button type="submit">{{ \App\Services\LanguageService::trans('admin_messages_welcome_save', $lang) }}</button>
                 </div>

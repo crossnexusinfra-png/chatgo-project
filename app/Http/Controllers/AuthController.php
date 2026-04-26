@@ -820,7 +820,10 @@ class AuthController extends Controller
         $friendService->generateInviteCode($user);
 
         // 初回登録時お知らせを送信（管理者が設定している場合）
-        \App\Services\WelcomeNotificationService::sendWelcomeTo($user);
+        \App\Services\WelcomeNotificationService::sendWelcomeTo(
+            $user,
+            \App\Services\WelcomeNotificationService::WELCOME_TYPE_NORMAL
+        );
         
         // 招待コードが有効な場合、コインを配布
         if ($inviter) {
@@ -1387,7 +1390,12 @@ class AuthController extends Controller
         ]);
 
         app(\App\Services\FriendService::class)->generateInviteCode($user);
-        \App\Services\WelcomeNotificationService::sendWelcomeTo($user);
+        \App\Services\WelcomeNotificationService::sendWelcomeTo(
+            $user,
+            $internationalPhone
+                ? \App\Services\WelcomeNotificationService::WELCOME_TYPE_PHONE
+                : \App\Services\WelcomeNotificationService::WELCOME_TYPE_GOOGLE
+        );
         session()->forget('external_registration');
         Auth::login($user);
         if ($request->hasSession()) {
