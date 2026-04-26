@@ -158,6 +158,7 @@
                     </button>
                     <div id="adminFilterPanel" class="admin-collapsible-panel is-open">
                         <div class="admin-logs-inline-help">ここで絞り込むと、下の相関ログ詳細（サーバーエラー/イベント/アクセス/WAL）を同条件で確認できます。</div>
+                        <div class="admin-muted">補足: <code>admin_visit</code> 系はイベントログには出ますが、管理ページのアクセスはアクセスログ対象外のため、アクセスログに出ない場合があります。</div>
                         <div class="admin-logs-actions">
                             <form method="GET" action="{{ route('admin.logs') }}" class="admin-form-inline" id="adminLogsFilterForm">
                                 <div class="admin-logs-form-group">

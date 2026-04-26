@@ -1682,9 +1682,6 @@ class AdminController extends Controller
         $eventLogsQuery = EventLog::query()
             ->when($requestId !== '', fn ($q) => $q->where('request_id', $requestId))
             ->when($eventId !== '', fn ($q) => $q->where('event_id', $eventId))
-            ->when(($requestId !== '' || $eventId !== ''), function ($q) {
-                $q->where('event_type', '!=', 'admin_visit');
-            })
             ->orderByDesc('created_at');
         if (!$hasCorrelationFilter) {
             $eventLogsQuery->limit(100);
