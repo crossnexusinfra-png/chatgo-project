@@ -18,6 +18,19 @@
 
         <div class="admin-logs-card">
             <h1 class="admin-logs-title">{{ \App\Services\LanguageService::trans('admin_logs_file_display', $lang) }}</h1>
+            <div class="admin-ops-guide">
+                <h2 class="admin-ops-guide-title">操作ガイド（異常検知→原因特定）</h2>
+                <ol class="admin-ops-guide-list">
+                    <li><strong>1. トリガー確認：</strong>「運用トリガー（直近5分）」で件数が0でない項目を確認。</li>
+                    <li><strong>2. クリック調査：</strong>サンプル行の <code>request_id</code> / <code>event_id</code> / <code>status</code> をクリック。</li>
+                    <li><strong>3. 相関確認：</strong>「相関ログ詳細」でサーバーエラー→イベント→アクセス→WALの順で同一IDを確認。</li>
+                    <li><strong>4. 生ログ確認：</strong>必要時のみ「ログファイル表示」を開いて詳細を確認。</li>
+                </ol>
+                <div class="admin-muted">
+                    例: 404を調べる場合は <code>status=404</code> をクリックし、<code>path</code> と <code>method</code>、
+                    さらに同じ <code>request_id</code> のイベントを確認します。
+                </div>
+            </div>
 
             @if(session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
