@@ -24,6 +24,7 @@ class UserFactory extends Factory
     {
         return [
             'username' => fake()->unique()->bothify('user###'),
+            'user_identifier' => fake()->unique()->regexify('[a-z_]{8,12}'),
             'email' => fake()->unique()->safeEmail(),
             'nationality' => 'JP',
             'residence' => 'JP',
