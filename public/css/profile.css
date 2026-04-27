@@ -224,14 +224,14 @@
 
 /* a要素ボタンとbutton要素ボタンの高さ差をなくす */
 .profile-actions .logout-form .btn {
-    height: 42px !important;
+    height: 38px !important;
     box-sizing: border-box;
 }
 
 .profile-actions > .btn,
 .profile-actions > .logout-form > .btn {
-    min-height: 42px !important;
-    height: 42px !important;
+    min-height: 38px !important;
+    height: 38px !important;
 }
 
 /* コイン配布テーブル（モーダル内） */
