@@ -133,6 +133,7 @@ body {
 .logo-image {
     height: 50px;
     width: auto;
+    object-fit: contain;
     border-radius: 8px;
 }
 
@@ -1155,6 +1156,8 @@ body {
     
     .logo-image {
         height: 40px;
+        width: auto;
+        object-fit: contain;
         border-radius: 6px;
     }
     
@@ -1222,6 +1225,8 @@ body {
     
     .logo-image {
         height: 35px;
+        width: auto;
+        object-fit: contain;
         border-radius: 5px;
     }
     
