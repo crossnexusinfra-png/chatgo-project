@@ -234,7 +234,9 @@
     appearance: none;
     -webkit-appearance: none;
     border: none;
-    font: inherit;
+    font-size: 0.9rem;
+    font-weight: bold;
+    font-family: inherit;
 }
 
 /* コイン配布テーブル（モーダル内） */
