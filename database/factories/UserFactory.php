@@ -25,6 +25,8 @@ class UserFactory extends Factory
         return [
             'username' => fake()->unique()->bothify('user###'),
             'email' => fake()->unique()->safeEmail(),
+            'nationality' => 'JP',
+            'residence' => 'JP',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
         ];
