@@ -203,6 +203,7 @@
     gap: 10px;
     justify-content: center;
     margin-top: 20px;
+    align-items: stretch;
 }
 
 .profile-actions .btn,
@@ -218,12 +219,19 @@
 
 .logout-form {
     margin: 0;
+    display: flex;
 }
 
 /* a要素ボタンとbutton要素ボタンの高さ差をなくす */
 .profile-actions .logout-form .btn {
-    height: 42px;
+    height: 42px !important;
     box-sizing: border-box;
+}
+
+.profile-actions > .btn,
+.profile-actions > .logout-form > .btn {
+    min-height: 42px !important;
+    height: 42px !important;
 }
 
 /* コイン配布テーブル（モーダル内） */

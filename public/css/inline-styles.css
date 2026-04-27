@@ -775,16 +775,21 @@ body {
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: stretch;
 }
 
 .r18-warning-button {
     min-width: 120px;
-    min-height: 42px;
-    height: 42px;
+    min-height: 42px !important;
+    height: 42px !important;
     box-sizing: border-box;
     white-space: nowrap;
     line-height: 1.2;
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
+}
+
+.r18-warning-actions .form-inline {
+    display: flex;
 }
