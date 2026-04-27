@@ -25,19 +25,6 @@
     @endif
     
     <main class="main-content">
-        @php
-            $externalApisCalled = \App\Services\ExternalApiAlertService::getRecorded();
-            if (empty($externalApisCalled) && session('translation_api_called')) {
-                $externalApisCalled = ['翻訳API (OpenAI)'];
-            }
-            $externalApiAlertMessage = !empty($externalApisCalled)
-                ? '以下の外部APIが呼び出されました:' . "\n" . implode("\n", $externalApisCalled)
-                : '';
-        @endphp
-        @if ($externalApiAlertMessage !== '')
-            <div id="external-api-alert-config" data-alert-message="{{ e($externalApiAlertMessage) }}" hidden></div>
-            <script src="{{ asset('js/external-api-alert.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-        @endif
         @if (session('login_reward_message'))
             <div class="alert alert-success alert-margin">
                 {{ session('login_reward_message') }}

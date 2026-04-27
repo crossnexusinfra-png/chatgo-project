@@ -252,8 +252,18 @@
             const form = e.target;
             if (!form || form.tagName !== 'FORM') return;
             const confirmMessage = form.getAttribute('data-confirm-message');
-            if (confirmMessage && !confirm(confirmMessage)) {
-                e.preventDefault();
+            if (!confirmMessage) return;
+            e.preventDefault();
+            if (typeof window.showAppConfirmBox === 'function') {
+                window.showAppConfirmBox(confirmMessage, { title: '確認' }).then(function(confirmed) {
+                    if (confirmed) {
+                        form.submit();
+                    }
+                });
+                return;
+            }
+            if (confirm(confirmMessage)) {
+                form.submit();
             }
         });
 
@@ -513,31 +523,36 @@
                     e.preventDefault();
                     return false;
                 }
-                if (!confirm(translations.confirmCreateThreadSubmit || 'この内容でルームを作成しますか？')) {
-                    e.preventDefault();
-                    return false;
-                }
                 e.preventDefault();
-                form.classList.add('form-submitting');
-                var userName = form.querySelector('.js-create-thread-user_name');
-                var title = form.querySelector('.js-create-thread-title');
-                var body = form.querySelector('.js-create-thread-body');
-                if (title) {
-                    title.value = title.value.replace(/\r\n|\r|\n/g, ' ');
-                }
-                var cancelBtn = form.querySelector('#cancelCreateThread');
-                var closeModalBtn = document.getElementById('closeCreateThreadModal');
-                if (userName) { userName.readOnly = true; userName.setAttribute('readonly', 'readonly'); }
-                if (title) { title.readOnly = true; title.setAttribute('readonly', 'readonly'); }
-                if (body) { body.readOnly = true; body.setAttribute('readonly', 'readonly'); }
-                if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
-                if (closeModalBtn) { closeModalBtn.disabled = true; closeModalBtn.setAttribute('disabled', 'disabled'); }
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.setAttribute('disabled', 'disabled');
-                    submitBtn.textContent = translations.creating_room || '作成中';
-                }
-                setTimeout(function() { form.submit(); }, 50);
+                var confirmMessage = translations.confirmCreateThreadSubmit || 'この内容でルームを作成しますか？';
+                var confirmPromise = typeof window.showAppConfirmBox === 'function'
+                    ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+                    : Promise.resolve(confirm(confirmMessage));
+                confirmPromise.then(function(confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+                    form.classList.add('form-submitting');
+                    var userName = form.querySelector('.js-create-thread-user_name');
+                    var title = form.querySelector('.js-create-thread-title');
+                    var body = form.querySelector('.js-create-thread-body');
+                    if (title) {
+                        title.value = title.value.replace(/\r\n|\r|\n/g, ' ');
+                    }
+                    var cancelBtn = form.querySelector('#cancelCreateThread');
+                    var closeModalBtn = document.getElementById('closeCreateThreadModal');
+                    if (userName) { userName.readOnly = true; userName.setAttribute('readonly', 'readonly'); }
+                    if (title) { title.readOnly = true; title.setAttribute('readonly', 'readonly'); }
+                    if (body) { body.readOnly = true; body.setAttribute('readonly', 'readonly'); }
+                    if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.setAttribute('disabled', 'disabled'); }
+                    if (closeModalBtn) { closeModalBtn.disabled = true; closeModalBtn.setAttribute('disabled', 'disabled'); }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.setAttribute('disabled', 'disabled');
+                        submitBtn.textContent = translations.creating_room || '作成中';
+                    }
+                    setTimeout(function() { form.submit(); }, 50);
+                });
             });
         }
 

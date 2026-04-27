@@ -232,15 +232,22 @@
                     e.preventDefault();
                     return false;
                 }
-                if (!confirm(translations.confirmRejectRequest || '')) {
-                    e.preventDefault();
-                    return false;
-                }
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.setAttribute('disabled', 'disabled');
-                    submitBtn.textContent = translations.processing || '処理中';
-                }
+                e.preventDefault();
+                const confirmMessage = translations.confirmRejectRequest || '';
+                const confirmPromise = typeof window.showAppConfirmBox === 'function'
+                    ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+                    : Promise.resolve(confirm(confirmMessage));
+                confirmPromise.then(function(confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.setAttribute('disabled', 'disabled');
+                        submitBtn.textContent = translations.processing || '処理中';
+                    }
+                    form.submit();
+                });
             });
         });
 
@@ -282,14 +289,19 @@
         }
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
-        if (!confirm(translations.confirmDeleteFriend || '')) {
-            return;
-        }
-        if (button) {
-            button.disabled = true;
-            button.textContent = translations.deleting || '削除中';
-        }
-        fetch(routes.deleteRoute || '/friends/delete', {
+        const confirmMessage = translations.confirmDeleteFriend || '';
+        const confirmPromise = typeof window.showAppConfirmBox === 'function'
+            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            : Promise.resolve(confirm(confirmMessage));
+        confirmPromise.then(function(confirmed) {
+            if (!confirmed) {
+                return;
+            }
+            if (button) {
+                button.disabled = true;
+                button.textContent = translations.deleting || '削除中';
+            }
+            fetch(routes.deleteRoute || '/friends/delete', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -299,7 +311,7 @@
                 friend_id: friendId
             })
         })
-        .then(response => {
+            .then(response => {
             if (response.ok) {
                 location.reload();
             } else {
@@ -307,7 +319,9 @@
                     button.disabled = false;
                     button.textContent = originalText;
                 }
-                if (translations.errorOccurred) {
+                if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
+                    window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                } else if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
             }
@@ -318,9 +332,12 @@
                 button.disabled = false;
                 button.textContent = originalText;
             }
-            if (translations.errorOccurred) {
+            if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
+                window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+            } else if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
+        });
         });
     };
 
@@ -331,14 +348,19 @@
         }
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
-        if (!confirm(translations.confirmRejectRequest || '')) {
-            return;
-        }
-        if (button) {
-            button.disabled = true;
-            button.textContent = translations.processing || '処理中';
-        }
-        fetch(routes.rejectAvailableRoute || '/friends/reject-available', {
+        const confirmMessage = translations.confirmRejectRequest || '';
+        const confirmPromise = typeof window.showAppConfirmBox === 'function'
+            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            : Promise.resolve(confirm(confirmMessage));
+        confirmPromise.then(function(confirmed) {
+            if (!confirmed) {
+                return;
+            }
+            if (button) {
+                button.disabled = true;
+                button.textContent = translations.processing || '処理中';
+            }
+            fetch(routes.rejectAvailableRoute || '/friends/reject-available', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -348,7 +370,7 @@
                 user_id: userId
             })
         })
-        .then(response => {
+            .then(response => {
             if (response.ok) {
                 location.reload();
             } else {
@@ -356,7 +378,9 @@
                     button.disabled = false;
                     button.textContent = originalText;
                 }
-                if (translations.errorOccurred) {
+                if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
+                    window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                } else if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
             }
@@ -367,9 +391,12 @@
                 button.disabled = false;
                 button.textContent = originalText;
             }
-            if (translations.errorOccurred) {
+            if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
+                window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+            } else if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
+        });
         });
     };
 
@@ -378,17 +405,23 @@
             requestId = event;
             event = null;
         }
-        if (!confirm(translations.confirmRejectRequest || '')) {
-            return;
-        }
-        const button = (event && event.target) ? event.target : null;
-        if (button) {
-            button.disabled = true;
-            button.textContent = translations.processing || '処理中';
-        }
-        const form = document.getElementById('reject-form-' + requestId);
-        if (form) {
-            form.submit();
-        }
+        const confirmMessage = translations.confirmRejectRequest || '';
+        const confirmPromise = typeof window.showAppConfirmBox === 'function'
+            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            : Promise.resolve(confirm(confirmMessage));
+        confirmPromise.then(function(confirmed) {
+            if (!confirmed) {
+                return;
+            }
+            const button = (event && event.target) ? event.target : null;
+            if (button) {
+                button.disabled = true;
+                button.textContent = translations.processing || '処理中';
+            }
+            const form = document.getElementById('reject-form-' + requestId);
+            if (form) {
+                form.submit();
+            }
+        });
     };
 })();

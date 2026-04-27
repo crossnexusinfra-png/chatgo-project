@@ -807,23 +807,6 @@ class TranslationService
     }
 
     /**
-     * 翻訳デバッグ用のセッションフラッシュを載せるか。
-     * fetch/AJAX ではレイアウトが描画されず、flash が次の無関係なフルページで遅延アラートになるため記録しない。
-     */
-    private static function shouldStoreTranslationDebugAlertInSession(): bool
-    {
-        $req = request();
-        if (! $req->hasSession()) {
-            return false;
-        }
-        if ($req->ajax() || $req->wantsJson() || $req->expectsJson()) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * OpenAI Chat Completions API を呼び出し、先頭のメッセージ本文を返す
      */
     private static function callChatCompletion(string $userPrompt): ?string
@@ -954,14 +937,6 @@ class TranslationService
                 null,
                 null
             );
-        }
-
-        if (self::shouldStoreTranslationDebugAlertInSession()) {
-            if (config('app.external_api_debug_alert')) {
-                ExternalApiAlertService::record('翻訳API (OpenAI)');
-            } elseif (config('services.openai.translation_debug_alert')) {
-                session()->flash('translation_api_called', true);
-            }
         }
 
         $outcome = SecureHttpClientService::postWithFailureCode(self::API_URL, $payload, [

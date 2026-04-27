@@ -117,38 +117,15 @@
     }
 
     /**
-     * 翻訳API呼び出し時の計測アラート（テスト用）
-     * @param {object} data レスポンスJSON（error, translation_ui_tier など）
-     * @param {Response|null} res fetch の Response（無い場合は null）
-     * @param {'reply'|'title'} kind
-     * @param {number} startedAtMs Date.now() 開始時刻
-     * @param {'success'|'failure'} phase
-     * @param {string} [clientExtra] クライアント例外時の追記（例: Error.message）
+     * 翻訳API呼び出し時のデバッグ表示は廃止。
      */
     function showTranslationApiTimingAlert(data, res, kind, startedAtMs, phase, clientExtra) {
-        kind = kind || 'reply';
-        data = data && typeof data === 'object' ? data : {};
-        const titleJa = kind === 'title' ? 'ルーム名の翻訳' : 'リプライ本文の翻訳';
-        const elapsedMs = Math.max(0, Date.now() - (startedAtMs || Date.now()));
-        const lines = [];
-        lines.push('【' + titleJa + '】翻訳API計測');
-        lines.push('結果: ' + (phase === 'success' ? '成功' : '失敗'));
-        lines.push('処理時間: ' + elapsedMs + ' ms');
-        lines.push('');
-        lines.push('この fetch のHTTPステータス:');
-        if (res != null && typeof res.status === 'number') {
-            lines.push(String(res.status));
-        } else {
-            lines.push('（不明・レスポンス未取得）');
-        }
-        lines.push('error: ' + (data.error != null && data.error !== '' ? String(data.error) : '（なし）'));
-        lines.push('translation_ui_tier: ' + (data.translation_ui_tier != null && data.translation_ui_tier !== '' ? String(data.translation_ui_tier) : '（なし）'));
-        if (clientExtra) {
-            lines.push('');
-            lines.push('クライアント側の追加情報:');
-            lines.push(String(clientExtra));
-        }
-        alert(lines.join('\n'));
+        void data;
+        void res;
+        void kind;
+        void startedAtMs;
+        void phase;
+        void clientExtra;
     }
 
     function setTranslationErrorOverlay(article, data) {

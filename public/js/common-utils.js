@@ -4,6 +4,145 @@
 (function() {
     'use strict';
 
+    function ensureMessageBoxElements() {
+        let overlay = document.getElementById('appMessageBoxOverlay');
+        if (overlay) {
+            return overlay;
+        }
+
+        overlay = document.createElement('div');
+        overlay.id = 'appMessageBoxOverlay';
+        overlay.setAttribute('role', 'presentation');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0, 0, 0, 0.45)';
+        overlay.style.display = 'none';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '16px';
+        overlay.style.zIndex = '9999';
+
+        const box = document.createElement('div');
+        box.id = 'appMessageBox';
+        box.style.background = '#fff';
+        box.style.borderRadius = '10px';
+        box.style.maxWidth = '460px';
+        box.style.width = '100%';
+        box.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.2)';
+        box.style.padding = '18px 16px 14px';
+
+        const title = document.createElement('h3');
+        title.id = 'appMessageBoxTitle';
+        title.style.margin = '0 0 10px';
+        title.style.fontSize = '18px';
+        title.style.lineHeight = '1.4';
+        title.textContent = '確認';
+
+        const message = document.createElement('p');
+        message.id = 'appMessageBoxMessage';
+        message.style.margin = '0';
+        message.style.whiteSpace = 'pre-wrap';
+        message.style.wordBreak = 'break-word';
+        message.style.lineHeight = '1.6';
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '8px';
+        actions.style.justifyContent = 'flex-end';
+        actions.style.marginTop = '14px';
+
+        const cancelButton = document.createElement('button');
+        cancelButton.id = 'appMessageBoxCancel';
+        cancelButton.type = 'button';
+        cancelButton.className = 'btn btn-secondary';
+        cancelButton.textContent = 'キャンセル';
+
+        const okButton = document.createElement('button');
+        okButton.id = 'appMessageBoxOk';
+        okButton.type = 'button';
+        okButton.className = 'btn btn-primary';
+        okButton.textContent = 'OK';
+
+        actions.appendChild(cancelButton);
+        actions.appendChild(okButton);
+        box.appendChild(title);
+        box.appendChild(message);
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        return overlay;
+    }
+
+    window.showAppMessageBox = function(message, options) {
+        const opts = options || {};
+        const overlay = ensureMessageBoxElements();
+        const titleEl = document.getElementById('appMessageBoxTitle');
+        const messageEl = document.getElementById('appMessageBoxMessage');
+        const okButton = document.getElementById('appMessageBoxOk');
+        const cancelButton = document.getElementById('appMessageBoxCancel');
+
+        return new Promise(function(resolve) {
+            const title = typeof opts.title === 'string' && opts.title !== '' ? opts.title : '確認';
+            const okText = typeof opts.okText === 'string' && opts.okText !== '' ? opts.okText : 'OK';
+            const cancelText = typeof opts.cancelText === 'string' && opts.cancelText !== '' ? opts.cancelText : 'キャンセル';
+            const showCancel = !!opts.showCancel;
+            const closeOnBackdrop = opts.closeOnBackdrop !== false;
+
+            titleEl.textContent = title;
+            messageEl.textContent = message || '';
+            okButton.textContent = okText;
+            cancelButton.textContent = cancelText;
+            cancelButton.style.display = showCancel ? '' : 'none';
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            function cleanup() {
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+                okButton.removeEventListener('click', onOk);
+                cancelButton.removeEventListener('click', onCancel);
+                overlay.removeEventListener('click', onBackdropClick);
+                document.removeEventListener('keydown', onKeyDown);
+            }
+
+            function onOk() {
+                cleanup();
+                resolve(true);
+            }
+
+            function onCancel() {
+                cleanup();
+                resolve(false);
+            }
+
+            function onBackdropClick(event) {
+                if (!closeOnBackdrop) return;
+                if (event.target === overlay) {
+                    onCancel();
+                }
+            }
+
+            function onKeyDown(event) {
+                if (event.key !== 'Escape') return;
+                if (showCancel || closeOnBackdrop) {
+                    onCancel();
+                }
+            }
+
+            okButton.addEventListener('click', onOk);
+            cancelButton.addEventListener('click', onCancel);
+            overlay.addEventListener('click', onBackdropClick);
+            document.addEventListener('keydown', onKeyDown);
+            (showCancel ? cancelButton : okButton).focus();
+        });
+    };
+
+    window.showAppConfirmBox = function(message, options) {
+        const opts = options || {};
+        return window.showAppMessageBox(message, Object.assign({}, opts, { showCancel: true }));
+    };
+
     /**
      * 広告動画を視聴する共通関数
      * @param {Object} options - 設定オプション

@@ -355,17 +355,24 @@
         const userId = config.userId;
         
         if (!userId) {
-            alert(translations.loginRequiredError);
+            if (typeof window.showAppMessageBox === 'function') {
+                window.showAppMessageBox(translations.loginRequiredError, { title: 'エラー' });
+            } else {
+                alert(translations.loginRequiredError);
+            }
             return;
         }
 
-        if (!confirm(translations.confirmR18ChangeApprove || 'このルームをR18ルームに変更しますか？')) {
-            return;
-        }
-        
         const button = event.target;
         const r18Section = button.closest('.r18-change-section');
-        
+        const confirmMessage = translations.confirmR18ChangeApprove || 'このルームをR18ルームに変更しますか？';
+        const confirmed = typeof window.showAppConfirmBox === 'function'
+            ? await window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            : confirm(confirmMessage);
+        if (!confirmed) {
+            return;
+        }
+
         const buttons = r18Section.querySelectorAll('button');
         buttons.forEach(btn => {
             btn.disabled = true;
@@ -388,7 +395,12 @@
                 const errorText = await response.text();
                 console.error('HTTP error:', response.status, errorText);
                 const result = await response.json().catch(() => ({ error: translations.r18ChangeApproveFailed }));
-                alert(result.error || translations.r18ChangeApproveFailed);
+                const errorMessage = result.error || translations.r18ChangeApproveFailed;
+                if (typeof window.showAppMessageBox === 'function') {
+                    window.showAppMessageBox(errorMessage, { title: 'エラー' });
+                } else {
+                    alert(errorMessage);
+                }
                 buttons.forEach(btn => {
                     btn.disabled = false;
                 });
@@ -421,7 +433,12 @@
                     if (section) section.remove();
                 });
             } else {
-                alert(result.error || translations.r18ChangeApproveFailed);
+                const errorMessage = result.error || translations.r18ChangeApproveFailed;
+                if (typeof window.showAppMessageBox === 'function') {
+                    window.showAppMessageBox(errorMessage, { title: 'エラー' });
+                } else {
+                    alert(errorMessage);
+                }
                 buttons.forEach(btn => {
                     btn.disabled = false;
                 });
@@ -429,7 +446,11 @@
             }
         } catch (error) {
                 console.error('Failed to approve R18 change:', error);
-            alert(translations.r18ChangeApproveFailed);
+            if (typeof window.showAppMessageBox === 'function') {
+                window.showAppMessageBox(translations.r18ChangeApproveFailed, { title: 'エラー' });
+            } else {
+                alert(translations.r18ChangeApproveFailed);
+            }
             buttons.forEach(btn => {
                 btn.disabled = false;
             });
