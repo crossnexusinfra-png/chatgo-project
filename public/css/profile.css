@@ -209,12 +209,13 @@
 .profile-actions .btn,
 .profile-actions .logout-form .btn {
     min-width: 140px;
-    min-height: 42px;
     white-space: nowrap;
     line-height: 1.2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    padding: 10px 20px;
 }
 
 .logout-form {
@@ -222,16 +223,18 @@
     display: flex;
 }
 
-/* a要素ボタンとbutton要素ボタンの高さ差をなくす */
-.profile-actions .logout-form .btn {
-    height: 38px !important;
-    box-sizing: border-box;
-}
-
 .profile-actions > .btn,
 .profile-actions > .logout-form > .btn {
-    min-height: 38px !important;
-    height: 38px !important;
+    min-height: 0;
+    height: auto;
+}
+
+/* button 要素のUA差分（既定appearance/フォント）を消してa要素と揃える */
+.profile-actions button.btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    font: inherit;
 }
 
 /* コイン配布テーブル（モーダル内） */
