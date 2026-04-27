@@ -205,6 +205,11 @@
     margin-top: 20px;
 }
 
+.profile-actions .btn,
+.profile-actions .logout-form .btn {
+    min-width: 140px;
+}
+
 .logout-form {
     margin: 0;
 }
@@ -900,6 +905,11 @@
     gap: 10px;
     justify-content: center;
     margin-top: 20px;
+}
+
+.form-actions .btn,
+.form-actions button {
+    min-width: 140px;
 }
 
 /* Alert Styles */

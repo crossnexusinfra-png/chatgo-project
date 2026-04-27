@@ -238,6 +238,12 @@
     gap: 10px;
 }
 
+.friend-actions .btn,
+.friend-request-actions .btn,
+.invite-code-display .btn {
+    min-width: 120px;
+}
+
 .no-friends {
     text-align: center;
     color: #999;

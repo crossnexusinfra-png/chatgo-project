@@ -1635,6 +1635,16 @@ body {
     border-top: 1px solid #eee;
 }
 
+/* 多言語時の文言差でボタン幅が揺れないよう、主要アクションを揃える */
+.form-actions .btn,
+.form-actions button,
+.terms-actions .back-btn,
+.terms-actions .auth-submit-btn,
+.auth-buttons .btn,
+.error-actions .btn-primary {
+    min-width: 140px;
+}
+
 .btn {
     padding: 12px 24px;
     border: none;
