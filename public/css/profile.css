@@ -220,6 +220,12 @@
     margin: 0;
 }
 
+/* a要素ボタンとbutton要素ボタンの高さ差をなくす */
+.profile-actions .logout-form .btn {
+    height: 42px;
+    box-sizing: border-box;
+}
+
 /* コイン配布テーブル（モーダル内） */
 .coin-reward-table table {
     width: 100%;

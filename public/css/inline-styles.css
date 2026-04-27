@@ -779,4 +779,12 @@ body {
 
 .r18-warning-button {
     min-width: 120px;
+    min-height: 42px;
+    height: 42px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
