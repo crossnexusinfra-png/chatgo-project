@@ -208,6 +208,12 @@
 .profile-actions .btn,
 .profile-actions .logout-form .btn {
     min-width: 140px;
+    min-height: 42px;
+    white-space: nowrap;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .logout-form {
@@ -910,6 +916,12 @@
 .form-actions .btn,
 .form-actions button {
     min-width: 140px;
+    min-height: 42px;
+    white-space: nowrap;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Alert Styles */

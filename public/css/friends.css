@@ -242,6 +242,12 @@
 .friend-request-actions .btn,
 .invite-code-display .btn {
     min-width: 120px;
+    min-height: 42px;
+    white-space: nowrap;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .no-friends {

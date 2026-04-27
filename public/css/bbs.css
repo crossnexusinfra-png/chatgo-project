@@ -1643,6 +1643,12 @@ body {
 .auth-buttons .btn,
 .error-actions .btn-primary {
     min-width: 140px;
+    min-height: 42px;
+    white-space: nowrap;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn {
