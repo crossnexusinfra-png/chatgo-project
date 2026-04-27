@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('thread_accesses', 'user_id')) {
+            return;
+        }
+
         Schema::table('thread_accesses', function (Blueprint $table) {
             $table->unsignedBigInteger('user_id')->nullable()->after('user_name');
             $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
@@ -22,6 +26,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('thread_accesses', 'user_id')) {
+            return;
+        }
+
         Schema::table('thread_accesses', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');
