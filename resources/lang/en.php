@@ -521,7 +521,7 @@ return [
     'email_verification_description' => 'Please enter the verification code sent to {email}.',
     
     // Site Title
-    'site_title' => 'Chatgo',
+    'site_title' => 'Chatgo - Chat with the world.',
     
     // Other (fallback)
     'other' => 'Other',

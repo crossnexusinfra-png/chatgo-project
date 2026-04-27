@@ -515,7 +515,7 @@ return [
     'message_reply_no_permission' => 'このメッセージに返信する権限がありません',
     
     // サイトタイトル
-    'site_title' => 'Chatgo',
+    'site_title' => 'Chatgo - Chat with the world.',
     
     // その他（フォールバック用）
     'other' => 'その他',
