@@ -4,6 +4,23 @@
 (function() {
     'use strict';
 
+    function isEnglishUi() {
+        const lang = (document.documentElement && document.documentElement.lang ? document.documentElement.lang : '').toLowerCase();
+        return lang.indexOf('en') === 0;
+    }
+
+    window.getAppDialogTitle = function(kind) {
+        const en = isEnglishUi();
+        if (kind === 'error') {
+            return en ? 'Error' : 'エラー';
+        }
+        return en ? 'Confirmation' : '確認';
+    };
+
+    window.getAppDialogCancelText = function() {
+        return isEnglishUi() ? 'Cancel' : 'キャンセル';
+    };
+
     function ensureMessageBoxElements() {
         let overlay = document.getElementById('appMessageBoxOverlay');
         if (overlay) {
@@ -36,7 +53,7 @@
         title.style.margin = '0 0 10px';
         title.style.fontSize = '18px';
         title.style.lineHeight = '1.4';
-        title.textContent = '確認';
+        title.textContent = window.getAppDialogTitle('confirm');
 
         const message = document.createElement('p');
         message.id = 'appMessageBoxMessage';
@@ -55,7 +72,7 @@
         cancelButton.id = 'appMessageBoxCancel';
         cancelButton.type = 'button';
         cancelButton.className = 'btn btn-secondary';
-        cancelButton.textContent = 'キャンセル';
+        cancelButton.textContent = window.getAppDialogCancelText();
 
         const okButton = document.createElement('button');
         okButton.id = 'appMessageBoxOk';
@@ -83,9 +100,9 @@
         const cancelButton = document.getElementById('appMessageBoxCancel');
 
         return new Promise(function(resolve) {
-            const title = typeof opts.title === 'string' && opts.title !== '' ? opts.title : '確認';
+            const title = typeof opts.title === 'string' && opts.title !== '' ? opts.title : window.getAppDialogTitle('confirm');
             const okText = typeof opts.okText === 'string' && opts.okText !== '' ? opts.okText : 'OK';
-            const cancelText = typeof opts.cancelText === 'string' && opts.cancelText !== '' ? opts.cancelText : 'キャンセル';
+            const cancelText = typeof opts.cancelText === 'string' && opts.cancelText !== '' ? opts.cancelText : window.getAppDialogCancelText();
             const showCancel = !!opts.showCancel;
             const closeOnBackdrop = opts.closeOnBackdrop !== false;
 

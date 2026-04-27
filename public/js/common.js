@@ -254,8 +254,9 @@
             const confirmMessage = form.getAttribute('data-confirm-message');
             if (!confirmMessage) return;
             e.preventDefault();
+            const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
             if (typeof window.showAppConfirmBox === 'function') {
-                window.showAppConfirmBox(confirmMessage, { title: '確認' }).then(function(confirmed) {
+                window.showAppConfirmBox(confirmMessage, { title: confirmTitle }).then(function(confirmed) {
                     if (confirmed) {
                         form.submit();
                     }
@@ -525,8 +526,9 @@
                 }
                 e.preventDefault();
                 var confirmMessage = translations.confirmCreateThreadSubmit || 'この内容でルームを作成しますか？';
+                var confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
                 var confirmPromise = typeof window.showAppConfirmBox === 'function'
-                    ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+                    ? window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
                     : Promise.resolve(confirm(confirmMessage));
                 confirmPromise.then(function(confirmed) {
                     if (!confirmed) {

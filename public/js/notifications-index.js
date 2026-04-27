@@ -353,10 +353,12 @@
         event.stopPropagation();
         
         const userId = config.userId;
+        const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
+        const errorTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('error') : 'エラー';
         
         if (!userId) {
             if (typeof window.showAppMessageBox === 'function') {
-                window.showAppMessageBox(translations.loginRequiredError, { title: 'エラー' });
+                window.showAppMessageBox(translations.loginRequiredError, { title: errorTitle });
             } else {
                 alert(translations.loginRequiredError);
             }
@@ -367,7 +369,7 @@
         const r18Section = button.closest('.r18-change-section');
         const confirmMessage = translations.confirmR18ChangeApprove || 'このルームをR18ルームに変更しますか？';
         const confirmed = typeof window.showAppConfirmBox === 'function'
-            ? await window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            ? await window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
             : confirm(confirmMessage);
         if (!confirmed) {
             return;
@@ -397,7 +399,7 @@
                 const result = await response.json().catch(() => ({ error: translations.r18ChangeApproveFailed }));
                 const errorMessage = result.error || translations.r18ChangeApproveFailed;
                 if (typeof window.showAppMessageBox === 'function') {
-                    window.showAppMessageBox(errorMessage, { title: 'エラー' });
+                    window.showAppMessageBox(errorMessage, { title: errorTitle });
                 } else {
                     alert(errorMessage);
                 }
@@ -435,7 +437,7 @@
             } else {
                 const errorMessage = result.error || translations.r18ChangeApproveFailed;
                 if (typeof window.showAppMessageBox === 'function') {
-                    window.showAppMessageBox(errorMessage, { title: 'エラー' });
+                    window.showAppMessageBox(errorMessage, { title: errorTitle });
                 } else {
                     alert(errorMessage);
                 }
@@ -447,7 +449,7 @@
         } catch (error) {
                 console.error('Failed to approve R18 change:', error);
             if (typeof window.showAppMessageBox === 'function') {
-                window.showAppMessageBox(translations.r18ChangeApproveFailed, { title: 'エラー' });
+                window.showAppMessageBox(translations.r18ChangeApproveFailed, { title: errorTitle });
             } else {
                 alert(translations.r18ChangeApproveFailed);
             }

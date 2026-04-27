@@ -234,8 +234,9 @@
                 }
                 e.preventDefault();
                 const confirmMessage = translations.confirmRejectRequest || '';
+                const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
                 const confirmPromise = typeof window.showAppConfirmBox === 'function'
-                    ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+                    ? window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
                     : Promise.resolve(confirm(confirmMessage));
                 confirmPromise.then(function(confirmed) {
                     if (!confirmed) {
@@ -290,8 +291,10 @@
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
         const confirmMessage = translations.confirmDeleteFriend || '';
+        const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
+        const errorTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('error') : 'エラー';
         const confirmPromise = typeof window.showAppConfirmBox === 'function'
-            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            ? window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
             : Promise.resolve(confirm(confirmMessage));
         confirmPromise.then(function(confirmed) {
             if (!confirmed) {
@@ -320,7 +323,7 @@
                     button.textContent = originalText;
                 }
                 if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
-                    window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                    window.showAppMessageBox(translations.errorOccurred, { title: errorTitle });
                 } else if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
@@ -333,7 +336,7 @@
                 button.textContent = originalText;
             }
             if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
-                window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                window.showAppMessageBox(translations.errorOccurred, { title: errorTitle });
             } else if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
@@ -349,8 +352,10 @@
         const button = (event && event.target) ? event.target : null;
         const originalText = button ? button.textContent : '';
         const confirmMessage = translations.confirmRejectRequest || '';
+        const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
+        const errorTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('error') : 'エラー';
         const confirmPromise = typeof window.showAppConfirmBox === 'function'
-            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            ? window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
             : Promise.resolve(confirm(confirmMessage));
         confirmPromise.then(function(confirmed) {
             if (!confirmed) {
@@ -379,7 +384,7 @@
                     button.textContent = originalText;
                 }
                 if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
-                    window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                    window.showAppMessageBox(translations.errorOccurred, { title: errorTitle });
                 } else if (translations.errorOccurred) {
                     alert(translations.errorOccurred);
                 }
@@ -392,7 +397,7 @@
                 button.textContent = originalText;
             }
             if (translations.errorOccurred && typeof window.showAppMessageBox === 'function') {
-                window.showAppMessageBox(translations.errorOccurred, { title: 'エラー' });
+                window.showAppMessageBox(translations.errorOccurred, { title: errorTitle });
             } else if (translations.errorOccurred) {
                 alert(translations.errorOccurred);
             }
@@ -406,8 +411,9 @@
             event = null;
         }
         const confirmMessage = translations.confirmRejectRequest || '';
+        const confirmTitle = typeof window.getAppDialogTitle === 'function' ? window.getAppDialogTitle('confirm') : '確認';
         const confirmPromise = typeof window.showAppConfirmBox === 'function'
-            ? window.showAppConfirmBox(confirmMessage, { title: '確認' })
+            ? window.showAppConfirmBox(confirmMessage, { title: confirmTitle })
             : Promise.resolve(confirm(confirmMessage));
         confirmPromise.then(function(confirmed) {
             if (!confirmed) {
