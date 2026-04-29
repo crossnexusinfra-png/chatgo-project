@@ -6,13 +6,8 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://chatgo.thecrossnexus.com/login</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://chatgo.thecrossnexus.com/register</loc>
-    <changefreq>weekly</changefreq>
+    <loc>https://chatgo.thecrossnexus.com/auth/terms</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 </urlset>
