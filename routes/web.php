@@ -163,6 +163,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // 新規登録フロー
 Route::get('/auth/terms', [AuthController::class, 'showTermsForm'])->name('auth.terms');
 Route::post('/auth/terms', [AuthController::class, 'acceptTerms'])->name('register.terms');
+Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/contact', 'legal.contact')->name('legal.contact');
+Route::view('/company', 'legal.company')->name('legal.company');
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:veriphone');
 Route::get('/register/sms-verification', [AuthController::class, 'showSmsVerification'])->name('register.sms-verification');
