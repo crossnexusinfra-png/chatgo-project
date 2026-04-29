@@ -9,3 +9,5 @@ Allow: /
 
 User-agent: Google-Display-Ads-Bot
 Allow: /
+
+Sitemap: https://chatgo.thecrossnexus.com/sitemap.xml
