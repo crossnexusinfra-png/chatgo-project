@@ -641,6 +641,7 @@ class AdminController extends Controller
             'target_registered_after' => 'nullable|date',
             'target_registered_before' => 'nullable|date',
             'recipient_identifiers' => 'nullable|string|max:2000',
+            'requires_consent' => 'nullable|boolean',
         ]);
 
         $targetType = request('target_type');
@@ -693,7 +694,7 @@ class AdminController extends Controller
             }
         }
 
-        $message = AdminMessage::create([
+        $createAttributes = [
             'title_key' => request('title_key'),
             'body_key' => request('body_key'),
             'title_ja' => request('title_ja'),
@@ -720,7 +721,12 @@ class AdminController extends Controller
             'delivery_type' => request()->filled('template_key')
                 ? AdminMessage::DELIVERY_TYPE_TEMPLATE
                 : AdminMessage::DELIVERY_TYPE_MANUAL,
-        ]);
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'requires_consent')) {
+            $createAttributes['requires_consent'] = request()->boolean('requires_consent');
+        }
+
+        $message = AdminMessage::create($createAttributes);
 
         foreach ($recipientUserIds as $uid) {
             $message->recipients()->attach($uid);

@@ -2854,6 +2854,27 @@ button.back-link--button {
     margin-top: 0;
 }
 
+.mandatory-notice-main-banner .mandatory-notice-main-banner-body {
+    padding: 4px 14px 14px;
+}
+
+.mandatory-notice-main-text,
+.mandatory-notice-main-frozen-hint,
+.mandatory-notice-main-link {
+    margin: 0 0 12px;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: #4a4a4a;
+}
+
+.mandatory-notice-main-frozen-hint {
+    color: #6a6a6a;
+}
+
+.mandatory-notice-main-link {
+    margin-bottom: 0;
+}
+
 /* アカウント凍結: ルーム作成ボタン・モーダル */
 .header-button.create-btn-disabled {
     opacity: 0.45;

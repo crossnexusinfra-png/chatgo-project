@@ -66,7 +66,15 @@
             <textarea name="body_ja" id="body_ja" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_ja', $lang) }}" required></textarea>
             <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
             <textarea name="body_en" id="body_en" rows="5" placeholder="{{ \App\Services\LanguageService::trans('admin_messages_body_placeholder_en', $lang) }}"></textarea>
+                @if(\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'requires_consent'))
                 <div class="admin-messages-form-row">
+                    <label class="admin-messages-label-flex">
+                        <input type="checkbox" name="requires_consent" value="1" id="requires_consent">
+                        <span>{{ \App\Services\LanguageService::trans('admin_messages_requires_consent', $lang) }}</span>
+                    </label>
+                </div>
+            @endif
+            <div class="admin-messages-form-row">
                     <label class="admin-messages-label-flex">
                     <input type="checkbox" name="allows_reply" value="1" id="allows_reply">
                     <span>{{ \App\Services\LanguageService::trans('admin_messages_allow_reply', $lang) }}</span>

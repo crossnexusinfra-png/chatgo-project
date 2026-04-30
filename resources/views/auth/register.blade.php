@@ -12,6 +12,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>{{ \App\Services\LanguageService::trans('register_title', $lang) }} - Chatgo</title>
+    @include('layouts.favicon')
     <link href="{{ asset('css/app.css') }}?v=2" rel="stylesheet">
     <link href="{{ asset('css/bbs.css') }}" rel="stylesheet">
 </head>

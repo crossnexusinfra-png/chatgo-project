@@ -31,7 +31,7 @@ class ResponseController extends Controller
         }
         Gate::authorize('create', Response::class);
 
-        if (auth()->user()->isFrozen()) {
+        if (auth()->user()->isOperationRestrictedLikeFrozen()) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
 
             return back()->withErrors(['body' => auth()->user()->frozenPostDeniedMessage($lang)])->withInput();
@@ -514,7 +514,7 @@ class ResponseController extends Controller
         }
         Gate::authorize('create', Response::class);
 
-        if (auth()->user()->isFrozen()) {
+        if (auth()->user()->isOperationRestrictedLikeFrozen()) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
 
             return back()->withErrors(['body' => auth()->user()->frozenPostDeniedMessage($lang)])->withInput();

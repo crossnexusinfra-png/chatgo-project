@@ -396,11 +396,32 @@ class User extends Authenticatable
     }
 
     /**
+     * 同意必須お知らせの未同意による利用制限（永久凍結と同等の操作制限）が有効か
+     */
+    public function hasPendingMandatoryNoticeConsent(): bool
+    {
+        return \App\Services\MandatoryNoticeConsentService::userHasPendingRequiredConsent($this);
+    }
+
+    /**
+     * 凍結または同意必須お知らせ未同意により、投稿等が制限されるか
+     */
+    public function isOperationRestrictedLikeFrozen(): bool
+    {
+        return $this->isFrozen() || $this->hasPendingMandatoryNoticeConsent();
+    }
+
+    /**
      * 凍結中に投稿等が拒否されたときのユーザー向けメッセージ
      */
     public function frozenPostDeniedMessage(?string $lang = null): string
     {
         $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+        if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'requires_consent')
+            && $this->hasPendingMandatoryNoticeConsent()
+            && !$this->isFrozen()) {
+            return \App\Services\LanguageService::trans('mandatory_notice_restriction_user_message', $lang);
+        }
         $manual = $this->activeBlockingAdminEnforcement();
         if ($manual) {
             if ($manual->enforcement_type === AdminUserEnforcement::TYPE_PERMANENT_FREEZE) {

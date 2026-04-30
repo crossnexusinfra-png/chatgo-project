@@ -556,7 +556,7 @@ class ThreadController extends Controller
             return redirect()->route('auth.choice');
         }
 
-        if (auth()->user()->isFrozen()) {
+        if (auth()->user()->isOperationRestrictedLikeFrozen()) {
             return back()->withInput()->withErrors([
                 'title' => auth()->user()->frozenPostDeniedMessage($lang),
             ]);

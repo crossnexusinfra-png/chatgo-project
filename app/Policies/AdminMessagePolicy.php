@@ -133,4 +133,19 @@ class AdminMessagePolicy
         }
         return false;
     }
+
+    /**
+     * 同意必須お知らせへの同意
+     */
+    public function consentMandatoryNotice(User $user, AdminMessage $message): bool
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'requires_consent')) {
+            return false;
+        }
+        if (!$message->getAttributeValue('requires_consent')) {
+            return false;
+        }
+
+        return $this->markAsRead($user, $message);
+    }
 }

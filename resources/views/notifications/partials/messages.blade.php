@@ -42,6 +42,14 @@
                 @endif
             </div>
         @endif
+        @if(($m->requires_consent_flag ?? false) && !($m->has_consented ?? false) && auth()->check())
+            <div class="mandatory-consent-section" data-message-id="{{ $m->id }}">
+                <p class="mandatory-consent-hint">{{ \App\Services\LanguageService::trans('mandatory_notice_consent_hint', $lang) }}</p>
+                <button type="button" class="mandatory-consent-btn" data-message-id="{{ $m->id }}">
+                    {{ \App\Services\LanguageService::trans('mandatory_notice_consent_button', $lang) }}
+                </button>
+            </div>
+        @endif
         @if(isset($m->title_key) && $m->title_key === 'r18_change_request_title' && $m->thread_id && !($m->reply_used ?? false))
             <div class="r18-change-section" data-message-id="{{ $m->id }}">
                 <div class="r18-change-buttons">

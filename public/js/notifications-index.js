@@ -118,6 +118,9 @@
         if (event && event.target.closest('.r18-change-section')) {
             return;
         }
+        if (event && event.target.closest('.mandatory-consent-section')) {
+            return;
+        }
         
         const messageBody = element.querySelector('.message-body');
         const toggleIcon = element.querySelector('.toggle-icon');
@@ -533,6 +536,83 @@
         }
     };
 
+    // 同意必須お知らせに同意する
+    window.consentMandatoryNotice = async function(event, messageId) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const userId = config.userId;
+        if (!userId) {
+            alert(translations.loginRequiredError);
+            return;
+        }
+
+        const button = event.target.closest('.mandatory-consent-btn') || event.target;
+        const section = button.closest('.mandatory-consent-section');
+        if (section) {
+            section.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+        }
+        if (button && button.textContent) {
+            button.textContent = translations.processing;
+        }
+
+        try {
+            const response = await fetch('/notifications/' + messageId + '/mandatory-consent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({})
+            });
+
+            let result = {};
+            try {
+                result = await response.json();
+            } catch (parseErr) {
+                result = {};
+            }
+
+            if (response.ok && result.success) {
+                const message = messagesData.find(function(m) { return m.id === messageId; });
+                if (message) {
+                    message.has_consented = true;
+                }
+                window.location.reload();
+            } else {
+                if (section) {
+                    section.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+                }
+                if (button) {
+                    button.textContent = translations.mandatoryNoticeConsentButton || button.textContent;
+                }
+                const err = (result && result.error) ? result.error : (translations.mandatoryNoticeConsentFailed || '');
+                if (typeof window.showAppMessageBox === 'function') {
+                    window.showAppMessageBox(err, { title: '' });
+                } else {
+                    alert(err);
+                }
+            }
+        } catch (err) {
+            console.error('consentMandatoryNotice failed', err);
+            if (section) {
+                section.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+            }
+            if (button) {
+                button.textContent = translations.mandatoryNoticeConsentButton || button.textContent;
+            }
+            const msg = translations.mandatoryNoticeConsentFailed || '';
+            if (typeof window.showAppMessageBox === 'function') {
+                window.showAppMessageBox(msg, { title: '' });
+            } else {
+                alert(msg);
+            }
+        }
+    };
+
     // 通報制限の了承を実行する関数
     window.acknowledgeReportRestriction = async function(event, messageId) {
         event.preventDefault();
@@ -725,8 +805,16 @@
                 if (!isNaN(mid)) window.acknowledgeReportRestriction(e, mid);
                 return;
             }
+            const consentBtn = e.target.closest('.mandatory-consent-btn');
+            if (consentBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mid = parseInt(consentBtn.dataset.messageId, 10);
+                if (!isNaN(mid)) window.consentMandatoryNotice(e, mid);
+                return;
+            }
             const item = e.target.closest('.notification-item');
-            if (item && !e.target.closest('.reply-section') && !e.target.closest('.r18-change-section') && !e.target.closest('.coin-reward-section') && !e.target.closest('.report-restriction-ack-section')) {
+            if (item && !e.target.closest('.reply-section') && !e.target.closest('.r18-change-section') && !e.target.closest('.coin-reward-section') && !e.target.closest('.report-restriction-ack-section') && !e.target.closest('.mandatory-consent-section')) {
                 const mid = parseInt(item.dataset.messageId, 10);
                 if (!isNaN(mid)) window.toggleMessage(mid, item, e);
             }

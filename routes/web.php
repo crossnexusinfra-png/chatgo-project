@@ -25,6 +25,19 @@ use App\Http\Controllers\FreezeAppealController;
 // 管理者専用ルート（必ず最初に登録）
 require __DIR__.'/admin.php';
 
+// ブラウザは /favicon.ico を先に取りに行くことが多い。images/favicon-16.png と同一内容を返す
+Route::get('/favicon.ico', function () {
+    $path = public_path('images/favicon-16.png');
+    if (! is_file($path)) {
+        abort(404);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'image/png',
+        'Cache-Control' => 'public, max-age=604800',
+    ]);
+});
+
 // トップページにアクセスされたら、ThreadControllerのindexメソッドを呼び出す
 Route::get('/', [ThreadController::class, 'index'])->name('threads.index');
 
@@ -239,6 +252,7 @@ Route::get('/threads/{thread}/responses/{response}/acknowledge', function($threa
 Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{message}/read', [NotificationsController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    Route::post('/notifications/{message}/mandatory-consent', [NotificationsController::class, 'consentMandatory'])->name('notifications.mandatory-consent');
     Route::post('/notifications/{message}/reply', [NotificationsController::class, 'reply'])->middleware('throttle:notice_reply')->name('notifications.reply');
     Route::post('/notifications/{message}/receive-coin', [NotificationsController::class, 'receiveCoin'])->name('notifications.receive-coin');
     Route::post('/notifications/{message}/r18-approve', [NotificationsController::class, 'approveR18Change'])->name('notifications.r18-approve');

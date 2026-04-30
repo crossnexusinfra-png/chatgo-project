@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Schema;
 
 class AdminMessage extends Model
 {
@@ -18,6 +19,7 @@ class AdminMessage extends Model
         'title_key', 'body_key', 'title', 'body', 'title_ja', 'title_en', 'body_ja', 'body_en', 'audience', 'published_at', 'user_id', 'thread_id', 'response_id', 'reported_user_id', 'allows_reply', 'reply_used', 'parent_message_id', 'unlimited_reply', 'coin_amount', 'is_auto_sent',
         'is_manual_sent', 'is_from_template', 'delivery_type',
         'is_welcome', 'welcome_type', 'target_is_adult', 'target_nationalities', 'target_registered_after', 'target_registered_before',
+        'requires_consent',
     ];
 
     /**
@@ -42,6 +44,7 @@ class AdminMessage extends Model
         'is_auto_sent' => 'boolean',
         'is_manual_sent' => 'boolean',
         'is_from_template' => 'boolean',
+        'requires_consent' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -126,6 +129,57 @@ class AdminMessage extends Model
     /**
      * システム自動送信のお知らせを除外（is_auto_sent / title_key ベース）
      */
+    /**
+     * 通知一覧と同条件: 送信済みの親メッセージ（システム自動お知らせ除く）
+     */
+    public function scopePublishedRootForNotifications(Builder $query): Builder
+    {
+        $q = $query->whereNotNull('published_at')
+            ->whereNull('parent_message_id');
+        if (Schema::hasColumn('admin_messages', 'is_auto_sent')) {
+            $q->excludingSystemAutoNotifications();
+        }
+
+        return $q;
+    }
+
+    /**
+     * 通知コントローラーと同じ表示対象フィルタ
+     */
+    public function scopeVisibleToRecipientUser(Builder $query, User $user): Builder
+    {
+        $userId = $user->user_id;
+
+        return $query->where(function ($q) use ($user, $userId) {
+            $q->where('user_id', $userId)
+                ->orWhereHas('recipients', fn ($r) => $r->where('users.user_id', $userId))
+                ->orWhere(function ($qq) use ($user, $userId) {
+                    $qq->whereNull('user_id')
+                        ->where('audience', 'members')
+                        ->where('published_at', '>=', $user->created_at)
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_is_adult')->orWhere('target_is_adult', $user->isAdult());
+                        })
+                        ->where(function ($t) use ($user) {
+                            if (empty($user->nationality)) {
+                                $t->whereNull('target_nationalities');
+                            } else {
+                                $t->whereNull('target_nationalities')
+                                    ->orWhereJsonContains('target_nationalities', $user->nationality);
+                            }
+                        })
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_registered_after')
+                                ->orWhere('target_registered_after', '<=', $user->created_at);
+                        })
+                        ->where(function ($t) use ($user) {
+                            $t->whereNull('target_registered_before')
+                                ->orWhere('target_registered_before', '>=', $user->created_at);
+                        });
+                });
+        });
+    }
+
     public function scopeExcludingSystemAutoNotifications(Builder $query): Builder
     {
         if (\Illuminate\Support\Facades\Schema::hasColumn('admin_messages', 'delivery_type')) {

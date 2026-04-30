@@ -23,45 +23,11 @@ class NotificationsController extends Controller
         $user = auth()->user();
         $userId = $user->user_id;
 
-        // 送信済み・親メッセージのみ・新しい順
-        $baseQuery = AdminMessage::query()
-            ->whereNotNull('published_at')
-            ->whereNull('parent_message_id')
-            ->when(Schema::hasColumn('admin_messages', 'is_auto_sent'), function ($q) {
-                $q->excludingSystemAutoNotifications();
-            })
+        $query = AdminMessage::query()
+            ->publishedRootForNotifications()
+            ->visibleToRecipientUser($user)
             ->orderByDesc('published_at')
             ->orderByDesc('created_at');
-
-        // 表示対象: (1) 自分宛て個人 (2) 自分が recipients に含まれる (3) 会員向け一斉で、登録日時以降かつ条件一致
-        $query = $baseQuery->where(function ($q) use ($user, $userId) {
-            $q->where('user_id', $userId)
-                ->orWhereHas('recipients', fn ($r) => $r->where('users.user_id', $userId))
-                ->orWhere(function ($qq) use ($user, $userId) {
-                    $qq->whereNull('user_id')
-                        ->where('audience', 'members')
-                        ->where('published_at', '>=', $user->created_at)
-                        ->where(function ($t) use ($user) {
-                            $t->whereNull('target_is_adult')->orWhere('target_is_adult', $user->isAdult());
-                        })
-                        ->where(function ($t) use ($user) {
-                            if (empty($user->nationality)) {
-                                $t->whereNull('target_nationalities');
-                            } else {
-                                $t->whereNull('target_nationalities')
-                                    ->orWhereJsonContains('target_nationalities', $user->nationality);
-                            }
-                        })
-                        ->where(function ($t) use ($user) {
-                            $t->whereNull('target_registered_after')
-                                ->orWhere('target_registered_after', '<=', $user->created_at);
-                        })
-                        ->where(function ($t) use ($user) {
-                            $t->whereNull('target_registered_before')
-                                ->orWhere('target_registered_before', '>=', $user->created_at);
-                        });
-                });
-        });
 
         $messages = $query->paginate(10)->withQueryString();
         $messageIds = $messages->pluck('id')->toArray();
@@ -75,6 +41,14 @@ class NotificationsController extends Controller
                 ->whereIn('admin_message_id', $messageIds)
                 ->pluck('admin_message_id')
                 ->toArray();
+            $consentedMessageIds = [];
+            if (Schema::hasColumn('admin_message_reads', 'consented_at')) {
+                $consentedMessageIds = AdminMessageRead::where('user_id', $userId)
+                    ->whereIn('admin_message_id', $messageIds)
+                    ->whereNotNull('consented_at')
+                    ->pluck('admin_message_id')
+                    ->toArray();
+            }
             foreach ($messages as $message) {
                 $message->is_read = in_array($message->id, $readMessageIds);
                 $message->has_received_coin = in_array($message->id, $receivedCoinMessageIds);
@@ -87,6 +61,14 @@ class NotificationsController extends Controller
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
                 $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
+                if (Schema::hasColumn('admin_messages', 'requires_consent')) {
+                    $message->requires_consent_flag = (bool) $message->getAttributeValue('requires_consent');
+                    $message->has_consented = $message->requires_consent_flag
+                        && in_array($message->id, $consentedMessageIds, true);
+                } else {
+                    $message->requires_consent_flag = false;
+                    $message->has_consented = false;
+                }
             }
         } else {
             foreach ($messages as $message) {
@@ -96,6 +78,8 @@ class NotificationsController extends Controller
                 $message->translated_title = $this->getTranslatedTitle($message, $lang);
                 $message->translated_body = $this->getTranslatedBody($message, $lang);
                 $message->report_ack_disabled = $this->isReportAckDisabledForMessage($message);
+                $message->requires_consent_flag = false;
+                $message->has_consented = false;
             }
         }
 
@@ -116,6 +100,8 @@ class NotificationsController extends Controller
                     'title_key' => $m->title_key ?? null,
                     'thread_id' => $m->thread_id ?? null,
                     'report_ack_disabled' => ($m->report_ack_disabled ?? false),
+                    'requires_consent' => ($m->requires_consent_flag ?? false),
+                    'has_consented' => ($m->has_consented ?? false),
                 ];
             })->values();
             
@@ -171,6 +157,52 @@ class NotificationsController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * 同意必須お知らせに同意する（利用制限解除）
+     */
+    public function consentMandatory(Request $request, $message)
+    {
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        if (!auth()->check()) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('login_required_error', $lang)], 401);
+        }
+
+        $adminMessage = AdminMessage::find($message);
+        if (!$adminMessage) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 404);
+        }
+
+        Gate::authorize('consentMandatoryNotice', $adminMessage);
+
+        if (!Schema::hasColumn('admin_messages', 'requires_consent')
+            || !Schema::hasColumn('admin_message_reads', 'consented_at')
+            || !$adminMessage->getAttributeValue('requires_consent')) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('message_not_found', $lang)], 400);
+        }
+
+        $userId = auth()->id();
+
+        $lock = \App\Services\DuplicateSubmissionLockService::acquire('notifications.mandatory-consent', $userId, (string) $adminMessage->id);
+        if (!$lock) {
+            return response()->json(['error' => \App\Services\LanguageService::trans('duplicate_submission', $lang)], 429);
+        }
+        try {
+            $read = AdminMessageRead::firstOrNew([
+                'user_id' => $userId,
+                'admin_message_id' => $adminMessage->id,
+            ]);
+            if (!$read->exists) {
+                $read->read_at = now();
+            }
+            $read->consented_at = now();
+            $read->save();
+
+            return response()->json(['success' => true]);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

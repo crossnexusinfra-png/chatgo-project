@@ -26,6 +26,7 @@ class AdminMessageRead extends Model
         'user_id',
         'admin_message_id',
         'read_at',
+        'consented_at',
     ];
 
     /**
@@ -33,6 +34,7 @@ class AdminMessageRead extends Model
      */
     protected $casts = [
         'read_at' => 'datetime',
+        'consented_at' => 'datetime',
     ];
 
     /**

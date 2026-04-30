@@ -117,7 +117,8 @@
 .notification-item.is-open .reply-section,
 .notification-item.is-open .coin-reward-section,
 .notification-item.is-open .r18-change-section,
-.notification-item.is-open .report-restriction-ack-section {
+.notification-item.is-open .report-restriction-ack-section,
+.notification-item.is-open .mandatory-consent-section {
     display: block;
 }
 
@@ -500,5 +501,35 @@
     color: #065f46;
     font-size: 14px;
     text-align: center;
+}
+
+.mandatory-consent-section {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.mandatory-consent-hint {
+    margin: 0 0 10px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #4b5563;
+}
+
+.mandatory-consent-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 0.9375rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+}
+
+.mandatory-consent-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 

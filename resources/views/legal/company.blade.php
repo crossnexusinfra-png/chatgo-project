@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>運営者情報 | Chatgo</title>
+    @include('layouts.favicon')
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
 </head>
 <body>

@@ -3,10 +3,12 @@
 namespace App\Http\Middleware;
 
 use App\Models\FreezeAppeal;
+use App\Services\MandatoryNoticeConsentService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -33,6 +35,7 @@ class CheckUserFrozen
             'viewerAccountFrozen' => false,
             'viewerFrozenUiMessage' => '',
             'viewerFreezeAppealCanSubmit' => false,
+            'viewerOnlyMandatoryNoticeRestriction' => false,
         ]);
 
         // ログインユーザーのみチェック
@@ -56,6 +59,9 @@ class CheckUserFrozen
         } catch (\Throwable $e) {
             // ここで失敗しても閲覧継続を優先
         }
+
+        $pendingMandatory = Schema::hasColumn('admin_messages', 'requires_consent')
+            && MandatoryNoticeConsentService::userHasPendingRequiredConsent($user);
 
         if ($user->isFrozen()) {
             $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -88,6 +94,15 @@ class CheckUserFrozen
                 'viewerAccountFrozen' => true,
                 'viewerFrozenUiMessage' => $uiMessage,
                 'viewerFreezeAppealCanSubmit' => $canSubmitAppeal,
+                'viewerOnlyMandatoryNoticeRestriction' => false,
+            ]);
+        } elseif ($pendingMandatory) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            View::share([
+                'viewerAccountFrozen' => true,
+                'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_frozen_like_ui_message', $lang),
+                'viewerFreezeAppealCanSubmit' => false,
+                'viewerOnlyMandatoryNoticeRestriction' => true,
             ]);
         }
 
@@ -124,11 +139,24 @@ class CheckUserFrozen
                     $user->frozen_until = null;
                     $user->freeze_period_started_at = null;
                     $user->save();
-                    View::share([
-                        'viewerAccountFrozen' => false,
-                        'viewerFrozenUiMessage' => '',
-                        'viewerFreezeAppealCanSubmit' => false,
-                    ]);
+                    $pendingAfterUnfreeze = Schema::hasColumn('admin_messages', 'requires_consent')
+                        && MandatoryNoticeConsentService::userHasPendingRequiredConsent($user);
+                    if ($pendingAfterUnfreeze) {
+                        $lang = \App\Services\LanguageService::getCurrentLanguage();
+                        View::share([
+                            'viewerAccountFrozen' => true,
+                            'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_frozen_like_ui_message', $lang),
+                            'viewerFreezeAppealCanSubmit' => false,
+                            'viewerOnlyMandatoryNoticeRestriction' => true,
+                        ]);
+                    } else {
+                        View::share([
+                            'viewerAccountFrozen' => false,
+                            'viewerFrozenUiMessage' => '',
+                            'viewerFreezeAppealCanSubmit' => false,
+                            'viewerOnlyMandatoryNoticeRestriction' => false,
+                        ]);
+                    }
                 } else {
                     // 凍結中の場合、閲覧以外の操作を禁止
                     $allowedNonGetRoutes = [
@@ -164,6 +192,26 @@ class CheckUserFrozen
                         return back()->withErrors(['frozen' => $message]);
                     }
                 }
+            }
+        } elseif ($pendingMandatory) {
+            // 同意必須お知らせ未同意: 永久凍結と同様の非GET制限＋お知らせ周りのPOSTを許可
+            $routeName = $request->route()?->getName();
+            $allowedNonGetRoutes = [
+                'logout',
+                'threads.acknowledge',
+                'responses.acknowledge',
+                'threads.responses.translate',
+                'friends.delete',
+                'notifications.mark-as-read',
+                'notifications.mandatory-consent',
+                'notifications.receive-coin',
+            ];
+            if (!$request->isMethod('GET') && !in_array($routeName, $allowedNonGetRoutes, true) && !$request->is('logout')) {
+                $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+                return back()->withErrors([
+                    'frozen' => \App\Services\LanguageService::trans('mandatory_notice_restriction_user_message', $lang),
+                ]);
             }
         }
 

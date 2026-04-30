@@ -59,6 +59,18 @@
 
                 @auth
                 @if(!empty($viewerAccountFrozen))
+                    @if(!empty($viewerOnlyMandatoryNoticeRestriction))
+                    <section class="post-list post-list-margin mandatory-notice-main-banner">
+                        <div class="thread-category">
+                            <h3 class="category-title">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_title', $lang) }}</h3>
+                            <div class="mandatory-notice-main-banner-body">
+                                <p class="mandatory-notice-main-text">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_body', $lang) }}</p>
+                                <p class="mandatory-notice-main-frozen-hint">{{ \App\Services\LanguageService::trans('mandatory_notice_main_frozen_like_hint', $lang) }}</p>
+                                <p class="mandatory-notice-main-link"><a href="{{ route('notifications.index') }}" class="more-link">{{ \App\Services\LanguageService::trans('mandatory_notice_main_open_notifications', $lang) }}</a></p>
+                            </div>
+                        </div>
+                    </section>
+                    @else
                 <section class="post-list post-list-margin freeze-appeal-section">
                     <div class="thread-category">
                         <h3 class="category-title">{{ \App\Services\LanguageService::trans('freeze_appeal_section_title', $lang) }}</h3>
@@ -82,6 +94,7 @@
                         </div>
                     </div>
                 </section>
+                    @endif
                 @endif
                 <!-- 広告報酬ルーレット用オーバーレイ -->
                 <div id="coinRouletteOverlay" class="coin-roulette-overlay">
