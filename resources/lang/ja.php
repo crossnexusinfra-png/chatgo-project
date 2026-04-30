@@ -517,6 +517,7 @@ return [
     
     // サイトタイトル
     'site_title' => 'Chatgo - Chat with the world.',
+    'guest_index_hero_tagline' => '自動翻訳で海外の人とリアルタイムに会話できるチャットサイトです。',
     
     // その他（フォールバック用）
     'other' => 'その他',

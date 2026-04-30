@@ -523,6 +523,7 @@ return [
     
     // Site Title
     'site_title' => 'Chatgo - Chat with the world.',
+    'guest_index_hero_tagline' => 'A real-time chat site where automatic translation lets you talk with people worldwide.',
     
     // Other (fallback)
     'other' => 'Other',

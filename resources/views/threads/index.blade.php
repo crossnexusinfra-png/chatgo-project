@@ -55,6 +55,12 @@
                     </div>
                 @endif
 
+                @guest
+                <section class="guest-index-hero post-list-margin" role="region" aria-label="{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}">
+                    <p class="guest-index-hero-text">{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}</p>
+                </section>
+                @endguest
+
                 <!-- メインページのコンテンツ -->
 
                 @auth
