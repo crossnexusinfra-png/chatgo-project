@@ -73,9 +73,10 @@
                         <div class="thread-category">
                             <h3 class="category-title">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_title', $lang) }}</h3>
                             <div class="mandatory-notice-main-banner-body">
-                                <p class="mandatory-notice-main-text">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_body', $lang) }}</p>
                                 <p class="mandatory-notice-main-summary">{{ \App\Services\LanguageService::trans('mandatory_notice_restriction_summary', $lang) }}</p>
-                                <p class="mandatory-notice-main-link"><a href="{{ route('notifications.index') }}" class="more-link">{{ \App\Services\LanguageService::trans('mandatory_notice_main_open_notifications', $lang) }}</a></p>
+                                <div class="mandatory-notice-main-actions">
+                                    <a href="{{ route('notifications.index') }}" class="btn btn-primary mandatory-notice-open-btn">{{ \App\Services\LanguageService::trans('mandatory_notice_main_open_notifications', $lang) }}</a>
+                                </div>
                             </div>
                         </div>
                     </section>
