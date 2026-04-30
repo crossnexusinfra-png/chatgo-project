@@ -24,14 +24,5 @@
             </section>
         @endfor
     </main>
-    <footer class="site-footer legal-footer">
-        <a href="{{ route('auth.terms') }}">利用規約</a>
-        <span> | </span>
-        <a href="{{ route('legal.privacy') }}">プライバシーポリシー</a>
-        <span> | </span>
-        <a href="{{ route('legal.company') }}">運営者情報</a>
-        <span> | </span>
-        <a href="{{ route('legal.contact') }}">お問い合わせ</a>
-    </footer>
 </body>
 </html>

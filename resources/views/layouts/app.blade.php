@@ -34,6 +34,17 @@
             </div>
         @endif
         @yield('content')
+        @if(request()->routeIs('threads.index'))
+        <footer class="site-footer site-footer-main">
+            <a href="{{ route('auth.terms') }}">{{ \App\Services\LanguageService::trans('footer_terms', $lang) }}</a>
+            <span> | </span>
+            <a href="{{ route('legal.privacy') }}">{{ \App\Services\LanguageService::trans('footer_privacy', $lang) }}</a>
+            <span> | </span>
+            <a href="{{ route('legal.company') }}">{{ \App\Services\LanguageService::trans('footer_company', $lang) }}</a>
+            <span> | </span>
+            <a href="{{ route('legal.contact') }}">{{ \App\Services\LanguageService::trans('footer_contact', $lang) }}</a>
+        </footer>
+        @endif
     </main>
     
     <!-- ルーム作成モーダル -->
@@ -230,18 +241,6 @@
         </div>
     </div>
     
-    @if(!request()->routeIs('admin.*'))
-    <footer class="site-footer">
-        <a href="{{ route('auth.terms') }}">利用規約</a>
-        <span> | </span>
-        <a href="{{ route('legal.privacy') }}">プライバシーポリシー</a>
-        <span> | </span>
-        <a href="{{ route('legal.company') }}">運営者情報</a>
-        <span> | </span>
-        <a href="{{ route('legal.contact') }}">お問い合わせ</a>
-    </footer>
-    @endif
-
     <!-- 通報モーダル -->
     <div class="modal-overlay" id="reportModal">
         <div class="modal-content">
