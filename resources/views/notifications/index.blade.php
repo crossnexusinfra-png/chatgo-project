@@ -18,6 +18,13 @@
 <div class="notifications-container">
     <div class="notifications-header">
         <h1 class="notifications-title">{{ \App\Services\LanguageService::trans('notifications_title', $lang) }}</h1>
+        <nav class="notifications-filter-nav" aria-label="{{ \App\Services\LanguageService::trans('notifications_filter_nav_aria', $lang) }}">
+            <a href="{{ route('notifications.index', ['filter' => 'all']) }}" class="notifications-filter-link @if(($filter ?? 'all') === 'all') is-active @endif">{{ \App\Services\LanguageService::trans('notifications_filter_all', $lang) }}</a>
+            <a href="{{ route('notifications.index', ['filter' => 'coin']) }}" class="notifications-filter-link @if(($filter ?? 'all') === 'coin') is-active @endif">{{ \App\Services\LanguageService::trans('notifications_filter_coin', $lang) }}</a>
+            @if(!empty($showMandatoryFilter))
+            <a href="{{ route('notifications.index', ['filter' => 'mandatory']) }}" class="notifications-filter-link @if(($filter ?? 'all') === 'mandatory') is-active @endif">{{ \App\Services\LanguageService::trans('notifications_filter_mandatory', $lang) }}</a>
+            @endif
+        </nav>
     </div>
     <div class="notifications-list" id="notificationsList">
         @include('notifications.partials.messages', ['messages' => $messages, 'lang' => $lang])
@@ -60,6 +67,7 @@
     data-user-id="{{ auth()->id() ?? '' }}"
     data-current-page="{{ $messages->currentPage() }}"
     data-has-more-pages="{{ $messages->hasMorePages() ? '1' : '0' }}"
+    data-notification-filter="{{ e($filter ?? 'all') }}"
     data-translations="{{ e(json_encode([
         'processing' => \App\Services\LanguageService::trans('processing', $lang),
         'submitting' => \App\Services\LanguageService::trans('submitting', $lang),

@@ -21,6 +21,7 @@
         userId: configElement.dataset.userId ? parseInt(configElement.dataset.userId, 10) : null,
         currentPage: parseInt(configElement.dataset.currentPage || '1', 10),
         hasMorePages: configElement.dataset.hasMorePages === '1',
+        notificationFilter: (configElement.dataset.notificationFilter || 'all').trim() || 'all',
         translations: parseJsonDataset(configElement.dataset.translations, {})
     } : (window.notificationsIndexConfig || {});
     let messagesData = config.messagesData || [];
@@ -711,7 +712,9 @@
         
         try {
             const nextPage = currentPage + 1;
-            const response = await fetch(`/notifications?page=${nextPage}`, {
+            const filter = (config.notificationFilter || 'all').trim() || 'all';
+            const filterQs = filter === 'all' ? '' : '&filter=' + encodeURIComponent(filter);
+            const response = await fetch('/notifications?page=' + nextPage + filterQs, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

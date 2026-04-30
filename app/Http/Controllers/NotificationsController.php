@@ -15,7 +15,7 @@ use App\Models\Report;
 
 class NotificationsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         // ログイン必須（ルートで auth ミドルウェア済み）。お知らせは登録日時以降のもののみ表示。
         set_time_limit(60);
@@ -23,11 +23,26 @@ class NotificationsController extends Controller
         $user = auth()->user();
         $userId = $user->user_id;
 
+        $showMandatoryFilter = Schema::hasColumn('admin_messages', 'requires_consent');
+        $filter = (string) $request->query('filter', 'all');
+        if (!in_array($filter, ['all', 'coin', 'mandatory'], true)) {
+            $filter = 'all';
+        }
+        if ($filter === 'mandatory' && !$showMandatoryFilter) {
+            $filter = 'all';
+        }
+
         $query = AdminMessage::query()
             ->publishedRootForNotifications()
             ->visibleToRecipientUser($user)
             ->orderByDesc('published_at')
             ->orderByDesc('created_at');
+
+        if ($filter === 'coin') {
+            $query->where('coin_amount', '>', 0);
+        } elseif ($filter === 'mandatory') {
+            $query->where('requires_consent', true);
+        }
 
         $messages = $query->paginate(10)->withQueryString();
         $messageIds = $messages->pluck('id')->toArray();
@@ -110,10 +125,11 @@ class NotificationsController extends Controller
                 'hasMorePages' => $messages->hasMorePages(),
                 'currentPage' => $messages->currentPage(),
                 'messagesData' => $messagesData,
+                'filter' => $filter,
             ]);
         }
         
-        return view('notifications.index', compact('messages', 'lang'))->with('hideSearch', true);
+        return view('notifications.index', compact('messages', 'lang', 'filter', 'showMandatoryFilter'))->with('hideSearch', true);
     }
 
     /**
