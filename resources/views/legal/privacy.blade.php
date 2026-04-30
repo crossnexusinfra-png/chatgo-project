@@ -23,9 +23,15 @@
                 <div class="terms-privacy-text">{!! nl2br(\App\Services\LanguageService::trans('terms_privacy_' . $i . '_text', $lang)) !!}</div>
             </section>
         @endfor
-        <p style="margin-top: 24px;">
-            {{ \App\Services\LanguageService::trans('privacy_footer_before', $lang) }}<a href="{{ route('legal.contact') }}">{{ \App\Services\LanguageService::trans('privacy_footer_link', $lang) }}</a>{{ \App\Services\LanguageService::trans('privacy_footer_after', $lang) }}
-        </p>
     </main>
+    <footer class="site-footer legal-footer">
+        <a href="{{ route('auth.terms') }}">利用規約</a>
+        <span> | </span>
+        <a href="{{ route('legal.privacy') }}">プライバシーポリシー</a>
+        <span> | </span>
+        <a href="{{ route('legal.company') }}">運営者情報</a>
+        <span> | </span>
+        <a href="{{ route('legal.contact') }}">お問い合わせ</a>
+    </footer>
 </body>
 </html>

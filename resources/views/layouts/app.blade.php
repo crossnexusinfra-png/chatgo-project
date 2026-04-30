@@ -231,7 +231,7 @@
     </div>
     
     @if(!request()->routeIs('admin.*'))
-    <footer style="max-width: 1200px; margin: 24px auto 12px; padding: 0 12px; font-size: 0.9rem;">
+    <footer class="site-footer">
         <a href="{{ route('auth.terms') }}">利用規約</a>
         <span> | </span>
         <a href="{{ route('legal.privacy') }}">プライバシーポリシー</a>

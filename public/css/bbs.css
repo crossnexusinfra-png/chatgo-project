@@ -2126,6 +2126,30 @@ form.form-submitting input[readonly] {
     text-decoration: underline;
 }
 
+.site-footer {
+    max-width: 1200px;
+    margin: 24px auto 12px;
+    padding: 0 12px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.site-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.site-footer a:hover {
+    text-decoration: underline;
+}
+
+.legal-footer {
+    margin-top: 8px;
+    margin-bottom: 24px;
+}
+
 .back-link {
     color: #999;
     text-decoration: none;
