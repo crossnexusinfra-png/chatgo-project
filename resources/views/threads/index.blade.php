@@ -57,7 +57,13 @@
 
                 @guest
                 <section class="guest-index-hero post-list-margin" role="region" aria-label="{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}">
-                    <p class="guest-index-hero-text">{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}</p>
+                    <div class="guest-index-hero-accent" aria-hidden="true"></div>
+                    <div class="guest-index-hero-inner">
+                        <div class="guest-index-hero-badge" aria-hidden="true">
+                            <span class="guest-index-hero-badge-icons"><span class="guest-index-hero-icon-globe">🌐</span><span class="guest-index-hero-icon-chat">💬</span></span>
+                        </div>
+                        <p class="guest-index-hero-text">{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}</p>
+                    </div>
                 </section>
                 @endguest
 
