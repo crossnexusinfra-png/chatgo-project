@@ -21,26 +21,29 @@
             </div>
             
             <div class="terms-content">
-                <div class="terms-section">
+                <div class="terms-section terms-legal-body">
                     <h3>{{ \App\Services\LanguageService::trans('terms_section_title', $lang) }}</h3>
                     <div class="terms-text">
-                        @for ($i = 1; $i <= 9; $i++)
+                        @for ($i = 1; $i <= 15; $i++)
                             <div class="terms-article">
                                 <h4 class="terms-article-title">{{ \App\Services\LanguageService::trans('terms_art_' . $i . '_title', $lang) }}</h4>
-                                <div class="terms-article-text">{!! nl2br(e(\App\Services\LanguageService::trans('terms_art_' . $i . '_text', $lang))) !!}</div>
+                                <div class="terms-article-text">{!! nl2br(\App\Services\LanguageService::trans('terms_art_' . $i . '_text', $lang)) !!}</div>
                             </div>
                         @endfor
                     </div>
                 </div>
 
-                <div class="terms-section terms-section-privacy">
+                <div class="terms-section terms-section-privacy terms-legal-body">
                     <h3>{{ \App\Services\LanguageService::trans('terms_privacy_section_title', $lang) }}</h3>
                     <div class="terms-text">
-                        <p class="terms-privacy-intro">{{ \App\Services\LanguageService::trans('terms_privacy_intro', $lang) }}</p>
-                        @for ($i = 1; $i <= 5; $i++)
+                        @php $privacyIntro = trim(\App\Services\LanguageService::trans('terms_privacy_intro', $lang)); @endphp
+                        @if($privacyIntro !== '')
+                            <p class="terms-privacy-intro">{{ $privacyIntro }}</p>
+                        @endif
+                        @for ($i = 1; $i <= 10; $i++)
                             <div class="terms-privacy-block">
                                 <h4 class="terms-privacy-title">{{ \App\Services\LanguageService::trans('terms_privacy_' . $i . '_title', $lang) }}</h4>
-                                <div class="terms-privacy-text">{!! nl2br(e(\App\Services\LanguageService::trans('terms_privacy_' . $i . '_text', $lang))) !!}</div>
+                                <div class="terms-privacy-text">{!! nl2br(\App\Services\LanguageService::trans('terms_privacy_' . $i . '_text', $lang)) !!}</div>
                             </div>
                         @endfor
                     </div>
