@@ -504,63 +504,19 @@ body {
 }
 
 .guest-index-hero-inner {
-    display: flex;
-    align-items: center;
-    gap: 18px;
     padding: 18px 20px 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.guest-index-hero-badge {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow:
-        0 6px 16px rgba(118, 75, 162, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22);
-}
-
-.guest-index-hero-badge-icons {
-    position: relative;
-    display: block;
-    width: 36px;
-    height: 36px;
-}
-
-.guest-index-hero-icon-globe {
-    position: absolute;
-    left: 0;
-    top: 0;
-    font-size: 28px;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-}
-
-.guest-index-hero-icon-chat {
-    position: absolute;
-    right: -4px;
-    bottom: -2px;
-    font-size: 16px;
-    line-height: 1;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+    text-align: center;
 }
 
 .guest-index-hero-text {
-    flex: 1 1 220px;
-    margin: 0;
+    margin: 0 auto;
     max-width: 42em;
     font-size: 16px;
     line-height: 1.6;
     font-weight: 500;
     color: #2c3d4f;
     letter-spacing: 0.01em;
-    text-align: left;
+    text-align: center;
 }
 
 .guest-index-hero-text::first-line {
@@ -570,13 +526,10 @@ body {
 
 @media (max-width: 520px) {
     .guest-index-hero-inner {
-        flex-direction: column;
-        text-align: center;
         padding: 16px 16px 18px;
     }
 
     .guest-index-hero-text {
-        text-align: center;
         font-size: 15px;
     }
 }

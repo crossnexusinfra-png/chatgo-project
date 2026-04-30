@@ -59,9 +59,6 @@
                 <section class="guest-index-hero post-list-margin" role="region" aria-label="{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}">
                     <div class="guest-index-hero-accent" aria-hidden="true"></div>
                     <div class="guest-index-hero-inner">
-                        <div class="guest-index-hero-badge" aria-hidden="true">
-                            <span class="guest-index-hero-badge-icons"><span class="guest-index-hero-icon-globe">🌐</span><span class="guest-index-hero-icon-chat">💬</span></span>
-                        </div>
                         <p class="guest-index-hero-text">{{ \App\Services\LanguageService::trans('guest_index_hero_tagline', $lang) }}</p>
                     </div>
                 </section>
@@ -77,7 +74,7 @@
                             <h3 class="category-title">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_title', $lang) }}</h3>
                             <div class="mandatory-notice-main-banner-body">
                                 <p class="mandatory-notice-main-text">{{ \App\Services\LanguageService::trans('mandatory_notice_main_banner_body', $lang) }}</p>
-                                <p class="mandatory-notice-main-frozen-hint">{{ \App\Services\LanguageService::trans('mandatory_notice_main_frozen_like_hint', $lang) }}</p>
+                                <p class="mandatory-notice-main-summary">{{ \App\Services\LanguageService::trans('mandatory_notice_restriction_summary', $lang) }}</p>
                                 <p class="mandatory-notice-main-link"><a href="{{ route('notifications.index') }}" class="more-link">{{ \App\Services\LanguageService::trans('mandatory_notice_main_open_notifications', $lang) }}</a></p>
                             </div>
                         </div>

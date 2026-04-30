@@ -141,7 +141,7 @@
 
                 <div class="profile-actions">
                     @if(($viewerAccountFrozen ?? false) === true)
-                        <button type="button" class="btn btn-primary" disabled aria-disabled="true" title="{{ $viewerFrozenUiMessage ?? '' }}">
+                        <button type="button" class="btn btn-primary" disabled aria-disabled="true" title="{{ !empty($viewerOnlyMandatoryNoticeRestriction) ? \App\Services\LanguageService::trans('mandatory_notice_profile_edit_blocked', $lang) : ($viewerFrozenUiMessage ?? '') }}">
                             {{ \App\Services\LanguageService::trans('profile_edit', $lang) }}
                         </button>
                     @else

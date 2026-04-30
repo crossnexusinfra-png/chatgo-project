@@ -100,7 +100,7 @@ class CheckUserFrozen
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             View::share([
                 'viewerAccountFrozen' => true,
-                'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_frozen_like_ui_message', $lang),
+                'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_restriction_summary', $lang),
                 'viewerFreezeAppealCanSubmit' => false,
                 'viewerOnlyMandatoryNoticeRestriction' => true,
             ]);
@@ -145,7 +145,7 @@ class CheckUserFrozen
                         $lang = \App\Services\LanguageService::getCurrentLanguage();
                         View::share([
                             'viewerAccountFrozen' => true,
-                            'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_frozen_like_ui_message', $lang),
+                            'viewerFrozenUiMessage' => \App\Services\LanguageService::trans('mandatory_notice_restriction_summary', $lang),
                             'viewerFreezeAppealCanSubmit' => false,
                             'viewerOnlyMandatoryNoticeRestriction' => true,
                         ]);

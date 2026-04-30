@@ -65,7 +65,12 @@
                         <!-- CSRF保護 -->
                         @csrf
                         @if(!empty($viewerAccountFrozen))
-                        <p class="account-frozen-modal-notice thread-restriction-info">{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
+                            @if(!empty($viewerOnlyMandatoryNoticeRestriction))
+                                <p class="mandatory-notice-modal-notice thread-restriction-info">{{ \App\Services\LanguageService::trans('mandatory_notice_restriction_summary', $lang) }}</p>
+                                <p class="mandatory-notice-modal-sub thread-restriction-info">{{ \App\Services\LanguageService::trans('mandatory_notice_modal_create_hint', $lang) }}</p>
+                            @else
+                                <p class="account-frozen-modal-notice thread-restriction-info">{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
+                            @endif
                         @endif
                         <fieldset class="create-thread-fieldset @if(!empty($viewerAccountFrozen)) is-disabled-frozen @endif" @if(!empty($viewerAccountFrozen)) disabled aria-disabled="true" @endif>
                         <div class="js-create-thread-fields">

@@ -2886,7 +2886,7 @@ button.back-link--button {
 }
 
 .mandatory-notice-main-text,
-.mandatory-notice-main-frozen-hint,
+.mandatory-notice-main-summary,
 .mandatory-notice-main-link {
     margin: 0 0 12px;
     font-size: 0.8125rem;
@@ -2894,12 +2894,23 @@ button.back-link--button {
     color: #4a4a4a;
 }
 
-.mandatory-notice-main-frozen-hint {
-    color: #6a6a6a;
+.mandatory-notice-main-summary {
+    color: #5c4a3a;
+    padding: 8px 10px;
+    background: #fff8e6;
+    border-radius: 6px;
+    border: 1px solid #f0e0c4;
 }
 
 .mandatory-notice-main-link {
     margin-bottom: 0;
+}
+
+.mandatory-notice-modal-sub {
+    margin: -6px 0 14px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: #5a5a5a;
 }
 
 /* アカウント凍結: ルーム作成ボタン・モーダル */

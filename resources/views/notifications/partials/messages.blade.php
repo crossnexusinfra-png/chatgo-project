@@ -15,6 +15,13 @@
             <div class="notification-content">
                 <h2 class="notification-title">
                     {{ $m->translated_title ?? $m->title ?? \App\Services\LanguageService::trans('notification_no_title', $lang) }}
+                    @if(!empty($m->requires_consent_flag))
+                        @if(!empty($m->has_consented))
+                            <span class="mandatory-notice-badge mandatory-notice-badge--agreed" title="{{ \App\Services\LanguageService::trans('mandatory_notice_list_badge_agreed', $lang) }}">{{ \App\Services\LanguageService::trans('mandatory_notice_list_badge_agreed', $lang) }}</span>
+                        @else
+                            <span class="mandatory-notice-badge mandatory-notice-badge--required" title="{{ \App\Services\LanguageService::trans('mandatory_notice_list_badge_required', $lang) }}">{{ \App\Services\LanguageService::trans('mandatory_notice_list_badge_required', $lang) }}</span>
+                        @endif
+                    @endif
                     @if($m->coin_amount && $m->coin_amount > 0)
                         <span class="coin-badge">{{ str_replace('{amount}', $m->coin_amount, \App\Services\LanguageService::trans('notification_coin_badge', $lang)) }}</span>
                     @endif

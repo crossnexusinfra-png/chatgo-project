@@ -267,9 +267,15 @@
             @else
             @auth
                 @if(!empty($viewerAccountFrozen))
-                    <div class="thread-restriction-info account-frozen-reply-notice">
-                        <p>{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
-                    </div>
+                    @if(!empty($viewerOnlyMandatoryNoticeRestriction))
+                        <div class="thread-restriction-info mandatory-notice-reply-notice">
+                            <p>{{ \App\Services\LanguageService::trans('mandatory_notice_thread_reply_notice', $lang) }}</p>
+                        </div>
+                    @else
+                        <div class="thread-restriction-info account-frozen-reply-notice">
+                            <p>{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
+                        </div>
+                    @endif
                 @else
                 @if(isset($isResponseLimitReached) && $isResponseLimitReached && !isset($continuationThread))
                 <!-- 続きルーム要望アンケート -->
