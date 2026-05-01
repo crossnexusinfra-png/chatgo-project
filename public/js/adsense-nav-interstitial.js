@@ -157,8 +157,8 @@
             placeholder.textContent = '広告';
             adWrap.appendChild(placeholder);
         }
-        inner.appendChild(closeBtn);
         inner.appendChild(adWrap);
+        inner.appendChild(closeBtn);
         overlay.appendChild(inner);
 
         function go() {
