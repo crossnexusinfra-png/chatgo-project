@@ -6,6 +6,7 @@
 (function () {
     'use strict';
     var CONSENT_KEY = 'chatgo_ads_consent_v1';
+    window.__chatgoEeaInitLoaded = true;
 
     function getMetaContent(name) {
         var el = document.querySelector('meta[name="' + name + '"]');
@@ -15,10 +16,31 @@
     function parseConfig(metaName) {
         var raw = getMetaContent(metaName);
         if (!raw) return null;
+        // HTMLエスケープされた JSON（&quot; など）にも対応
+        if (raw.indexOf('&quot;') !== -1 || raw.indexOf('&#34;') !== -1 || raw.indexOf('&amp;') !== -1) {
+            var ta = document.createElement('textarea');
+            ta.innerHTML = raw;
+            raw = ta.value;
+        }
         try {
             return JSON.parse(raw);
         } catch (e) {
             return null;
+        }
+    }
+
+    function readForceEeaUkFallback() {
+        try {
+            var raw = getMetaContent('adsense-eea-test-config');
+            if (!raw) return false;
+            if (raw.indexOf('&quot;') !== -1 || raw.indexOf('&#34;') !== -1 || raw.indexOf('&amp;') !== -1) {
+                var ta = document.createElement('textarea');
+                ta.innerHTML = raw;
+                raw = ta.value;
+            }
+            return /"forceEeaUk"\s*:\s*true/i.test(raw);
+        } catch (e) {
+            return false;
         }
     }
 
@@ -123,40 +145,60 @@
     function run() {
         var cfg = parseConfig('adsense-page-level-config');
         var eeaCfg = parseConfig('adsense-eea-test-config') || {};
-        var forceEeaUk = !!eeaCfg.forceEeaUk;
+        var forceEeaUk = !!eeaCfg.forceEeaUk || readForceEeaUkFallback();
+        window.__chatgoEeaForceFlag = forceEeaUk;
+        // テスト強制時は、AdSense有効/official条件の前でも同意UIを表示して検証可能にする
+        if (forceEeaUk) {
+            var forcedChoice = getConsentChoice();
+            if (forcedChoice === 'granted') {
+                if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                    initPageLevelAds(cfg.client, false);
+                }
+                return;
+            }
+            if (forcedChoice === 'denied') {
+                if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                    initPageLevelAds(cfg.client, true);
+                }
+                return;
+            }
+
+            renderConsentBanner(function () {
+                setConsentChoice('granted');
+                removeConsentBanner();
+                if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                    initPageLevelAds(cfg.client, false);
+                }
+            }, function () {
+                setConsentChoice('denied');
+                removeConsentBanner();
+                if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                    initPageLevelAds(cfg.client, true);
+                }
+            });
+            return;
+        }
+
         if (!cfg || !cfg.enabled) return;
         if (cfg.interstitialMode !== 'official') return;
         if (!cfg.client) return;
 
-        if (!forceEeaUk) {
-            initPageLevelAds(cfg.client, false);
-            return;
-        }
+        initPageLevelAds(cfg.client, false);
+    }
 
-        var choice = getConsentChoice();
-        if (choice === 'granted') {
-            initPageLevelAds(cfg.client, false);
-            return;
+    function safeRun() {
+        try {
+            run();
+            window.__chatgoEeaInitRunOk = true;
+        } catch (e) {
+            window.__chatgoEeaInitRunOk = false;
+            window.__chatgoEeaInitError = (e && e.message) ? e.message : String(e);
         }
-        if (choice === 'denied') {
-            initPageLevelAds(cfg.client, true);
-            return;
-        }
-
-        renderConsentBanner(function () {
-            setConsentChoice('granted');
-            removeConsentBanner();
-            initPageLevelAds(cfg.client, false);
-        }, function () {
-            setConsentChoice('denied');
-            removeConsentBanner();
-            initPageLevelAds(cfg.client, true);
-        });
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run);
+        document.addEventListener('DOMContentLoaded', safeRun);
     } else {
-        run();
+        safeRun();
     }
 })();
