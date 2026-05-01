@@ -14,22 +14,56 @@
         }
     }
 
-    const configElement = document.getElementById('notifications-index-config');
-    const config = configElement ? {
-        messagesData: parseJsonDataset(configElement.dataset.messagesData, []),
-        csrfToken: configElement.dataset.csrfToken || '',
-        userId: configElement.dataset.userId ? parseInt(configElement.dataset.userId, 10) : null,
-        currentPage: parseInt(configElement.dataset.currentPage || '1', 10),
-        hasMorePages: configElement.dataset.hasMorePages === '1',
-        notificationFilter: (configElement.dataset.notificationFilter || 'all').trim() || 'all',
-        translations: parseJsonDataset(configElement.dataset.translations, {})
-    } : (window.notificationsIndexConfig || {});
-    let messagesData = config.messagesData || [];
-    const csrfToken = config.csrfToken || '';
-    const translations = config.translations || {};
-    let currentPage = config.currentPage || 1;
-    let hasMorePages = config.hasMorePages || false;
+    function loadNotificationsBootstrap() {
+        const scriptEl = document.getElementById('notifications-index-bootstrap');
+        if (scriptEl && (scriptEl.textContent || '').trim() !== '') {
+            try {
+                return JSON.parse(scriptEl.textContent);
+            } catch (e) {
+                console.error('Failed to parse notifications-index-bootstrap JSON:', e);
+            }
+        }
+        const legacyEl = document.getElementById('notifications-index-config');
+        if (legacyEl) {
+            return {
+                messagesData: parseJsonDataset(legacyEl.dataset.messagesData, []),
+                translations: parseJsonDataset(legacyEl.dataset.translations, {}),
+                csrfToken: legacyEl.dataset.csrfToken || '',
+                userId: legacyEl.dataset.userId ? parseInt(legacyEl.dataset.userId, 10) : null,
+                currentPage: parseInt(legacyEl.dataset.currentPage || '1', 10),
+                hasMorePages: legacyEl.dataset.hasMorePages === '1',
+                notificationFilter: (legacyEl.dataset.notificationFilter || 'all').trim() || 'all',
+            };
+        }
+        return window.notificationsIndexConfig || {};
+    }
+
+    const bootstrap = loadNotificationsBootstrap();
+    let messagesData = Array.isArray(bootstrap.messagesData) ? bootstrap.messagesData : [];
+    const csrfToken = bootstrap.csrfToken || '';
+    const translations = bootstrap.translations && typeof bootstrap.translations === 'object' ? bootstrap.translations : {};
+    const config = {
+        userId: bootstrap.userId != null && bootstrap.userId !== ''
+            ? parseInt(String(bootstrap.userId), 10)
+            : null,
+        notificationFilter: (bootstrap.notificationFilter || 'all').trim() || 'all',
+    };
+    if (config.userId !== null && Number.isNaN(config.userId)) {
+        config.userId = null;
+    }
+    let currentPage = parseInt(String(bootstrap.currentPage || '1'), 10) || 1;
+    let hasMorePages = Boolean(bootstrap.hasMorePages);
     let isLoadingMore = false;
+
+    function findMessageById(messageId) {
+        const id = Number(messageId);
+        if (Number.isNaN(id)) {
+            return undefined;
+        }
+        return messagesData.find(function(m) {
+            return Number(m.id) === id;
+        });
+    }
 
     // メッセージを開封済みとしてマークする関数
     async function markAsRead(messageId, element) {
@@ -130,7 +164,7 @@
         
         if (isClosed) {
             if (!messageBody.textContent.trim()) {
-                const message = messagesData.find(m => m.id === messageId);
+                const message = findMessageById(messageId);
                 if (message) {
                     messageBody.innerHTML = renderMessageBodySafe(message.body);
                 }
@@ -334,7 +368,7 @@
                     coinSection.innerHTML = '<div class="coin-received-message">' + translations.notificationCoinReceived + '</div>';
                 }
                 
-                const message = messagesData.find(m => m.id === messageId);
+                const message = findMessageById(messageId);
                 if (message) {
                     message.has_received_coin = true;
                 }
@@ -421,7 +455,7 @@
                     r18Section.innerHTML = '<div class="r18-change-success-message">' + translations.r18ChangeApproveSuccess + '</div>';
                 }
                 
-                const message = messagesData.find(m => m.id === messageId);
+                const message = findMessageById(messageId);
                 if (message) {
                     message.reply_used = true;
                 }
@@ -431,7 +465,7 @@
                 // R18切替後は通報了承ボタンを出さない：サーバが返した分をDOMから除去
                 reportMessagesToDisable.forEach(function (rid) {
                     const mid = Number(rid);
-                    const msg = messagesData.find(m => m.id === mid);
+                    const msg = findMessageById(mid);
                     if (msg) msg.reply_used = true;
                     const article = document.querySelector('article.notification-item[data-message-id="' + mid + '"]');
                     if (!article) return;
@@ -516,7 +550,7 @@
                     r18Section.innerHTML = '<div class="r18-change-success-message">' + translations.r18ChangeRejectSuccess + '</div>';
                 }
                 
-                const message = messagesData.find(m => m.id === messageId);
+                const message = findMessageById(messageId);
                 if (message) {
                     message.reply_used = true;
                 }
@@ -578,7 +612,7 @@
             }
 
             if (response.ok && result.success) {
-                const message = messagesData.find(function(m) { return m.id === messageId; });
+                const message = findMessageById(messageId);
                 if (message) {
                     message.has_consented = true;
                 }
@@ -668,7 +702,7 @@
                 if (section) {
                     section.innerHTML = '<div class="report-restriction-ack-success-message">' + (translations.reportAckSuccess || '処理しました') + '</div>';
                 }
-                const message = messagesData.find(m => m.id === messageId);
+                const message = findMessageById(messageId);
                 if (message) message.reply_used = true;
                 if (result.result) {
                     console.log('report acknowledge result:', result.result);

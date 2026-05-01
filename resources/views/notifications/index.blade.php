@@ -59,16 +59,7 @@
             'has_consented' => ($m->has_consented ?? false),
         ];
     })->values();
-@endphp
-<div
-    id="notifications-index-config"
-    data-messages-data="{{ e(json_encode($messagesData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
-    data-csrf-token="{{ csrf_token() }}"
-    data-user-id="{{ auth()->id() ?? '' }}"
-    data-current-page="{{ $messages->currentPage() }}"
-    data-has-more-pages="{{ $messages->hasMorePages() ? '1' : '0' }}"
-    data-notification-filter="{{ e($filter ?? 'all') }}"
-    data-translations="{{ e(json_encode([
+    $notificationsTranslations = [
         'processing' => \App\Services\LanguageService::trans('processing', $lang),
         'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
         'replyRequired' => \App\Services\LanguageService::trans('reply_required', $lang),
@@ -94,9 +85,18 @@
         'mandatoryNoticeConsentButton' => \App\Services\LanguageService::trans('mandatory_notice_consent_button', $lang),
         'mandatoryNoticeConsentSuccess' => \App\Services\LanguageService::trans('mandatory_notice_consent_success', $lang),
         'mandatoryNoticeConsentFailed' => \App\Services\LanguageService::trans('mandatory_notice_consent_failed', $lang),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
-    hidden
-></div>
+    ];
+    $notificationsIndexBootstrap = [
+        'messagesData' => $messagesData,
+        'translations' => $notificationsTranslations,
+        'csrfToken' => csrf_token(),
+        'userId' => auth()->id(),
+        'currentPage' => $messages->currentPage(),
+        'hasMorePages' => $messages->hasMorePages(),
+        'notificationFilter' => $filter ?? 'all',
+    ];
+@endphp
+<script type="application/json" id="notifications-index-bootstrap" nonce="{{ $csp_nonce ?? '' }}">@json($notificationsIndexBootstrap)</script>
 <script src="{{ asset('js/notifications-index.js') }}?v={{ @filemtime(public_path('js/notifications-index.js')) ?: time() }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection
 
