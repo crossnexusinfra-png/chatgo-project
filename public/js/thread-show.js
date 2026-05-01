@@ -535,9 +535,10 @@
         return div.innerHTML;
     }
 
-    function createReplyInlineAdNode(adIndex) {
+    function createReplyInlineAdNode(adIndex, anchorResponseId) {
         const wrapper = document.createElement('div');
         wrapper.className = 'adsense-thread-reply-inline';
+        wrapper.setAttribute('data-reply-ad-anchor', String(anchorResponseId));
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
         if (adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
             const banner = document.createElement('div');
@@ -551,7 +552,7 @@
             ins.setAttribute('data-ad-format', 'horizontal');
             ins.setAttribute('data-full-width-responsive', 'true');
             dynamicReplyAdSerial += 1;
-            ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex;
+            ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
             banner.appendChild(ins);
             wrapper.appendChild(banner);
         } else {
@@ -566,18 +567,31 @@
     function normalizeReplyInlineAds() {
         const container = document.getElementById('responsesContainer');
         if (!container) return;
-        Array.from(container.querySelectorAll('.adsense-thread-reply-inline')).forEach(function(el) {
-            el.remove();
-        });
         const responseItems = Array.from(container.querySelectorAll('.response-item'));
         responseItems.forEach(function(item, idx) {
             const n = idx + 1;
             if (n >= 10 && n % 10 === 0) {
-                const adNode = createReplyInlineAdNode(n);
-                if (item.nextSibling) {
-                    container.insertBefore(adNode, item.nextSibling);
-                } else {
-                    container.appendChild(adNode);
+                const anchorResponseId = item.getAttribute('data-response-id');
+                if (!anchorResponseId) return;
+
+                let adNode = container.querySelector('.adsense-thread-reply-inline[data-reply-ad-anchor="' + anchorResponseId + '"]');
+                if (!adNode) {
+                    adNode = createReplyInlineAdNode(n, anchorResponseId);
+                }
+
+                const nextElement = item.nextElementSibling;
+                const isAlreadyAnchoredAfter =
+                    nextElement &&
+                    nextElement.classList &&
+                    nextElement.classList.contains('adsense-thread-reply-inline') &&
+                    nextElement.getAttribute('data-reply-ad-anchor') === anchorResponseId;
+
+                if (!isAlreadyAnchoredAfter) {
+                    if (nextElement) {
+                        container.insertBefore(adNode, nextElement);
+                    } else {
+                        container.appendChild(adNode);
+                    }
                 }
             }
         });
