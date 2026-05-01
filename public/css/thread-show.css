@@ -1390,11 +1390,13 @@ body {
 }
 
 .thread-show-rail {
+    --thread-rail-top-gap: 12px;
+    --thread-rail-bottom-gap: 12px;
     width: 100%;
     min-width: 0;
     position: sticky;
-    top: 72px;
-    height: calc(100vh - 144px);
+    top: calc(72px + var(--thread-rail-top-gap));
+    height: calc(100vh - 72px - var(--thread-rail-top-gap) - var(--thread-rail-bottom-gap));
     align-self: flex-start;
     display: grid;
     grid-template-rows: repeat(3, 1fr);
