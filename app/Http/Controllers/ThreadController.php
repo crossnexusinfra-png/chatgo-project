@@ -3205,6 +3205,7 @@ class ThreadController extends Controller
             'threadRestrictionData' => $threadRestrictionData,
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
+            'listRowOffset' => (int) $request->get('offset', 20),
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;
@@ -3320,6 +3321,7 @@ class ThreadController extends Controller
             'threadRestrictionData' => $threadRestrictionData,
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
+            'listRowOffset' => (int) $request->get('offset', 20),
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;
@@ -3427,6 +3429,7 @@ class ThreadController extends Controller
             'threadRestrictionData' => $threadRestrictionData,
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
+            'listRowOffset' => (int) $request->get('offset', 20),
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;

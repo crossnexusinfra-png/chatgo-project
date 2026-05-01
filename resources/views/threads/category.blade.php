@@ -156,6 +156,7 @@
         return $tagCategories[$tag] ?? \App\Services\LanguageService::trans('other', $lang);
     }
 @endphp
+                    @php $listRowOffset = $listRowOffset ?? 0; @endphp
                     @forelse ($threads as $thread)
                         @php
                             $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -252,6 +253,12 @@
                                 <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                             </div>
                         </article>
+                        @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
+                        @if($rowIdx >= 2 && $rowIdx % 2 === 0)
+                        <div class="posts-grid-ad-row">
+                            @include('components.adsense-inline-banner', ['instanceId' => 'catlist-'.$rowIdx])
+                        </div>
+                        @endif
                     @empty
                         <div class="no-posts">
                             <p>{{ str_replace('{category}', $title, \App\Services\LanguageService::trans('no_threads_yet_category', $lang)) }}</p>

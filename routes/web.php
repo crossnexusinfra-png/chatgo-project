@@ -177,6 +177,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/auth/terms', [AuthController::class, 'showTermsForm'])->name('auth.terms');
 Route::post('/auth/terms', [AuthController::class, 'acceptTerms'])->name('register.terms');
 Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/terms', 'legal.terms')->name('legal.terms');
 Route::view('/contact', 'legal.contact')->name('legal.contact');
 Route::view('/company', 'legal.company')->name('legal.company');
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');

@@ -439,7 +439,11 @@
             .then(data => {
                 if (data.html && postsGrid) {
                     postsGrid.insertAdjacentHTML('beforeend', data.html);
-                    
+                    if (typeof window.chatgoAdsensePushIn === 'function') {
+                        try {
+                            window.chatgoAdsensePushIn(postsGrid);
+                        } catch (e) { /* ignore */ }
+                    }
                     currentOffset = data.offset !== undefined ? data.offset : currentOffset;
                     currentHasMoreThreads = data.hasMore !== undefined ? data.hasMore : false;
                     

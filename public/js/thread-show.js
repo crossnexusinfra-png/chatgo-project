@@ -440,6 +440,9 @@
                 if (typeof enqueueDeferredTranslations === 'function') {
                     enqueueDeferredTranslations();
                 }
+                if (typeof window.chatgoAdsensePushIn === 'function') {
+                    window.chatgoAdsensePushIn(responsesContainer);
+                }
             } else {
                 console.log(translations.responseLoadEmpty || 'Response HTML is empty. Stopping load.');
                 hasMoreResponses = false;
@@ -1540,6 +1543,9 @@
                 }
                 if (typeof enqueueDeferredTranslations === 'function') {
                     enqueueDeferredTranslations();
+                }
+                if (typeof window.chatgoAdsensePushIn === 'function') {
+                    window.chatgoAdsensePushIn(responsesContainer);
                 }
 
                 // 動画サムネイルの生成

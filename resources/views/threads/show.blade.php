@@ -15,6 +15,10 @@
 @endpush
 
 @section('content')
+    <div class="thread-show-outer">
+        <aside class="thread-show-rail thread-show-rail--left" aria-label="Advertisement">
+            @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left'])
+        </aside>
     <div class="chat-container">
         <!-- ヘッダー部分（固定） -->
         <header class="chat-header">
@@ -233,6 +237,11 @@
                     'existingReportByResponseId' => $existingReportByResponseId ?? [],
                     'lang' => $lang
                 ])
+                @if($loop->iteration >= 10 && $loop->iteration % 10 === 0)
+                <div class="adsense-thread-reply-inline">
+                    @include('components.adsense-inline-banner', ['instanceId' => 'thread-reply-'.$loop->iteration])
+                </div>
+                @endif
             @empty
                 <div class="no-responses">
                     <p>{{ \App\Services\LanguageService::trans('no_responses_yet', $lang) }}</p>
@@ -420,6 +429,10 @@
             @endif
         </section>
     </div>
+        <aside class="thread-show-rail thread-show-rail--right" aria-label="Advertisement">
+            @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right'])
+        </aside>
+    </div>
 
     @auth
     <!-- このルームページ専用の広告動画モーダル -->
@@ -527,4 +540,7 @@
         ]
     ]) }}">
     <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+    @if(config('adsense.enabled'))
+    <script src="{{ asset('js/adsense-rail-refresh.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+    @endif
 @endsection 

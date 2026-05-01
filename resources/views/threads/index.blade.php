@@ -118,6 +118,7 @@
                 </div>
 
                 <!-- 広告動画視聴でコイン獲得（アクセス数の多いルームの上） -->
+                @php $mainPageAdRegionCount = 0; @endphp
                 <section class="post-list post-list-margin">
                     <div class="thread-category">
                         <h3 class="category-title">
@@ -135,11 +136,22 @@
                         </div>
                     </div>
                 </section>
+                @php
+                    $mainPageAdRegionCount = ($mainPageAdRegionCount ?? 0) + 1;
+                @endphp
+                @if(($mainPageAdRegionCount ?? 0) >= 2 && ($mainPageAdRegionCount ?? 0) % 2 === 0)
+                <div class="main-page-ad-slot post-list-margin">
+                    @include('components.adsense-inline-banner', ['instanceId' => 'main-video-'.$mainPageAdRegionCount])
+                </div>
+                @endif
                 @endauth
 
                 <!-- カテゴリ別スレッド一覧 -->
                 <section class="post-list">
                     @php
+                        if (!isset($mainPageAdRegionCount)) {
+                            $mainPageAdRegionCount = 0;
+                        }
                         $categories = config('thread_categories.categories');
                         $displayConfig = config('thread_categories.display');
                         
@@ -386,6 +398,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainPageAdRegionCount++; @endphp
+                            @if($mainPageAdRegionCount >= 2 && $mainPageAdRegionCount % 2 === 0)
+                            <div class="main-page-ad-slot">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-'.$mainPageAdRegionCount.'-'.$categoryKey])
+                            </div>
+                            @endif
                         @endif
                     @endforeach
                     
@@ -501,6 +519,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainPageAdRegionCount++; @endphp
+                            @if($mainPageAdRegionCount >= 2 && $mainPageAdRegionCount % 2 === 0)
+                            <div class="main-page-ad-slot">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-fav-'.$mainPageAdRegionCount])
+                            </div>
+                            @endif
                         @endif
                     @endauth
 
@@ -614,6 +638,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainPageAdRegionCount++; @endphp
+                            @if($mainPageAdRegionCount >= 2 && $mainPageAdRegionCount % 2 === 0)
+                            <div class="main-page-ad-slot">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-recent-'.$mainPageAdRegionCount])
+                            </div>
+                            @endif
                         @endif
                     @endauth
 
@@ -752,6 +782,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainPageAdRegionCount++; @endphp
+                            @if($mainPageAdRegionCount >= 2 && $mainPageAdRegionCount % 2 === 0)
+                            <div class="main-page-ad-slot">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-taghist-'.$mainPageAdRegionCount])
+                            </div>
+                            @endif
                         @endforeach
                     @endif
                 </section>
