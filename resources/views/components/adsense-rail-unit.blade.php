@@ -10,7 +10,7 @@
     @if($enabled && $client && $slot)
     <div class="adsense-rail-refresh-wrap" data-adsense-rail-refresh="1" data-client="{{ $client }}" data-slot="{{ $slot }}">
         <ins class="adsbygoogle"
-             style="display:block; min-height: 240px;"
+             style="display:block;"
              data-ad-client="{{ $client }}"
              data-ad-slot="{{ $slot }}"
              data-ad-format="vertical"

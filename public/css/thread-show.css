@@ -1388,8 +1388,8 @@ body {
 }
 
 .thread-show-rail {
-    flex: 0 0 170px;
-    width: 170px;
+    flex: 0 0 clamp(96px, 14vw, 170px);
+    width: clamp(96px, 14vw, 170px);
     min-width: 0;
     position: sticky;
     top: 72px;
@@ -1407,18 +1407,22 @@ body {
 }
 
 .thread-show-rail .adsense-rail-unit {
-    width: 120px;
+    width: min(120px, 100%);
     flex: 0 0 auto;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap,
 .thread-show-rail .adsense-rail-placeholder,
 .thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
-    width: 120px;
-    min-width: 120px;
+    width: 100%;
     max-width: 120px;
-    height: 240px;
-    min-height: 240px;
+    aspect-ratio: 1 / 2;
+    height: auto;
+    min-height: 0;
+}
+
+.thread-show-rail .adsense-rail-refresh-wrap {
+    margin: 0 auto;
 }
 
 .adsense-thread-reply-inline {

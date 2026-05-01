@@ -5,6 +5,7 @@
     'use strict';
 
     var STORAGE_KEY = 'chatgo_thread_nav_count';
+    var memoryCount = 0;
 
     function getStorage() {
         try {
@@ -15,6 +16,23 @@
             /* ignore */
         }
         return window.sessionStorage;
+    }
+
+    function getCount(storage) {
+        try {
+            return parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
+        } catch (e) {
+            return memoryCount;
+        }
+    }
+
+    function setCount(storage, n) {
+        memoryCount = n;
+        try {
+            storage.setItem(STORAGE_KEY, String(n));
+        } catch (e) {
+            /* ignore and keep memory fallback */
+        }
     }
 
     function getMetaContent(name) {
@@ -127,9 +145,9 @@
         }
 
         var storage = getStorage();
-        var n = parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
+        var n = getCount(storage);
         n += 1;
-        storage.setItem(STORAGE_KEY, String(n));
+        setCount(storage, n);
 
         if (n < 3 || n % 3 !== 0) {
             return;
