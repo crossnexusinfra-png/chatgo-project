@@ -28,17 +28,17 @@
         'processing' => \App\Services\LanguageService::trans('processing', $lang)
     ]
 ]) }}">
-@if(!request()->routeIs('admin.*') && config('adsense.enabled') && filled(config('adsense.slots.interstitial')))
+@if(!request()->routeIs('admin.*'))
 <meta name="adsense-interstitial-config" content="{{ e(json_encode([
-    'enabled' => true,
-    'client' => config('adsense.client'),
-    'slot' => config('adsense.slots.interstitial'),
+    'enabled' => (bool) config('adsense.enabled'),
+    'client' => (string) config('adsense.client'),
+    'slot' => (string) config('adsense.slots.interstitial'),
     'closeLabel' => \App\Services\LanguageService::trans('adsense_interstitial_close', $lang),
 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}">
 @endif
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 <script src="{{ asset('js/adsense-push.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@if(!request()->routeIs('admin.*') && config('adsense.enabled') && filled(config('adsense.slots.interstitial')))
+@if(!request()->routeIs('admin.*'))
 <script src="{{ asset('js/adsense-nav-interstitial.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif

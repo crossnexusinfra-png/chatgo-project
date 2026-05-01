@@ -178,7 +178,7 @@
                     @if(isset($threads) && $threads && $threads->count() > 0)
                         @php
                             $listRowOffset = $listRowOffset ?? 0;
-                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
+                            $adSlotEvery = 5;
                         @endphp
                         @foreach ($threads as $thread)
                         @php

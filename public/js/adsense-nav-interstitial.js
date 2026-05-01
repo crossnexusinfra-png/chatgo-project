@@ -6,6 +6,17 @@
 
     var STORAGE_KEY = 'chatgo_thread_nav_count';
 
+    function getStorage() {
+        try {
+            if (window.localStorage) {
+                return window.localStorage;
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        return window.sessionStorage;
+    }
+
     function getMetaContent(name) {
         var el = document.querySelector('meta[name="' + name + '"]');
         return el ? el.getAttribute('content') || '' : '';
@@ -24,7 +35,7 @@
     }
 
     var cfg = parseConfig();
-    if (!cfg || !cfg.enabled || !cfg.client || !cfg.slot) {
+    if (!cfg) {
         return;
     }
 
@@ -49,15 +60,21 @@
         var adWrap = document.createElement('div');
         adWrap.className = 'adsense-interstitial-ad';
 
-        var ins = document.createElement('ins');
-        ins.className = 'adsbygoogle';
-        ins.style.display = 'block';
-        ins.setAttribute('data-ad-client', cfg.client);
-        ins.setAttribute('data-ad-slot', cfg.slot);
-        ins.setAttribute('data-ad-format', 'auto');
-        ins.setAttribute('data-full-width-responsive', 'true');
-
-        adWrap.appendChild(ins);
+        if (cfg.enabled && cfg.client && cfg.slot) {
+            var ins = document.createElement('ins');
+            ins.className = 'adsbygoogle';
+            ins.style.display = 'block';
+            ins.setAttribute('data-ad-client', cfg.client);
+            ins.setAttribute('data-ad-slot', cfg.slot);
+            ins.setAttribute('data-ad-format', 'auto');
+            ins.setAttribute('data-full-width-responsive', 'true');
+            adWrap.appendChild(ins);
+        } else {
+            var placeholder = document.createElement('div');
+            placeholder.className = 'adsense-interstitial-placeholder';
+            placeholder.textContent = '広告';
+            adWrap.appendChild(placeholder);
+        }
         inner.appendChild(closeBtn);
         inner.appendChild(adWrap);
         overlay.appendChild(inner);
@@ -77,10 +94,12 @@
         });
 
         document.body.appendChild(overlay);
-        try {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {
-            /* ignore */
+        if (cfg.enabled && cfg.client && cfg.slot) {
+            try {
+                (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch (e) {
+                /* ignore */
+            }
         }
         closeBtn.focus();
     }
@@ -107,9 +126,10 @@
             return;
         }
 
-        var n = parseInt(sessionStorage.getItem(STORAGE_KEY) || '0', 10) || 0;
+        var storage = getStorage();
+        var n = parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
         n += 1;
-        sessionStorage.setItem(STORAGE_KEY, String(n));
+        storage.setItem(STORAGE_KEY, String(n));
 
         if (n < 3 || n % 3 !== 0) {
             return;

@@ -6,8 +6,8 @@
     $slot = config('adsense.slots.'.$slotKey) ?: config('adsense.slots.display_banner');
     $instanceId = $instanceId ?? 'rail-'.$side.'-'.uniqid();
 @endphp
-@if($enabled && $client && $slot)
 <div class="adsense-rail-unit" data-adsense-rail="{{ $side }}">
+    @if($enabled && $client && $slot)
     <div class="adsense-rail-refresh-wrap" data-adsense-rail-refresh="1" data-client="{{ $client }}" data-slot="{{ $slot }}">
         <ins class="adsbygoogle"
              style="display:block; min-height: 250px;"
@@ -17,5 +17,9 @@
              data-full-width-responsive="false"
              id="adsense-{{ $instanceId }}"></ins>
     </div>
+    @else
+    <div class="adsense-rail-refresh-wrap">
+        <div class="adsense-rail-placeholder" aria-label="ad-placeholder">広告</div>
+    </div>
+    @endif
 </div>
-@endif
