@@ -123,8 +123,6 @@
                 <textarea name="template_body_ja" id="template_editor_body_ja" rows="4" required></textarea>
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_body_label', $lang) }}（{{ \App\Services\LanguageService::trans('admin_messages_title_en', $lang) }}）</label>
                 <textarea name="template_body_en" id="template_editor_body_en" rows="4"></textarea>
-                <label>{{ \App\Services\LanguageService::trans('admin_messages_coin_amount', $lang) }}</label>
-                <input type="number" name="template_coin_amount" id="template_editor_coin" min="0" placeholder="0">
                 <div class="admin-template-edit-actions">
                     <button type="submit" id="template_editor_save_button">{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}</button>
                 </div>
@@ -191,14 +189,35 @@
     </div>
     </div>
 </div>
-    <div
-        id="admin-messages-config"
-        data-templates="{{ e(json_encode(collect($templates ?? [])->keyBy('key'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
-        data-editable-templates="{{ e(json_encode(collect($editableTemplates ?? [])->keyBy('id'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
-        data-template-create-label="{{ \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang) }}"
-        data-template-update-label="{{ \App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang) }}"
-        hidden
-    ></div>
+    @php
+        $sendTemplatesKeyed = collect($templates ?? [])->keyBy('key')->map(function ($row) {
+            return [
+                'key' => $row['key'],
+                'name' => $row['name'],
+                'title_ja' => $row['title_ja'] ?? null,
+                'title_en' => $row['title_en'] ?? null,
+                'body_ja' => $row['body_ja'] ?? '',
+                'body_en' => $row['body_en'] ?? null,
+            ];
+        });
+        $editableTemplatesKeyed = collect($editableTemplates ?? [])->keyBy('id')->map(function ($t) {
+            return [
+                'id' => $t->id,
+                'name' => $t->name,
+                'title_ja' => $t->title_ja,
+                'title_en' => $t->title_en,
+                'body_ja' => $t->body_ja,
+                'body_en' => $t->body_en,
+            ];
+        });
+        $adminMessagesTemplatesPayload = [
+            'templates' => $sendTemplatesKeyed->isEmpty() ? new \stdClass() : $sendTemplatesKeyed->all(),
+            'editableTemplates' => $editableTemplatesKeyed->isEmpty() ? new \stdClass() : $editableTemplatesKeyed->all(),
+            'templateCreateLabel' => \App\Services\LanguageService::trans('admin_messages_template_create_submit', $lang),
+            'templateUpdateLabel' => \App\Services\LanguageService::trans('admin_messages_template_update_submit', $lang),
+        ];
+    @endphp
+    <script type="application/json" id="admin-messages-templates-data" nonce="{{ $csp_nonce ?? '' }}">@json($adminMessagesTemplatesPayload)</script>
     <script src="{{ asset('js/admin-messages.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script src="{{ asset('js/admin-messages-templates.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

@@ -4,26 +4,32 @@
 (function() {
     'use strict';
 
-    const configElement = document.getElementById('admin-messages-config');
-    if (!configElement) {
+    const dataScript = document.getElementById('admin-messages-templates-data');
+    if (!dataScript) {
         return;
     }
 
-    function parseJson(value) {
-        if (!value) {
-            return {};
-        }
-        try {
-            return JSON.parse(value);
-        } catch (error) {
-            return {};
-        }
+    let pageData;
+    try {
+        pageData = JSON.parse(dataScript.textContent || '{}');
+    } catch (error) {
+        return;
     }
 
-    const templates = parseJson(configElement.dataset.templates);
-    const editableTemplates = parseJson(configElement.dataset.editableTemplates);
-    const templateCreateLabel = configElement.dataset.templateCreateLabel || '作成';
-    const templateUpdateLabel = configElement.dataset.templateUpdateLabel || '更新';
+    function asKeyedObject(raw) {
+        if (!raw || typeof raw !== 'object') {
+            return {};
+        }
+        if (Array.isArray(raw)) {
+            return {};
+        }
+        return raw;
+    }
+
+    const templates = asKeyedObject(pageData.templates);
+    const editableTemplates = asKeyedObject(pageData.editableTemplates);
+    const templateCreateLabel = pageData.templateCreateLabel || '作成';
+    const templateUpdateLabel = pageData.templateUpdateLabel || '更新';
 
     function applyTemplate(templateKey) {
         if (!templateKey || !templates[templateKey]) {
@@ -32,27 +38,21 @@
 
         const template = templates[templateKey];
         const titleJaField = document.getElementById('title_ja');
-        const bodyJaField = document.getElementById('body_ja');
-        const coinAmountField = document.getElementById('coin_amount');
-
-        if (titleJaField && template.title_ja) {
-            titleJaField.value = template.title_ja;
-        }
         const titleEnField = document.getElementById('title_en');
-        if (titleEnField && template.title_en) {
-            titleEnField.value = template.title_en;
-        }
-
-        if (bodyJaField && template.body_ja) {
-            bodyJaField.value = template.body_ja;
-        }
+        const bodyJaField = document.getElementById('body_ja');
         const bodyEnField = document.getElementById('body_en');
-        if (bodyEnField && template.body_en) {
-            bodyEnField.value = template.body_en;
-        }
 
-        if (coinAmountField && template.coin_amount !== undefined) {
-            coinAmountField.value = template.coin_amount;
+        if (titleJaField) {
+            titleJaField.value = template.title_ja != null ? String(template.title_ja) : '';
+        }
+        if (titleEnField) {
+            titleEnField.value = template.title_en != null ? String(template.title_en) : '';
+        }
+        if (bodyJaField) {
+            bodyJaField.value = template.body_ja != null ? String(template.body_ja) : '';
+        }
+        if (bodyEnField) {
+            bodyEnField.value = template.body_en != null ? String(template.body_en) : '';
         }
     }
 
@@ -71,7 +71,6 @@
         const titleEnEl = document.getElementById('template_editor_title_en');
         const bodyJaEl = document.getElementById('template_editor_body_ja');
         const bodyEnEl = document.getElementById('template_editor_body_en');
-        const coinEl = document.getElementById('template_editor_coin');
         const deleteIdEl = document.getElementById('template_delete_id');
         const deleteBtn = document.getElementById('template_editor_delete_button');
         const saveBtn = document.getElementById('template_editor_save_button');
@@ -82,7 +81,6 @@
         if (titleEnEl) titleEnEl.value = '';
         if (bodyJaEl) bodyJaEl.value = '';
         if (bodyEnEl) bodyEnEl.value = '';
-        if (coinEl) coinEl.value = '';
         if (deleteIdEl) deleteIdEl.value = '';
         if (deleteBtn) deleteBtn.disabled = true;
         if (saveBtn) saveBtn.textContent = templateCreateLabel;
@@ -101,7 +99,6 @@
         const titleEnEl = document.getElementById('template_editor_title_en');
         const bodyJaEl = document.getElementById('template_editor_body_ja');
         const bodyEnEl = document.getElementById('template_editor_body_en');
-        const coinEl = document.getElementById('template_editor_coin');
         const deleteIdEl = document.getElementById('template_delete_id');
         const deleteBtn = document.getElementById('template_editor_delete_button');
         const saveBtn = document.getElementById('template_editor_save_button');
@@ -112,7 +109,6 @@
         if (titleEnEl) titleEnEl.value = template.title_en || '';
         if (bodyJaEl) bodyJaEl.value = template.body_ja || '';
         if (bodyEnEl) bodyEnEl.value = template.body_en || '';
-        if (coinEl) coinEl.value = (template.coin_amount ?? '') === null ? '' : (template.coin_amount ?? '');
         if (deleteIdEl) deleteIdEl.value = template.id;
         if (deleteBtn) deleteBtn.disabled = false;
         if (saveBtn) saveBtn.textContent = templateUpdateLabel;

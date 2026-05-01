@@ -309,7 +309,6 @@ class AdminController extends Controller
                     'title_en' => null,
                     'body_ja' => $template['body'] ?? '',
                     'body_en' => null,
-                    'coin_amount' => $template['coin_amount'] ?? null,
                     'source' => 'config',
                 ];
             })
@@ -328,7 +327,6 @@ class AdminController extends Controller
                         'title_en' => $template->title_en,
                         'body_ja' => $template->body_ja,
                         'body_en' => $template->body_en,
-                        'coin_amount' => $template->coin_amount,
                         'source' => 'db',
                     ];
                 })
@@ -488,7 +486,6 @@ class AdminController extends Controller
             'template_title_en' => 'nullable|string|max:255',
             'template_body_ja' => 'required|string|max:10000',
             'template_body_en' => 'nullable|string|max:10000',
-            'template_coin_amount' => 'nullable|integer|min:0',
             'template_id' => 'nullable|integer|exists:admin_message_templates,id',
         ]);
 
@@ -498,7 +495,7 @@ class AdminController extends Controller
             'title_en' => request('template_title_en'),
             'body_ja' => request('template_body_ja'),
             'body_en' => request('template_body_en'),
-            'coin_amount' => request()->filled('template_coin_amount') ? (int) request('template_coin_amount') : null,
+            'coin_amount' => null,
         ];
 
         if (request()->filled('template_id')) {
