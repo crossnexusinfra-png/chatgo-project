@@ -1388,17 +1388,18 @@ body {
 }
 
 .thread-show-rail {
-    flex: 0 0 150px;
-    width: 150px;
+    flex: 0 0 170px;
+    width: 170px;
     min-width: 0;
     position: sticky;
     top: 72px;
     align-self: flex-start;
-    max-height: calc(100vh - 80px);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 12px;
+    padding: 4px 0;
+    box-sizing: border-box;
 }
 
 .thread-show-rail:not(:has(.adsense-rail-unit)) {
@@ -1406,7 +1407,18 @@ body {
 }
 
 .thread-show-rail .adsense-rail-unit {
-    width: 100%;
+    width: 120px;
+    flex: 0 0 auto;
+}
+
+.thread-show-rail .adsense-rail-refresh-wrap,
+.thread-show-rail .adsense-rail-placeholder,
+.thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    height: 240px;
+    min-height: 240px;
 }
 
 .adsense-thread-reply-inline {
