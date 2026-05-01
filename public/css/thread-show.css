@@ -1370,11 +1370,11 @@ body {
 /* ルームページ：中央チャット＋左右レール広告 */
 .thread-show-outer {
     display: grid;
-    grid-template-columns: 168px minmax(0, 800px) 168px;
+    grid-template-columns: 190px minmax(0, 800px) 190px;
     align-items: start;
     justify-content: center;
-    width: min(100%, 1224px);
-    max-width: 1224px;
+    width: min(100%, 1260px);
+    max-width: 1260px;
     margin: 0 auto;
     gap: 16px;
     padding: 0 16px;
@@ -1390,17 +1390,18 @@ body {
 }
 
 .thread-show-rail {
-    width: 168px;
+    width: 190px;
     min-width: 0;
     position: sticky;
     top: 72px;
+    height: calc(100vh - 144px);
     align-self: flex-start;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 10px;
-    padding: 8px 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -1409,16 +1410,16 @@ body {
 }
 
 .thread-show-rail .adsense-rail-unit {
-    width: 112px;
+    width: 128px;
     flex: 0 0 auto;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap,
 .thread-show-rail .adsense-rail-placeholder,
 .thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
-    width: 112px;
-    max-width: 112px;
-    aspect-ratio: 1 / 2;
+    width: 128px;
+    max-width: 128px;
+    aspect-ratio: 3 / 4;
     height: auto;
     min-height: 0;
 }

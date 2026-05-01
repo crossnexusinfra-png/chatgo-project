@@ -122,7 +122,9 @@
 
         function go() {
             overlay.remove();
-            window.location.href = href;
+            if (href) {
+                window.location.href = href;
+            }
         }
 
         closeBtn.addEventListener('click', go);
@@ -143,6 +145,40 @@
             }
         }
         closeBtn.focus();
+    }
+
+    function isThreadPageNow() {
+        try {
+            return /\/threads\/\d+\/?$/.test(window.location.pathname || '');
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isReloadNavigation() {
+        try {
+            var navEntries = performance.getEntriesByType && performance.getEntriesByType('navigation');
+            if (navEntries && navEntries[0] && navEntries[0].type) {
+                return navEntries[0].type === 'reload';
+            }
+        } catch (e) {
+            /* ignore */
+        }
+        return false;
+    }
+
+    function maybeShowInterstitialOnThreadPage() {
+        if (!isThreadPageNow() || isReloadNavigation()) {
+            return;
+        }
+        var storage = getStorage();
+        var n = getCount(storage);
+        n += 1;
+        setCount(storage, n);
+        if (n < 3 || n % 3 !== 0) {
+            return;
+        }
+        buildOverlay('', cfg.closeLabel);
     }
 
     document.addEventListener('click', function (e) {
@@ -186,4 +222,6 @@
         }
         buildOverlay(a.href, cfg.closeLabel);
     }, true);
+
+    maybeShowInterstitialOnThreadPage();
 })();
