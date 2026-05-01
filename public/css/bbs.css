@@ -2289,6 +2289,12 @@ button.back-link--button {
     margin-bottom: 1.25em;
 }
 
+.terms-privacy-block-eea {
+    margin-top: 2.25em !important;
+    padding-top: 1.5em;
+    border-top: 1px solid #e9ecef;
+}
+
 .terms-privacy-title {
     font-size: 14px;
     font-weight: 600;

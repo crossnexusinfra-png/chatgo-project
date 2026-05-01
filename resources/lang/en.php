@@ -753,6 +753,8 @@ return [
     'terms_privacy_9_text' => 'The Operator manages data.',
     'terms_privacy_10_title' => '10. Changes',
     'terms_privacy_10_text' => 'Effective upon posting.',
+    'terms_privacy_11_title' => '[Additional Provisions for EEA and UK Users]',
+    'terms_privacy_11_text' => "1. Scope\nThis section applies to users located in the European Economic Area (EEA) and the United Kingdom.\n\n2. Consent\nThe Service obtains user consent before using cookies and similar technologies.\nUsers may accept or reject such technologies via a consent banner or settings panel.\n\n3. Technologies Used\nThe Service uses cookies and similar technologies for:\n- Providing core functionality\n- Analytics and performance measurement\n- Advertising and personalization\n\n4. Third-Party Services\nThe Service may use third-party services, including Google.\nThese providers may collect device information, browsing behavior, and identifiers.\nPlease refer to their respective privacy policies.\n\n5. Withdrawal of Consent\nUsers may withdraw consent at any time via cookie settings or browser controls.\n\n6. User Rights\nUsers in the EEA and UK have the right to:\n- Access personal data\n- Rectify or erase data\n- Restrict processing\n- Data portability\n- Object to processing\n\n7. Legal Basis\nProcessing is based on user consent or legitimate interests.\n\n8. International Data Transfers\nPersonal data may be transferred outside the EEA/UK with appropriate safeguards in place.",
     'privacy_page_h1' => 'Privacy Policy',
     'privacy_page_document_title' => 'Privacy Policy | Chatgo',
     'privacy_footer_before' => 'Please use the ',

@@ -40,8 +40,8 @@
                         @if($privacyIntro !== '')
                             <p class="terms-privacy-intro">{{ $privacyIntro }}</p>
                         @endif
-                        @for ($i = 1; $i <= 10; $i++)
-                            <div class="terms-privacy-block">
+                        @for ($i = 1; $i <= 11; $i++)
+                            <div class="terms-privacy-block @if ($i === 11) terms-privacy-block-eea @endif">
                                 <h4 class="terms-privacy-title">{{ \App\Services\LanguageService::trans('terms_privacy_' . $i . '_title', $lang) }}</h4>
                                 <div class="terms-privacy-text">{!! nl2br(\App\Services\LanguageService::trans('terms_privacy_' . $i . '_text', $lang)) !!}</div>
                             </div>
