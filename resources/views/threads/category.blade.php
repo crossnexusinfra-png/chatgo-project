@@ -158,7 +158,7 @@
 @endphp
                     @php
                         $listRowOffset = $listRowOffset ?? 0;
-                        $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
+                        $adSlotEvery = 5;
                     @endphp
                     @forelse ($threads as $thread)
                         @php
@@ -258,9 +258,9 @@
                         </article>
                         @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
                         @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
-                        <div class="posts-grid-ad-row">
+                        <article class="posts-grid-ad-row post-item">
                             @include('components.adsense-inline-banner', ['instanceId' => 'catlist-'.$rowIdx])
-                        </div>
+                        </article>
                         @endif
                     @empty
                         <div class="no-posts">

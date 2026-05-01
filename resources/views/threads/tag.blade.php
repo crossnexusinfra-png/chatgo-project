@@ -280,9 +280,9 @@
                             </article>
                             @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
                             @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
-                            <div class="posts-grid-ad-row">
+                            <article class="posts-grid-ad-row post-item">
                                 @include('components.adsense-inline-banner', ['instanceId' => 'taglist-'.$rowIdx])
-                            </div>
+                            </article>
                             @endif
                         @endforeach
                     @else

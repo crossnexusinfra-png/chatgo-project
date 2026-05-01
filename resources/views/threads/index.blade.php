@@ -246,8 +246,8 @@
                                     @endif
                                     {{ $categoryTitle }}
                                 </h3>
-                                <div class="thread-scroll-container thread-scroll-container--index-grid">
-                                    <div class="posts-grid main-index-posts-grid">
+                                <div class="thread-scroll-container">
+                                    <div class="thread-scroll-wrapper">
                                         @php
                                             // カテゴリに応じて適切な変数を使用
                                             if ($categoryKey === 'popular') {
@@ -408,8 +408,8 @@
                                     <span class="category-icon">⭐</span>
                                     {{ \App\Services\LanguageService::trans('favorite_threads', $lang) }}
                                 </h3>
-                                <div class="thread-scroll-container thread-scroll-container--index-grid">
-                                    <div class="posts-grid main-index-posts-grid">
+                                <div class="thread-scroll-container">
+                                    <div class="thread-scroll-wrapper">
                                         @foreach ($favoriteThreads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -527,8 +527,8 @@
                                     <span class="category-icon">🕒</span>
                                     {{ \App\Services\LanguageService::trans('recent_access_threads', $lang) }}
                                 </h3>
-                                <div class="thread-scroll-container thread-scroll-container--index-grid">
-                                    <div class="posts-grid main-index-posts-grid">
+                                <div class="thread-scroll-container">
+                                    <div class="thread-scroll-wrapper">
                                         @foreach ($recentAccessThreads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -651,8 +651,8 @@
                                     <span class="category-icon">🏷️</span>
                                     {{ $translatedTagName }}
                                 </h3>
-                                <div class="thread-scroll-container thread-scroll-container--index-grid">
-                                    <div class="posts-grid main-index-posts-grid">
+                                <div class="thread-scroll-container">
+                                    <div class="thread-scroll-wrapper">
                                         @forelse ($threads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];

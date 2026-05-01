@@ -425,36 +425,17 @@ body {
     width: 100%;
 }
 
-/* グリッド内の横長広告・「さらに表示」は全列にまたがる */
+/* グリッド内広告はルーム1件分サイズで表示 */
 .posts-grid .posts-grid-ad-row {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-width: 0;
-}
-
-.posts-grid .more-posts-link {
-    grid-column: 1 / -1;
-    width: 100%;
-    max-width: none;
-    flex: none;
-}
-
-/* メイン index：横スクロールからグリッドへ（約2行ごとにバナー用） */
-.thread-scroll-container--index-grid {
-    overflow-x: visible;
-    overflow-y: visible;
-}
-
-.main-index-posts-grid.posts-grid .thread-item {
-    flex: initial;
     width: auto;
     min-width: 0;
-    border: 1px solid #ddd;
-    padding: 15px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin: 0;
+}
+
+.posts-grid .posts-grid-ad-row.post-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
 }
 
 .adsense-inline-banner {
