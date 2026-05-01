@@ -1373,8 +1373,8 @@ body {
     grid-template-columns: 168px minmax(0, 800px) 168px;
     align-items: start;
     justify-content: center;
-    width: min(100%, 1168px);
-    max-width: 1168px;
+    width: min(100%, 1224px);
+    max-width: 1224px;
     margin: 0 auto;
     gap: 16px;
     padding: 0 16px;
@@ -1394,14 +1394,13 @@ body {
     min-width: 0;
     position: sticky;
     top: 72px;
-    height: calc(100vh - 144px);
     align-self: flex-start;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
-    padding: 0;
+    padding: 8px 0;
     box-sizing: border-box;
 }
 

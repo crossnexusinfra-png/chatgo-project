@@ -81,7 +81,7 @@
     }
 
     function threadPathMatch(pathname) {
-        return /^\/(?:[a-z]{2}\/)?threads\/\d+\/?$/.test(pathname);
+        return /\/threads\/\d+\/?$/.test(pathname);
     }
 
     function buildOverlay(href, closeLabel) {
