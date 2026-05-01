@@ -6,6 +6,7 @@
 
     var STORAGE_KEY = 'chatgo_thread_nav_count';
     var memoryCount = 0;
+    var COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
     function getStorage() {
         try {
@@ -18,10 +19,30 @@
         return window.sessionStorage;
     }
 
+    function getCookieCount() {
+        try {
+            var m = document.cookie.match(new RegExp('(?:^|; )' + STORAGE_KEY + '=([^;]*)'));
+            if (!m) return 0;
+            return parseInt(decodeURIComponent(m[1]), 10) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function setCookieCount(n) {
+        try {
+            document.cookie = STORAGE_KEY + '=' + encodeURIComponent(String(n)) + '; path=/; max-age=' + COOKIE_MAX_AGE + '; SameSite=Lax';
+        } catch (e) {
+            /* ignore */
+        }
+    }
+
     function getCount(storage) {
         try {
             return parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
         } catch (e) {
+            var cookieCount = getCookieCount();
+            if (cookieCount > 0) return cookieCount;
             return memoryCount;
         }
     }
@@ -31,8 +52,10 @@
         try {
             storage.setItem(STORAGE_KEY, String(n));
         } catch (e) {
-            /* ignore and keep memory fallback */
+            setCookieCount(n);
+            return;
         }
+        setCookieCount(n);
     }
 
     function getMetaContent(name) {
