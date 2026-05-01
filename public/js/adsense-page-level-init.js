@@ -176,6 +176,25 @@
                     initPageLevelAds(cfg.client, true);
                 }
             });
+
+            // テスト強制時に他スクリプトの再描画等でバナーが消えるケースへの保険
+            setTimeout(function () {
+                if (getConsentChoice() !== null) return;
+                if (document.getElementById('chatgo-eea-consent-banner')) return;
+                renderConsentBanner(function () {
+                    setConsentChoice('granted');
+                    removeConsentBanner();
+                    if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                        initPageLevelAds(cfg.client, false);
+                    }
+                }, function () {
+                    setConsentChoice('denied');
+                    removeConsentBanner();
+                    if (cfg && cfg.enabled && cfg.interstitialMode === 'official' && cfg.client) {
+                        initPageLevelAds(cfg.client, true);
+                    }
+                });
+            }, 600);
             return;
         }
 
