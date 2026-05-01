@@ -1375,7 +1375,8 @@ body {
     justify-content: center;
     width: 100%;
     max-width: 100%;
-    gap: 12px;
+    gap: 16px;
+    padding: 0 16px;
     box-sizing: border-box;
     min-height: 0;
 }
@@ -1388,8 +1389,8 @@ body {
 }
 
 .thread-show-rail {
-    flex: 0 0 clamp(96px, 14vw, 170px);
-    width: clamp(96px, 14vw, 170px);
+    flex: 0 0 168px;
+    width: 168px;
     min-width: 0;
     position: sticky;
     top: 72px;
@@ -1398,7 +1399,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 4px 0;
+    padding: 4px 0 24px;
     box-sizing: border-box;
 }
 
@@ -1407,15 +1408,15 @@ body {
 }
 
 .thread-show-rail .adsense-rail-unit {
-    width: min(120px, 100%);
+    width: 112px;
     flex: 0 0 auto;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap,
 .thread-show-rail .adsense-rail-placeholder,
 .thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
-    width: 100%;
-    max-width: 120px;
+    width: 112px;
+    max-width: 112px;
     aspect-ratio: 1 / 2;
     height: auto;
     min-height: 0;

@@ -58,7 +58,7 @@
     }
 
     function threadPathMatch(pathname) {
-        return /^\/threads\/\d+\/?$/.test(pathname);
+        return /^\/(?:[a-z]{2}\/)?threads\/\d+\/?$/.test(pathname);
     }
 
     function buildOverlay(href, closeLabel) {
@@ -123,6 +123,9 @@
     }
 
     document.addEventListener('click', function (e) {
+        if (e.button && e.button !== 0) {
+            return;
+        }
         var a = e.target.closest('a[href]');
         if (!a || a.getAttribute('target') === '_blank') {
             return;
@@ -155,6 +158,9 @@
 
         e.preventDefault();
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation();
+        }
         buildOverlay(a.href, cfg.closeLabel);
     }, true);
 })();
