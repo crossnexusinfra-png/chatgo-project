@@ -84,7 +84,7 @@
 @endphp
 @php
     $listRowOffset = $listRowOffset ?? 0;
-    $adSlotEvery = 5;
+    $adSlotEvery = 7;
 @endphp
 @foreach ($threads as $thread)
     @php

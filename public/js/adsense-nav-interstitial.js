@@ -40,7 +40,7 @@
     }
 
     function threadPathMatch(pathname) {
-        return /^\/threads\/\d+$/.test(pathname);
+        return /^\/threads\/\d+\/?$/.test(pathname);
     }
 
     function buildOverlay(href, closeLabel) {
@@ -106,7 +106,7 @@
 
     document.addEventListener('click', function (e) {
         var a = e.target.closest('a[href]');
-        if (!a || a.getAttribute('target') === '_blank' || e.defaultPrevented) {
+        if (!a || a.getAttribute('target') === '_blank') {
             return;
         }
         var href = a.getAttribute('href');

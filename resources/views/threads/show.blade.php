@@ -17,7 +17,9 @@
 @section('content')
     <div class="thread-show-outer">
         <aside class="thread-show-rail thread-show-rail--left" aria-label="Advertisement">
-            @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left'])
+            @for($i = 1; $i <= 3; $i++)
+                @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left-'.$i])
+            @endfor
         </aside>
     <div class="chat-container">
         <!-- ヘッダー部分（固定） -->
@@ -430,7 +432,9 @@
         </section>
     </div>
         <aside class="thread-show-rail thread-show-rail--right" aria-label="Advertisement">
-            @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right'])
+            @for($i = 1; $i <= 3; $i++)
+                @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right-'.$i])
+            @endfor
         </aside>
     </div>
 
@@ -482,6 +486,11 @@
             'translateResponseUrlPrefix' => '/threads/'.$thread->thread_id.'/responses/',
             'translateResponseUrlSuffix' => '/translate',
             'translateThreadTitleUrl' => route('threads.translate-title', $thread),
+        ],
+        'adsense' => [
+            'enabled' => (bool) config('adsense.enabled'),
+            'client' => (string) config('adsense.client'),
+            'displaySlot' => (string) config('adsense.slots.display_banner'),
         ],
         'translations' => [
             'loading' => \App\Services\LanguageService::trans('loading', $lang),

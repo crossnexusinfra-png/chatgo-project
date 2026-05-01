@@ -52,6 +52,7 @@
     let lastResponseId = 0;
     let pollingInterval = null;
     let isPollingActive = true;
+    let dynamicReplyAdSerial = 0;
 
     // 検索機能用の変数
     let isSearchMode = false;
@@ -440,6 +441,7 @@
                 if (typeof enqueueDeferredTranslations === 'function') {
                     enqueueDeferredTranslations();
                 }
+                normalizeReplyInlineAds();
                 if (typeof window.chatgoAdsensePushIn === 'function') {
                     window.chatgoAdsensePushIn(responsesContainer);
                 }
@@ -531,6 +533,54 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function createReplyInlineAdNode(adIndex) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'adsense-thread-reply-inline';
+        const adsenseCfg = (config && config.adsense) ? config.adsense : {};
+        if (adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
+            const banner = document.createElement('div');
+            banner.className = 'adsense-inline-banner';
+            banner.setAttribute('data-adsense-inline', '1');
+            const ins = document.createElement('ins');
+            ins.className = 'adsbygoogle';
+            ins.style.display = 'block';
+            ins.setAttribute('data-ad-client', adsenseCfg.client);
+            ins.setAttribute('data-ad-slot', adsenseCfg.displaySlot);
+            ins.setAttribute('data-ad-format', 'horizontal');
+            ins.setAttribute('data-full-width-responsive', 'true');
+            dynamicReplyAdSerial += 1;
+            ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex;
+            banner.appendChild(ins);
+            wrapper.appendChild(banner);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'adsense-inline-banner-placeholder';
+            placeholder.textContent = '広告';
+            wrapper.appendChild(placeholder);
+        }
+        return wrapper;
+    }
+
+    function normalizeReplyInlineAds() {
+        const container = document.getElementById('responsesContainer');
+        if (!container) return;
+        Array.from(container.querySelectorAll('.adsense-thread-reply-inline')).forEach(function(el) {
+            el.remove();
+        });
+        const responseItems = Array.from(container.querySelectorAll('.response-item'));
+        responseItems.forEach(function(item, idx) {
+            const n = idx + 1;
+            if (n >= 10 && n % 10 === 0) {
+                const adNode = createReplyInlineAdNode(n);
+                if (item.nextSibling) {
+                    container.insertBefore(adNode, item.nextSibling);
+                } else {
+                    container.appendChild(adNode);
+                }
+            }
+        });
     }
 
     // 検索実行
@@ -1544,6 +1594,7 @@
                 if (typeof enqueueDeferredTranslations === 'function') {
                     enqueueDeferredTranslations();
                 }
+                normalizeReplyInlineAds();
                 if (typeof window.chatgoAdsensePushIn === 'function') {
                     window.chatgoAdsensePushIn(responsesContainer);
                 }
@@ -1785,6 +1836,7 @@
 
             initReplyButtons();
         }
+        normalizeReplyInlineAds();
 
         // ルーム名の原文/訳文トグル（非同期翻訳後にボタンが挿入されるため委譲）
         document.addEventListener('click', function(e) {

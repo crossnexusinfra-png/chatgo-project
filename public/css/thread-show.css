@@ -1391,6 +1391,14 @@ body {
     flex: 0 0 150px;
     width: 150px;
     min-width: 0;
+    position: sticky;
+    top: 72px;
+    align-self: flex-start;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .thread-show-rail:not(:has(.adsense-rail-unit)) {
@@ -1398,8 +1406,7 @@ body {
 }
 
 .thread-show-rail .adsense-rail-unit {
-    position: sticky;
-    top: 72px;
+    width: 100%;
 }
 
 .adsense-thread-reply-inline {
