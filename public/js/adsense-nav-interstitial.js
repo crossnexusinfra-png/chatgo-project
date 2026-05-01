@@ -1,5 +1,5 @@
 /**
- * ルーム（/threads/{id}）への遷移: 3回に1回、閉じる操作後に遷移するインタースティシャル風オーバーレイ
+ * ルーム（/threads/{id}）アクセス回数: 3回に1回、閉じるボタン付きインタースティシャル風オーバーレイ
  */
 (function () {
     'use strict';
@@ -119,10 +119,7 @@
         }
     }
 
-    var cfg = parseConfig();
-    if (!cfg) {
-        return;
-    }
+    var cfg = parseConfig() || {};
 
     function threadPathMatch(pathname) {
         return /^\/(?:[^/]+\/)?threads\/[^/?#]+\/?$/.test(pathname);
@@ -191,30 +188,15 @@
         closeBtn.focus();
     }
 
-    function isThreadPageNow() {
-        try {
-            return /\/threads\/\d+\/?$/.test(window.location.pathname || '');
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function isReloadNavigation() {
-        try {
-            var navEntries = performance.getEntriesByType && performance.getEntriesByType('navigation');
-            if (navEntries && navEntries[0] && navEntries[0].type) {
-                return navEntries[0].type === 'reload';
-            }
-        } catch (e) {
-            /* ignore */
-        }
-        return false;
-    }
-
-    function maybeShowInterstitialOnThreadPage() {
-        if (!isThreadPageNow() || isReloadNavigation()) {
+    function maybeShowInterstitialByThreadAccessCount() {
+        if (!threadPathMatch(window.location.pathname || '')) {
             return;
         }
+        if (window.__chatgoThreadAccessCounted === true) {
+            return;
+        }
+        window.__chatgoThreadAccessCounted = true;
+
         var storage = getStorage();
         var n = getCount(storage);
         n += 1;
@@ -224,52 +206,5 @@
         }
         buildOverlay('', cfg.closeLabel);
     }
-
-    document.addEventListener('click', function (e) {
-        if (e.button && e.button !== 0) {
-            return;
-        }
-        var target = e.target && e.target.nodeType === 1 ? e.target : (e.target && e.target.parentElement ? e.target.parentElement : null);
-        if (!target || typeof target.closest !== 'function') {
-            return;
-        }
-        var a = target.closest('a[href]');
-        if (!a || a.getAttribute('target') === '_blank') {
-            return;
-        }
-        var href = a.getAttribute('href');
-        if (!href || href.indexOf('#') === 0) {
-            return;
-        }
-        var url;
-        try {
-            url = new URL(a.href, window.location.origin);
-        } catch (err) {
-            return;
-        }
-        if (url.origin !== window.location.origin) {
-            return;
-        }
-        if (!threadPathMatch(url.pathname)) {
-            return;
-        }
-
-        var storage = getStorage();
-        var n = getCount(storage);
-        n += 1;
-        setCount(storage, n);
-
-        if (n < 3 || n % 3 !== 0) {
-            return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === 'function') {
-            e.stopImmediatePropagation();
-        }
-        buildOverlay(a.href, cfg.closeLabel);
-    }, true);
-
-    maybeShowInterstitialOnThreadPage();
+    maybeShowInterstitialByThreadAccessCount();
 })();

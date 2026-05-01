@@ -1373,8 +1373,8 @@ body {
     grid-template-columns: minmax(120px, 1fr) minmax(0, 800px) minmax(120px, 1fr);
     align-items: start;
     justify-content: center;
-    width: min(100%, 1360px);
-    max-width: 1360px;
+    width: 100%;
+    max-width: none;
     margin: 0 auto;
     gap: 16px;
     padding: 0 16px;
@@ -1394,14 +1394,14 @@ body {
     min-width: 0;
     position: sticky;
     top: 72px;
-    height: calc(100vh - 144px);
+    height: calc(100vh - 160px);
     align-self: flex-start;
     display: grid;
     grid-template-rows: repeat(3, 1fr);
     justify-items: center;
     align-items: stretch;
     gap: 12px;
-    padding: 0;
+    padding: 8px 0;
     box-sizing: border-box;
 }
 
@@ -1421,8 +1421,8 @@ body {
 .thread-show-rail .adsense-rail-refresh-wrap,
 .thread-show-rail .adsense-rail-placeholder,
 .thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
-    width: 100%;
-    height: 100%;
+    width: min(100%, 220px);
+    height: min(100%, 320px);
     min-height: 0;
 }
 
