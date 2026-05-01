@@ -225,6 +225,7 @@
                             
                             return $tagCategories[$tag] ?? \App\Services\LanguageService::trans('other', $lang);
                         }
+                        $mainSectionAdCount = 0;
                     @endphp
 
                     @foreach($categories as $categoryKey => $category)
@@ -248,8 +249,6 @@
                                 <div class="thread-scroll-container thread-scroll-container--index-grid">
                                     <div class="posts-grid main-index-posts-grid">
                                         @php
-                                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
-                                            $mainGridSlot = 0;
                                             // カテゴリに応じて適切な変数を使用
                                             if ($categoryKey === 'popular') {
                                                 $categoryThreads = isset($popularThreads) && $popularThreads ? $popularThreads : collect();
@@ -360,12 +359,6 @@
                                                     <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                                                 </div>
                                             </article>
-                                            @php $mainGridSlot++; @endphp
-                                            @if($mainGridSlot >= $adSlotEvery && $mainGridSlot % $adSlotEvery === 0)
-                                            <div class="posts-grid-ad-row">
-                                                @include('components.adsense-inline-banner', ['instanceId' => 'main-idx-'.$categoryKey.'-'.$mainGridSlot])
-                                            </div>
-                                            @endif
                                         @empty
                                             <div class="no-posts-placeholder">
                                                 @php
@@ -394,6 +387,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainSectionAdCount++; @endphp
+                            @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
+                            <div class="main-page-ad-slot post-list-margin">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-'.$mainSectionAdCount.'-'.$categoryKey])
+                            </div>
+                            @endif
                         @endif
                     @endforeach
                     
@@ -411,10 +410,6 @@
                                 </h3>
                                 <div class="thread-scroll-container thread-scroll-container--index-grid">
                                     <div class="posts-grid main-index-posts-grid">
-                                        @php
-                                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
-                                            $mainGridSlot = 0;
-                                        @endphp
                                         @foreach ($favoriteThreads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -509,16 +504,16 @@
                                                     <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                                                 </div>
                                             </article>
-                                            @php $mainGridSlot++; @endphp
-                                            @if($mainGridSlot >= $adSlotEvery && $mainGridSlot % $adSlotEvery === 0)
-                                            <div class="posts-grid-ad-row">
-                                                @include('components.adsense-inline-banner', ['instanceId' => 'main-fav-'.$mainGridSlot])
-                                            </div>
-                                            @endif
                                         @endforeach
                                     </div>
                                 </div>
                             </div>
+                            @php $mainSectionAdCount++; @endphp
+                            @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
+                            <div class="main-page-ad-slot post-list-margin">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-fav-'.$mainSectionAdCount])
+                            </div>
+                            @endif
                         @endif
                     @endauth
 
@@ -534,10 +529,6 @@
                                 </h3>
                                 <div class="thread-scroll-container thread-scroll-container--index-grid">
                                     <div class="posts-grid main-index-posts-grid">
-                                        @php
-                                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
-                                            $mainGridSlot = 0;
-                                        @endphp
                                         @foreach ($recentAccessThreads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -632,16 +623,16 @@
                                                     <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                                                 </div>
                                             </article>
-                                            @php $mainGridSlot++; @endphp
-                                            @if($mainGridSlot >= $adSlotEvery && $mainGridSlot % $adSlotEvery === 0)
-                                            <div class="posts-grid-ad-row">
-                                                @include('components.adsense-inline-banner', ['instanceId' => 'main-recent-'.$mainGridSlot])
-                                            </div>
-                                            @endif
                                         @endforeach
                                     </div>
                                 </div>
                             </div>
+                            @php $mainSectionAdCount++; @endphp
+                            @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
+                            <div class="main-page-ad-slot post-list-margin">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-recent-'.$mainSectionAdCount])
+                            </div>
+                            @endif
                         @endif
                     @endauth
 
@@ -662,10 +653,6 @@
                                 </h3>
                                 <div class="thread-scroll-container thread-scroll-container--index-grid">
                                     <div class="posts-grid main-index-posts-grid">
-                                        @php
-                                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
-                                            $mainGridSlot = 0;
-                                        @endphp
                                         @forelse ($threads as $thread)
                                             @php
                                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -760,12 +747,6 @@
                                                     <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                                                 </div>
                                             </article>
-                                            @php $mainGridSlot++; @endphp
-                                            @if($mainGridSlot >= $adSlotEvery && $mainGridSlot % $adSlotEvery === 0)
-                                            <div class="posts-grid-ad-row">
-                                                @include('components.adsense-inline-banner', ['instanceId' => 'main-taghist-'.$loop->parent->iteration.'-'.$mainGridSlot])
-                                            </div>
-                                            @endif
                                         @empty
                                             <div class="no-posts-placeholder">
                                                 @php
@@ -790,6 +771,12 @@
                                     </div>
                                 </div>
                             </div>
+                            @php $mainSectionAdCount++; @endphp
+                            @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
+                            <div class="main-page-ad-slot post-list-margin">
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-tag-'.$mainSectionAdCount.'-'.$loop->iteration])
+                            </div>
+                            @endif
                         @endforeach
                     @endif
                 </section>
