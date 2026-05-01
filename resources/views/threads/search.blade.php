@@ -164,7 +164,10 @@
                         }
                     @endphp
                     @if(isset($threads) && $threads && $threads->count() > 0)
-                        @php $listRowOffset = $listRowOffset ?? 0; @endphp
+                        @php
+                            $listRowOffset = $listRowOffset ?? 0;
+                            $adSlotEvery = (int) config('adsense.inline_banner_every_n', 4);
+                        @endphp
                         @foreach ($threads as $thread)
                             @php
                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -260,7 +263,7 @@
                                 </div>
                             </article>
                             @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
-                            @if($rowIdx >= 2 && $rowIdx % 2 === 0)
+                            @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
                             <div class="posts-grid-ad-row">
                                 @include('components.adsense-inline-banner', ['instanceId' => 'search-'.$rowIdx])
                             </div>

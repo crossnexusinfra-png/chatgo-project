@@ -425,6 +425,92 @@ body {
     width: 100%;
 }
 
+/* グリッド内の横長広告・「さらに表示」は全列にまたがる */
+.posts-grid .posts-grid-ad-row {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+}
+
+.posts-grid .more-posts-link {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    flex: none;
+}
+
+/* メイン index：横スクロールからグリッドへ（約2行ごとにバナー用） */
+.thread-scroll-container--index-grid {
+    overflow-x: visible;
+    overflow-y: visible;
+}
+
+.main-index-posts-grid.posts-grid .thread-item {
+    flex: initial;
+    width: auto;
+    min-width: 0;
+    border: 1px solid #ddd;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0;
+}
+
+.adsense-inline-banner {
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+}
+
+.adsense-inline-banner ins {
+    min-width: 100%;
+}
+
+/* ルーム遷移インタースティシャル風 */
+.adsense-interstitial-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.adsense-interstitial-inner {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.adsense-interstitial-close {
+    align-self: center;
+    min-width: 200px;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 20px;
+}
+
+.adsense-interstitial-ad {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .post-item {
     border: 1px solid #ddd;
     padding: 15px;
@@ -2289,10 +2375,6 @@ button.back-link--button {
     margin-bottom: 1.25em;
 }
 
-.terms-privacy-block-eea {
-    margin-top: 1.25em;
-}
-
 .terms-privacy-title {
     font-size: 14px;
     font-weight: 600;
@@ -2303,6 +2385,10 @@ button.back-link--button {
 .terms-privacy-text {
     margin-left: 0;
     white-space: pre-line;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: #555;
 }
 
 .terms-text p {

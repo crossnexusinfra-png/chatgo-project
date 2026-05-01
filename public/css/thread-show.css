@@ -1366,3 +1366,55 @@ body {
     font-size: 0.9em;
     opacity: 0.95;
 }
+
+/* ルームページ：中央チャット＋左右レール広告 */
+.thread-show-outer {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    gap: 12px;
+    box-sizing: border-box;
+    min-height: 0;
+}
+
+.thread-show-outer .chat-container {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.thread-show-rail {
+    flex: 0 0 150px;
+    width: 150px;
+    min-width: 0;
+}
+
+.thread-show-rail:not(:has(.adsense-rail-unit)) {
+    display: none;
+}
+
+.thread-show-rail .adsense-rail-unit {
+    position: sticky;
+    top: 72px;
+}
+
+.adsense-thread-reply-inline {
+    display: none;
+    margin: 12px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1100px) {
+    .thread-show-rail {
+        display: none !important;
+    }
+
+    .adsense-thread-reply-inline {
+        display: block !important;
+    }
+}

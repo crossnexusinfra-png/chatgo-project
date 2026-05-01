@@ -18,4 +18,10 @@ return [
         'rail_right' => env('ADSENSE_SLOT_RAIL_RIGHT', ''),
         'interstitial' => env('ADSENSE_SLOT_INTERSTITIAL', ''),
     ],
+
+    /*
+    | 一覧グリッドで横長バナーを挟むまでのルーム数（目安: 2列グリッドで約2行＝4）。
+    | 最小2。環境変数未設定時は 4。
+    */
+    'inline_banner_every_n' => max(2, (int) env('ADSENSE_INLINE_BANNER_EVERY_N', 4)),
 ];
