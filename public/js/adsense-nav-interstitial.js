@@ -5,6 +5,7 @@
     'use strict';
 
     var STORAGE_KEY = 'chatgo_thread_nav_count';
+    var WINDOW_NAME_KEY = '__chatgo_thread_nav_count__';
     var memoryCount = 0;
     var COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -16,7 +17,39 @@
         } catch (e) {
             /* ignore */
         }
-        return window.sessionStorage;
+        try {
+            if (window.sessionStorage) {
+                return window.sessionStorage;
+            }
+        } catch (e2) {
+            /* ignore */
+        }
+        return null;
+    }
+
+    function getWindowNameCount() {
+        try {
+            var raw = String(window.name || '');
+            var m = raw.match(new RegExp(WINDOW_NAME_KEY + '=(\\d+)'));
+            if (!m) return 0;
+            return parseInt(m[1], 10) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function setWindowNameCount(n) {
+        try {
+            var raw = String(window.name || '');
+            var token = WINDOW_NAME_KEY + '=' + String(n);
+            if (raw.indexOf(WINDOW_NAME_KEY + '=') === -1) {
+                window.name = raw ? (raw + ';' + token) : token;
+                return;
+            }
+            window.name = raw.replace(new RegExp(WINDOW_NAME_KEY + '=\\d+'), token);
+        } catch (e) {
+            /* ignore */
+        }
     }
 
     function getCookieCount() {
@@ -39,10 +72,15 @@
 
     function getCount(storage) {
         try {
-            return parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
+            if (storage && typeof storage.getItem === 'function') {
+                return parseInt(storage.getItem(STORAGE_KEY) || '0', 10) || 0;
+            }
+            throw new Error('storage_unavailable');
         } catch (e) {
             var cookieCount = getCookieCount();
             if (cookieCount > 0) return cookieCount;
+            var windowNameCount = getWindowNameCount();
+            if (windowNameCount > 0) return windowNameCount;
             return memoryCount;
         }
     }
@@ -50,12 +88,18 @@
     function setCount(storage, n) {
         memoryCount = n;
         try {
-            storage.setItem(STORAGE_KEY, String(n));
+            if (storage && typeof storage.setItem === 'function') {
+                storage.setItem(STORAGE_KEY, String(n));
+            } else {
+                throw new Error('storage_unavailable');
+            }
         } catch (e) {
             setCookieCount(n);
+            setWindowNameCount(n);
             return;
         }
         setCookieCount(n);
+        setWindowNameCount(n);
     }
 
     function getMetaContent(name) {
@@ -185,7 +229,11 @@
         if (e.button && e.button !== 0) {
             return;
         }
-        var a = e.target.closest('a[href]');
+        var target = e.target && e.target.nodeType === 1 ? e.target : (e.target && e.target.parentElement ? e.target.parentElement : null);
+        if (!target || typeof target.closest !== 'function') {
+            return;
+        }
+        var a = target.closest('a[href]');
         if (!a || a.getAttribute('target') === '_blank') {
             return;
         }

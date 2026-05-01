@@ -1415,21 +1415,30 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap,
 .thread-show-rail .adsense-rail-placeholder,
 .thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
-    width: min(100%, 160px);
-    max-width: 160px;
-    aspect-ratio: 3 / 4;
-    height: auto;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     min-height: 0;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap {
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thread-show-rail .adsense-rail-refresh-wrap .adsbygoogle {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.thread-show-rail .adsense-rail-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
