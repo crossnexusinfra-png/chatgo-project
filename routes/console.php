@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Process;
 use App\Models\Admin;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -61,6 +62,148 @@ Artisan::command('admin:create', function () {
         return 1;
     }
 })->purpose('管理者アカウントを作成します');
+
+Artisan::command('user:admin-create', function () {
+    $username = $this->ask('利用者ページ用 管理者ユーザー名を入力してください');
+    $userIdentifier = $this->ask('ユーザーID（@以降）を入力してください（15文字以内）');
+    $email = $this->ask('メールアドレスを入力してください');
+    $password = $this->secret('パスワードを入力してください');
+    $passwordConfirm = $this->secret('パスワードを再入力してください');
+
+    $validator = Validator::make([
+        'username' => $username,
+        'user_identifier' => $userIdentifier,
+        'email' => $email,
+        'password' => $password,
+        'password_confirmation' => $passwordConfirm,
+    ], [
+        'username' => ['required', 'string', 'max:255'],
+        'user_identifier' => ['required', 'string', 'max:15', 'regex:/^[a-z0-9_]+$/', 'unique:users,user_identifier'],
+        'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    if ($validator->fails()) {
+        foreach ($validator->errors()->all() as $error) {
+            $this->error($error);
+        }
+        return 1;
+    }
+
+    try {
+        $user = User::create([
+            'username' => $username,
+            'user_identifier' => strtolower($userIdentifier),
+            'email' => $email,
+            'password' => Hash::make($password),
+            'nationality' => 'JP',
+            'residence' => 'JP',
+            'language' => 'JA',
+            'is_admin' => true,
+            'email_verified_at' => now(),
+            'is_verified' => true,
+        ]);
+
+        $this->info('利用者ページ用の管理者ユーザーを作成しました。');
+        $this->line('user_id: ' . $user->user_id);
+        $this->line('表示名: ' . $user->username . '@' . $user->user_identifier);
+        $this->line('管理者マーク: ON');
+
+        return 0;
+    } catch (\Throwable $e) {
+        $this->error('管理者ユーザーの作成に失敗しました: ' . $e->getMessage());
+        return 1;
+    }
+})->purpose('利用者ページ用の管理者ユーザー（is_admin=true）を作成');
+
+Artisan::command('admin:bootstrap-from-env {--rotate-passwords : 既存レコードのパスワードも更新する}', function () {
+    $enabled = (bool) data_get(config('admin.bootstrap'), 'enabled', false);
+    if (!$enabled) {
+        $this->warn('ADMIN_BOOTSTRAP_ENABLED=true ではないため、処理を中断しました。');
+        return 1;
+    }
+
+    $panel = (array) data_get(config('admin.bootstrap'), 'panel', []);
+    $userAdmin = (array) data_get(config('admin.bootstrap'), 'user', []);
+    $rotate = (bool) $this->option('rotate-passwords');
+
+    $validator = Validator::make([
+        'panel_username' => (string) ($panel['username'] ?? ''),
+        'panel_email' => (string) ($panel['email'] ?? ''),
+        'panel_password' => (string) ($panel['password'] ?? ''),
+        'user_username' => (string) ($userAdmin['username'] ?? ''),
+        'user_identifier' => (string) ($userAdmin['identifier'] ?? ''),
+        'user_email' => (string) ($userAdmin['email'] ?? ''),
+        'user_password' => (string) ($userAdmin['password'] ?? ''),
+    ], [
+        'panel_username' => ['required', 'string', 'max:255'],
+        'panel_email' => ['required', 'string', 'email', 'max:255'],
+        'panel_password' => ['required', 'string', 'min:8'],
+        'user_username' => ['required', 'string', 'max:255'],
+        'user_identifier' => ['required', 'string', 'max:15', 'regex:/^[a-z0-9_]+$/'],
+        'user_email' => ['required', 'string', 'email', 'max:255'],
+        'user_password' => ['required', 'string', 'min:8'],
+    ]);
+
+    if ($validator->fails()) {
+        foreach ($validator->errors()->all() as $error) {
+            $this->error($error);
+        }
+        return 1;
+    }
+
+    try {
+        DB::transaction(function () use ($panel, $userAdmin, $rotate) {
+            $panelAdmin = Admin::where('email', (string) $panel['email'])->first();
+            if (!$panelAdmin) {
+                Admin::create([
+                    'username' => (string) $panel['username'],
+                    'email' => (string) $panel['email'],
+                    'password' => Hash::make((string) $panel['password']),
+                ]);
+            } elseif ($rotate) {
+                $panelAdmin->password = Hash::make((string) $panel['password']);
+                $panelAdmin->save();
+            }
+
+            $user = User::where('email', (string) $userAdmin['email'])->first();
+            if (!$user) {
+                User::create([
+                    'username' => (string) $userAdmin['username'],
+                    'user_identifier' => strtolower((string) $userAdmin['identifier']),
+                    'email' => (string) $userAdmin['email'],
+                    'password' => Hash::make((string) $userAdmin['password']),
+                    'nationality' => 'JP',
+                    'residence' => 'JP',
+                    'language' => 'JA',
+                    'is_verified' => true,
+                    'is_admin' => true,
+                    'email_verified_at' => now(),
+                ]);
+            } else {
+                $user->is_admin = true;
+                $user->is_verified = true;
+                if ($user->email_verified_at === null) {
+                    $user->email_verified_at = now();
+                }
+                if ($rotate) {
+                    $user->password = Hash::make((string) $userAdmin['password']);
+                }
+                $user->save();
+            }
+        });
+    } catch (\Throwable $e) {
+        $this->error('初期投入に失敗しました: ' . $e->getMessage());
+        return 1;
+    }
+
+    $this->info('管理者アカウント初期投入が完了しました。');
+    $this->line('- admins: ' . (string) $panel['email']);
+    $this->line('- users(is_admin=true): ' . (string) $userAdmin['email']);
+    $this->line('次の手順: ADMIN_BOOTSTRAP_ENABLED=false に戻し、php artisan config:clear を実行してください。');
+
+    return 0;
+})->purpose('.env の初期値から admins/users の管理者アカウントをDBへ投入');
 
 Artisan::command('admin:url', function () {
     $baseUrl = config('app.url');

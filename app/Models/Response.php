@@ -206,7 +206,18 @@ class Response extends Model
 
         // レスポンスが作成された時にスレッドのレスポンス数を更新
         static::created(function ($response) {
-            $response->thread->updateResponsesCountUp();
+            try {
+                $thread = $response->thread ?? Thread::withTrashed()->find($response->thread_id);
+                if ($thread) {
+                    $thread->updateResponsesCountUp();
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Response created: updateResponsesCountUp failed', [
+                    'response_id' => $response->response_id ?? null,
+                    'thread_id' => $response->thread_id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
 
         // 削除ログは deleting(削除前) に記録する

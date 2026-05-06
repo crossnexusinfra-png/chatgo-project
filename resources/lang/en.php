@@ -158,6 +158,7 @@ return [
     'anonymous' => 'Anonymous',
     'unknown' => 'Unknown',
     'deleted_user' => 'Deleted user',
+    'admin_badge' => 'Admin',
     'deleted_response_placeholder' => '(Deleted response)',
     'deleted_label' => '(Deleted)',
     

@@ -78,7 +78,12 @@
 
             <div class="profile-info">
                 <div class="profile-info-name-row">
-                    <h2>{{ $displayUserName }}</h2>
+                    <h2>
+                        {{ $displayUserName }}
+                        @if(!empty($user->is_admin))
+                            <span class="profile-admin-badge">{{ \App\Services\LanguageService::trans('admin_badge', $lang) }}</span>
+                        @endif
+                    </h2>
                 </div>
                 {{-- プロフィール通報は廃止 --}}
 

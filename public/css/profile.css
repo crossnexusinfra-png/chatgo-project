@@ -50,6 +50,18 @@
     margin: 0;
 }
 
+.profile-admin-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
 /* 通報ボタン：ユーザー名の一行下で左端に配置 */
 .profile-info-report-row {
     margin-bottom: 20px;

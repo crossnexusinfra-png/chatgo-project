@@ -158,6 +158,7 @@ return [
     'anonymous' => '匿名',
     'unknown' => '不明',
     'deleted_user' => '削除されたユーザー',
+    'admin_badge' => '管理者',
     'deleted_response_placeholder' => '（削除されたレスポンス）',
     'deleted_label' => '（削除済み）',
     
