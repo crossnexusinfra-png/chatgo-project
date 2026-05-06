@@ -245,6 +245,80 @@ Artisan::command('db:wal:snapshot {reason=scheduled}', function (string $reason)
     $this->info("WAL snapshot saved. event_id={$eventId}");
 })->purpose('DB復元用のWALスナップショットログを保存');
 
+Artisan::command('db:archive:cleanup {--dry-run : 実削除せず対象のみ表示}', function () {
+    $dryRun = (bool) $this->option('dry-run');
+    $now = now();
+
+    $walArchiveDir = trim((string) env('DB_WAL_ARCHIVE_DIR', '/var/lib/postgresql/wal_archive'));
+    $walRetentionDays = max(1, (int) env('DB_WAL_ARCHIVE_RETENTION_DAYS', 14));
+    $walCutoff = $now->copy()->subDays($walRetentionDays);
+
+    $basebackupGlob = trim((string) env('DB_BASEBACKUP_GLOB', '/var/lib/postgresql/basebackup_*'));
+    $basebackupRetentionDays = max(1, (int) env('DB_BASEBACKUP_RETENTION_DAYS', 14));
+    $basebackupCutoff = $now->copy()->subDays($basebackupRetentionDays);
+
+    $deletedWal = 0;
+    $deletedWalBytes = 0;
+    $deletedBackups = 0;
+
+    // WALアーカイブ削除（古いファイルのみ）
+    if (is_dir($walArchiveDir)) {
+        $entries = @scandir($walArchiveDir) ?: [];
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $fullPath = $walArchiveDir . DIRECTORY_SEPARATOR . $entry;
+            if (!is_file($fullPath)) {
+                continue;
+            }
+            $mtime = @filemtime($fullPath);
+            if ($mtime === false) {
+                continue;
+            }
+            if (\Carbon\Carbon::createFromTimestamp($mtime)->lt($walCutoff)) {
+                $size = (int) (@filesize($fullPath) ?: 0);
+                if ($dryRun) {
+                    $this->line("[dry-run] WAL delete: {$fullPath}");
+                } else {
+                    @unlink($fullPath);
+                }
+                $deletedWal++;
+                $deletedWalBytes += $size;
+            }
+        }
+    }
+
+    // basebackup削除（古いディレクトリのみ）
+    $backups = glob($basebackupGlob, GLOB_NOSORT) ?: [];
+    foreach ($backups as $backupPath) {
+        if (!is_dir($backupPath)) {
+            continue;
+        }
+        $mtime = @filemtime($backupPath);
+        if ($mtime === false) {
+            continue;
+        }
+        if (\Carbon\Carbon::createFromTimestamp($mtime)->lt($basebackupCutoff)) {
+            if ($dryRun) {
+                $this->line("[dry-run] basebackup delete: {$backupPath}");
+            } else {
+                File::deleteDirectory($backupPath);
+            }
+            $deletedBackups++;
+        }
+    }
+
+    $this->info('DB archive cleanup completed.');
+    $this->line('mode: ' . ($dryRun ? 'dry-run' : 'delete'));
+    $this->line("wal_archive_dir: {$walArchiveDir}");
+    $this->line("wal_retention_days: {$walRetentionDays}");
+    $this->line("basebackup_retention_days: {$basebackupRetentionDays}");
+    $this->line("wal_deleted_files: {$deletedWal}");
+    $this->line('wal_deleted_bytes: ' . number_format($deletedWalBytes));
+    $this->line("basebackup_deleted_dirs: {$deletedBackups}");
+})->purpose('WALアーカイブとbasebackupの古い世代を削除');
+
 // ログファイルの自動削除（毎日実行）
 Schedule::call(function () {
     $logsDir = storage_path('logs');
@@ -294,6 +368,10 @@ Schedule::call(function () {
 
 Schedule::command('db:wal:snapshot scheduled')
     ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('db:archive:cleanup')
+    ->dailyAt(env('DB_ARCHIVE_CLEANUP_SCHEDULE_AT', '04:10'))
     ->withoutOverlapping();
 
 Artisan::command('db:backup:s3 {--label=}', function () {

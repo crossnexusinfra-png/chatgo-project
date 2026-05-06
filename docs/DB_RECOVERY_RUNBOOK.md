@@ -229,3 +229,24 @@ tail -n 80 /tmp/pg_restore_verbose.log
 - WALアーカイブの保存期間を明確化（例: 7日/14日）
 - 月1回以上、復元リハーサルを実施
 
+### 自動クリーンアップ（再発防止）
+
+本リポジトリには、WALアーカイブと `basebackup_*` の古い世代を削除するコマンドがあります。
+
+```bash
+cd /var/www/crossnexus/apps/chatgo
+php artisan db:archive:cleanup --dry-run
+php artisan db:archive:cleanup
+```
+
+Scheduler でも日次実行されます（既定: `04:10`）。  
+保持日数は `.env` の下記で調整できます。
+
+```bash
+DB_ARCHIVE_CLEANUP_SCHEDULE_AT=04:10
+DB_WAL_ARCHIVE_DIR=/var/lib/postgresql/wal_archive
+DB_WAL_ARCHIVE_RETENTION_DAYS=14
+DB_BASEBACKUP_GLOB=/var/lib/postgresql/basebackup_*
+DB_BASEBACKUP_RETENTION_DAYS=14
+```
+
