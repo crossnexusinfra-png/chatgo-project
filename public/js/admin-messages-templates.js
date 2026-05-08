@@ -118,11 +118,15 @@
         const type = document.getElementById('target_type')?.value;
         const filteredEl = document.getElementById('target_filtered_fields');
         const specificEl = document.getElementById('target_specific_fields');
+        const adminHint = document.getElementById('target_admin_only_hint');
         if (filteredEl) {
             filteredEl.classList.toggle('is-visible', type === 'filtered');
         }
         if (specificEl) {
             specificEl.classList.toggle('is-visible', type === 'specific');
+        }
+        if (adminHint) {
+            adminHint.classList.toggle('is-visible', type === 'admin_users_only');
         }
         const ri = document.getElementById('recipient_identifiers');
         if (ri) {

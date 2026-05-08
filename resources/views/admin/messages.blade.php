@@ -34,13 +34,19 @@
                 </select>
                 <input type="hidden" name="template_key" id="template_key" value="">
             @endif
-            <label>{{ \App\Services\LanguageService::trans('admin_messages_target_type', $lang) }}</label>
+            <label for="target_type">{{ \App\Services\LanguageService::trans('admin_messages_target_type', $lang) }}</label>
             <select name="target_type" id="target_type" required>
                 <option value="all_members">{{ \App\Services\LanguageService::trans('admin_messages_target_all_members', $lang) }}</option>
+                <option value="admin_users_only">{{ \App\Services\LanguageService::trans('admin_messages_target_admin_users_only', $lang) }}</option>
                 <option value="filtered">{{ \App\Services\LanguageService::trans('admin_messages_target_filtered', $lang) }}</option>
                 <option value="specific">{{ \App\Services\LanguageService::trans('admin_messages_target_specific', $lang) }}</option>
-                <option value="admin_users_only">{{ \App\Services\LanguageService::trans('admin_messages_target_admin_users_only', $lang) }}</option>
             </select>
+            <div id="target_admin_only_hint" class="admin-messages-target-admin-hint" role="note">
+                <p id="target_admin_only_hint_text" class="admin-messages-target-admin-hint-text">{{ \App\Services\LanguageService::trans('admin_messages_target_admin_users_only_help', $lang) }}</p>
+            </div>
+            @error('target_type')
+                <p class="admin-form-error">{{ $message }}</p>
+            @enderror
             <div id="target_filtered_fields" class="admin-messages-target-extra">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult', $lang) }}</label>
                 <select name="target_is_adult">

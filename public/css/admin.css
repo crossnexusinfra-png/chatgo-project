@@ -107,6 +107,30 @@
     display: block;
 }
 
+/* 送信先「管理者のみ」選択時の説明（ユーザー画面の is_admin アカウント宛） */
+.admin-messages-target-admin-hint {
+    display: none;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #374151;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+}
+.admin-messages-target-admin-hint.is-visible {
+    display: block;
+}
+.admin-messages-target-admin-hint-text {
+    margin: 0;
+}
+.admin-form-error {
+    color: #b91c1c;
+    font-size: 14px;
+    margin: 6px 0 8px;
+}
+
 /* Buttons */
 .admin-page button {
     padding: 8px 12px;
