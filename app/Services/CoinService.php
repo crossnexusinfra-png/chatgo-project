@@ -20,6 +20,10 @@ class CoinService
      */
     public function consumeCoins(User $user, int $amount): bool
     {
+        if (!empty($user->is_admin)) {
+            return true;
+        }
+
         if ($user->coins < $amount) {
             return false;
         }
@@ -33,6 +37,10 @@ class CoinService
      */
     public function addCoins(User $user, int $amount): void
     {
+        if (!empty($user->is_admin)) {
+            return;
+        }
+
         $user->increment('coins', $amount);
     }
 
@@ -82,6 +90,15 @@ class CoinService
      */
     public function rewardAdWatch(User $user): array
     {
+        if (!empty($user->is_admin)) {
+            $lang = LanguageService::getCurrentLanguage();
+
+            return [
+                'success' => false,
+                'message' => LanguageService::trans('admin_no_coin_reward_needed', $lang),
+            ];
+        }
+
         $today = now()->toDateString();
         
         // 今日の視聴回数を取得
@@ -163,6 +180,15 @@ class CoinService
      */
     public function rewardConsecutiveLogin(User $user): array
     {
+        if (!empty($user->is_admin)) {
+            $lang = LanguageService::getCurrentLanguage();
+
+            return [
+                'success' => false,
+                'message' => LanguageService::trans('admin_no_coin_reward_needed', $lang),
+            ];
+        }
+
         return DB::transaction(function () use ($user) {
             /** @var User $locked */
             $locked = User::where('user_id', $user->user_id)->lockForUpdate()->firstOrFail();

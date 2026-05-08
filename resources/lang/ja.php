@@ -280,6 +280,8 @@ return [
     'admin_messages_target_all_members' => '全会員',
     'admin_messages_target_filtered' => '条件を指定（18歳以上/国籍/登録日時）',
     'admin_messages_target_specific' => '特定のユーザー（ユーザーID・ユーザー名）',
+    'admin_messages_target_admin_users_only' => '利用者ページ管理者のみ（is_admin）',
+    'admin_messages_no_admin_users' => '管理者ユーザー（is_admin）が登録されていません。',
     'admin_messages_target_is_adult' => '18歳以上',
     'admin_messages_target_is_adult_all' => '指定なし',
     'admin_messages_target_is_adult_yes' => '18歳以上のみ',
@@ -794,6 +796,7 @@ return [
     'report_profile_reason_only' => 'プロフィール通報では、プロフィール専用の通報理由のみ使用できます。',
     'report_cannot_report_self' => '自分自身のプロフィールを通報することはできません。',
     'report_cannot_report_own_thread' => '自分のルームを通報することはできません。',
+    'report_cannot_report_admin_content' => '管理者アカウントの投稿は通報できません。',
     'report_cannot_report_own_response' => '自分のリプライを通報することはできません。',
     'report_restricted_profile' => 'このプロフィールは制限されているため、通報できません。',
     'thread_image_reported' => 'この画像は通報により表示できません',
@@ -1122,6 +1125,11 @@ return [
     'register_invite_code_help' => '招待コードをお持ちの場合は入力してください。登録完了時に10コインずつ配布されます。',
     
     // フレンド機能
+    'friend_request_blocked_involves_admin' => '管理者アカウントはフレンド機能の対象外です。',
+    'admin_friend_feature_notice' => '管理者アカウントではフレンド機能はご利用いただけません。',
+    'admin_no_friend_nav' => '管理者アカウントではフレンド機能は利用できません',
+    'admin_no_coin_reward_needed' => '管理者アカウントはコインが無制限のため、この機能は利用できません。',
+    'coins_unlimited_display' => '∞',
     'friends' => 'フレンド',
     'friends_list' => 'フレンド一覧',
     'no_friends' => 'フレンドがいません',

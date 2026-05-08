@@ -171,7 +171,11 @@ class ReportController extends Controller
         // スレッドを通報する場合の処理
         if ($validated['thread_id']) {
             $thread = Thread::findOrFail($validated['thread_id']);
-            
+            $thread->loadMissing('user');
+            if ($thread->user && !empty($thread->user->is_admin)) {
+                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_admin_content', $lang)]);
+            }
+
             // 自分のルームは通報できない
             if ((int) $thread->user_id === (int) $userId) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_own_thread', $lang)]);
@@ -203,7 +207,11 @@ class ReportController extends Controller
             
         } elseif ($validated['response_id']) {
             $response = Response::findOrFail($validated['response_id']);
-            
+            $response->loadMissing('user');
+            if ($response->user && !empty($response->user->is_admin)) {
+                return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_admin_content', $lang)]);
+            }
+
             // 自分のリプライは通報できない
             if ((int) $response->user_id === (int) $userId) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_own_response', $lang)]);

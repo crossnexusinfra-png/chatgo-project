@@ -623,7 +623,7 @@ class AdminController extends Controller
         $lang = $this->getAdminLanguage();
 
         request()->validate([
-            'target_type' => 'required|in:all_members,filtered,specific',
+            'target_type' => 'required|in:all_members,filtered,specific,admin_users_only',
             'body_ja' => 'required|string|max:2000',
             'body_en' => 'nullable|string|max:2000',
             'title_ja' => 'nullable|string|max:255',
@@ -645,7 +645,22 @@ class AdminController extends Controller
         $userId = null;
         $recipientUserIds = [];
 
-        if ($targetType === 'specific') {
+        if ($targetType === 'admin_users_only') {
+            $recipientUserIds = User::query()
+                ->where('is_admin', true)
+                ->pluck('user_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            if (empty($recipientUserIds)) {
+                return back()->withErrors(['target_type' => \App\Services\LanguageService::trans('admin_messages_no_admin_users', $lang)]);
+            }
+            if (count($recipientUserIds) === 1) {
+                $userId = $recipientUserIds[0];
+                $recipientUserIds = [];
+            }
+        } elseif ($targetType === 'specific') {
             $raw = preg_replace('/\s+/', ',', trim((string) request('recipient_identifiers')));
             if ($raw === '') {
                 return back()->withErrors(['recipient_identifiers' => \App\Services\LanguageService::trans('admin_messages_specific_required', $lang)]);
@@ -701,7 +716,9 @@ class AdminController extends Controller
             // 既存ロジック互換のため、従来カラムにも保存
             'title' => request('title_ja'),
             'body' => request('body_ja'),
-            'audience' => 'members',
+            'audience' => ($targetType === 'admin_users_only' && $userId === null)
+                ? 'members_admin_only'
+                : 'members',
             'published_at' => now(),
             'user_id' => $userId,
             'allows_reply' => request('allows_reply', false),

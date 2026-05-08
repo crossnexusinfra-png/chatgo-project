@@ -413,7 +413,7 @@
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
             @auth
-                @if(!$isMyResponse)
+                @if(!$isMyResponse && empty($responseUser?->is_admin))
                 {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
                 @if(!$shouldBeHidden && !$isDeletedByReport)
                     @if(isset($isReported) && $isReported)

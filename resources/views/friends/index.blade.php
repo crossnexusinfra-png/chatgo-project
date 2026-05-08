@@ -26,7 +26,13 @@
         </div>
     @endif
 
-    @if(isset($isEnabled) && !$isEnabled)
+    @if(!empty(auth()->user()->is_admin))
+        <div class="friend-conditions-section">
+            <div class="alert alert-info">
+                {{ \App\Services\LanguageService::trans('admin_friend_feature_notice', $lang) }}
+            </div>
+        </div>
+    @elseif(isset($isEnabled) && !$isEnabled)
         <!-- フレンド機能条件未達成の表示 -->
         <div class="friend-conditions-section">
             <h2>{{ \App\Services\LanguageService::trans('friend_feature_conditions_title', $lang) }}</h2>
@@ -63,7 +69,8 @@
     @endif
 
     <div class="friends-content">
-        @if(isset($isEnabled) && !$isEnabled)
+        @if(!empty(auth()->user()->is_admin))
+        @elseif(isset($isEnabled) && !$isEnabled)
             <div class="alert alert-warning">
                 {{ \App\Services\LanguageService::trans('friend_feature_conditions_message', $lang) }}
             </div>

@@ -127,7 +127,7 @@
                     <span>📅 <span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span></span>
                 </div>
                 @auth
-                @if(auth()->id() !== (int) $thread->user_id)
+                @if(auth()->id() !== (int) $thread->user_id && empty($threadUser?->is_admin))
                 <div class="meta-item">
                     {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
                     @if(!(isset($isThreadRestricted) && $isThreadRestricted) && empty($isThreadDeletedByReport))

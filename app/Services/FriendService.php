@@ -18,6 +18,11 @@ class FriendService
      */
     public function isFriendFeatureEnabled(User $user): bool
     {
+        // 利用者ページ用管理者はフレンド機能を利用しない
+        if (!empty($user->is_admin)) {
+            return false;
+        }
+
         // 総ログイン数5日以上
         $loginCount = \App\Models\AccessLog::where('user_id', $user->user_id)
             ->where('type', 'login')
@@ -101,6 +106,16 @@ class FriendService
             return [
                 'can_send' => false,
                 'reason' => '自分自身には申請できません',
+            ];
+        }
+
+        // 管理者アカウントを含むペアではフレンド申請不可（相互に成立させない）
+        if (!empty($fromUser->is_admin) || !empty($toUser->is_admin)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return [
+                'can_send' => false,
+                'reason' => \App\Services\LanguageService::trans('friend_request_blocked_involves_admin', $lang),
             ];
         }
 
@@ -238,6 +253,10 @@ class FriendService
      */
     public function sendFriendRequest(User $fromUser, User $toUser): bool
     {
+        if (!empty($fromUser->is_admin) || !empty($toUser->is_admin)) {
+            return false;
+        }
+
         if (!$this->hasFriendSlotCapacityIncludingPendingOutgoing($fromUser)) {
             return false;
         }
@@ -303,7 +322,12 @@ class FriendService
             return false;
         }
 
+        $fromUser = User::query()->find($request->from_user_id);
         $toUser = User::query()->find($request->to_user_id);
+        if (($fromUser && !empty($fromUser->is_admin)) || ($toUser && !empty($toUser->is_admin))) {
+            return false;
+        }
+
         if (!$toUser) {
             return false;
         }
@@ -331,6 +355,10 @@ class FriendService
             $fromUser = User::query()->lockForUpdate()->find($locked->from_user_id);
             $toUser = User::query()->lockForUpdate()->find($locked->to_user_id);
             if (!$fromUser || !$toUser) {
+                return false;
+            }
+
+            if (!empty($fromUser->is_admin) || !empty($toUser->is_admin)) {
                 return false;
             }
 
@@ -416,6 +444,15 @@ class FriendService
      */
     public function sendCoinsToFriend(User $fromUser, User $toUser): array
     {
+        if (!empty($fromUser->is_admin) || !empty($toUser->is_admin)) {
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+
+            return [
+                'success' => false,
+                'message' => \App\Services\LanguageService::trans('friend_request_blocked_involves_admin', $lang),
+            ];
+        }
+
         // フレンドかチェック
         $friendship = Friendship::where(function($query) use ($fromUser, $toUser) {
             $query->where('user_id', $fromUser->user_id)
@@ -505,11 +542,19 @@ class FriendService
     public function getAvailableFriendRequests(User $user): array
     {
         $availableUsers = [];
+
+        if (!empty($user->is_admin)) {
+            return [];
+        }
         
         // すべてのユーザーを取得（自分以外）
         $allUsers = User::where('user_id', '!=', $user->user_id)->get();
         
         foreach ($allUsers as $otherUser) {
+            if (!empty($otherUser->is_admin)) {
+                continue;
+            }
+
             $friendship = Friendship::where(function ($query) use ($user, $otherUser) {
                 $query->where('user_id', $user->user_id)
                     ->where('friend_id', $otherUser->user_id);
@@ -578,6 +623,10 @@ class FriendService
      */
     public function rejectAvailableFriendConnection(User $user, User $targetUser): bool
     {
+        if (!empty($user->is_admin)) {
+            return false;
+        }
+
         return DB::transaction(function () use ($user, $targetUser): bool {
             $outgoing = FriendRequest::query()
                 ->where('from_user_id', $user->user_id)
@@ -638,6 +687,10 @@ class FriendService
      */
     public function deleteFriend(User $user, User $friend): bool
     {
+        if (!empty($user->is_admin)) {
+            return false;
+        }
+
         // フレンド関係を削除（双方向）
         Friendship::where(function($query) use ($user, $friend) {
             $query->where('user_id', $user->user_id)

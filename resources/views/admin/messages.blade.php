@@ -39,6 +39,7 @@
                 <option value="all_members">{{ \App\Services\LanguageService::trans('admin_messages_target_all_members', $lang) }}</option>
                 <option value="filtered">{{ \App\Services\LanguageService::trans('admin_messages_target_filtered', $lang) }}</option>
                 <option value="specific">{{ \App\Services\LanguageService::trans('admin_messages_target_specific', $lang) }}</option>
+                <option value="admin_users_only">{{ \App\Services\LanguageService::trans('admin_messages_target_admin_users_only', $lang) }}</option>
             </select>
             <div id="target_filtered_fields" class="admin-messages-target-extra">
                 <label>{{ \App\Services\LanguageService::trans('admin_messages_target_is_adult', $lang) }}</label>

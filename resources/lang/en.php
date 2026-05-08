@@ -280,6 +280,8 @@ return [
     'admin_messages_target_all_members' => 'All members',
     'admin_messages_target_filtered' => 'By criteria (18+, nationality, registration date)',
     'admin_messages_target_specific' => 'Specific users (User ID or username)',
+    'admin_messages_target_admin_users_only' => 'Site administrator accounts only (is_admin)',
+    'admin_messages_no_admin_users' => 'No administrator accounts (is_admin) are registered.',
     'admin_messages_target_is_adult' => '18+',
     'admin_messages_target_is_adult_all' => 'Any',
     'admin_messages_target_is_adult_yes' => '18+ only',
@@ -799,6 +801,7 @@ return [
     'report_profile_reason_only' => 'Only profile-specific report reasons can be used when reporting profiles.',
     'report_cannot_report_self' => 'You cannot report your own profile.',
     'report_cannot_report_own_thread' => 'You cannot report your own room.',
+    'report_cannot_report_admin_content' => 'You cannot report content posted by administrator accounts.',
     'report_cannot_report_own_response' => 'You cannot report your own reply.',
     'report_restricted_profile' => 'This profile is restricted and cannot be reported.',
     'thread_image_reported' => 'This image cannot be displayed due to reports',
@@ -1125,6 +1128,11 @@ return [
     'register_invite_code_help' => 'If you have an invite code, enter it here. You and the inviter will each receive 10 coins upon registration.',
     
     // Friend Feature
+    'friend_request_blocked_involves_admin' => 'Friend features cannot include administrator accounts.',
+    'admin_friend_feature_notice' => 'Administrator accounts cannot use the friend feature.',
+    'admin_no_friend_nav' => 'Friend features are not available for administrator accounts',
+    'admin_no_coin_reward_needed' => 'Administrator accounts have unlimited coins; this action is not needed.',
+    'coins_unlimited_display' => '∞',
     'friends' => 'Friends',
     'friends_list' => 'Friends List',
     'no_friends' => 'No friends yet',

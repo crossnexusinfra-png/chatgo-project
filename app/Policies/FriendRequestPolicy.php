@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\FriendRequest;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 class FriendRequestPolicy
 {
@@ -17,6 +16,10 @@ class FriendRequestPolicy
         if ($user->user_id === $targetUser->user_id) {
             return false;
         }
+
+        if (!empty($user->is_admin) || !empty($targetUser->is_admin)) {
+            return false;
+        }
         
         // ログインユーザーは他のユーザーに申請可能
         return true;
@@ -27,8 +30,17 @@ class FriendRequestPolicy
      */
     public function accept(User $user, FriendRequest $friendRequest): bool
     {
-        // 申請の受信者のみ承認可能
-        return $user->user_id === $friendRequest->to_user_id;
+        if ($user->user_id !== $friendRequest->to_user_id) {
+            return false;
+        }
+
+        $fromUser = User::query()->find($friendRequest->from_user_id);
+        $toUser = User::query()->find($friendRequest->to_user_id);
+        if (($fromUser && !empty($fromUser->is_admin)) || ($toUser && !empty($toUser->is_admin))) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -45,9 +57,15 @@ class FriendRequestPolicy
      */
     public function sendCoins(User $user, User $friend): bool
     {
-        // フレンド関係にあることを確認する必要がある
-        // このチェックはFriendServiceで行われるため、ここでは基本的なチェックのみ
-        return $user->user_id !== $friend->user_id;
+        if ($user->user_id === $friend->user_id) {
+            return false;
+        }
+
+        if (!empty($user->is_admin) || !empty($friend->is_admin)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -59,9 +77,11 @@ class FriendRequestPolicy
         if ($user->user_id === $friend->user_id) {
             return false;
         }
+
+        if (!empty($user->is_admin)) {
+            return false;
+        }
         
-        // フレンド関係にあることを確認する必要がある
-        // このチェックはFriendServiceで行われるため、ここでは基本的なチェックのみ
         return true;
     }
 }

@@ -98,8 +98,16 @@ class CoinController extends Controller
         }
         
         $user = Auth::user();
+        if (!empty($user->is_admin)) {
+            return response()->json([
+                'coins' => null,
+                'unlimited' => true,
+            ]);
+        }
+
         return response()->json([
             'coins' => $user->coins,
+            'unlimited' => false,
         ]);
     }
 }

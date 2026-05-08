@@ -46,10 +46,15 @@
                     @php
                         $currentUser = auth()->user();
                         $currentCoins = $currentUser->coins ?? 0;
+                        $viewerIsAdminUser = !empty($currentUser->is_admin);
                     @endphp
                     <!-- ログイン時の表示 -->
                     <div class="header-coin-display">
-                        🪙 {{ $currentCoins }} {{ \App\Services\LanguageService::trans('coins_unit', $lang) }}
+                        @if($viewerIsAdminUser)
+                            🪙 {{ \App\Services\LanguageService::trans('coins_unlimited_display', $lang) }} {{ \App\Services\LanguageService::trans('coins_unit', $lang) }}
+                        @else
+                            🪙 {{ $currentCoins }} {{ \App\Services\LanguageService::trans('coins_unit', $lang) }}
+                        @endif
                     </div>
                     <a href="{{ route('notifications.index') }}" class="header-button notification-btn" title="{{ \App\Services\LanguageService::trans('notifications', $lang) }}">
                         🔔
@@ -59,6 +64,10 @@
                     </a>
                     @if(!empty($viewerAccountFrozen))
                     <span class="header-button create-btn-disabled" role="button" aria-disabled="true" title="{{ !empty($viewerOnlyMandatoryNoticeRestriction) ? \App\Services\LanguageService::trans('mandatory_notice_no_friends_nav', $lang) : \App\Services\LanguageService::trans('account_frozen_no_friends_nav', $lang) }}">
+                        🤝
+                    </span>
+                    @elseif(!empty($viewerIsAdminUser))
+                    <span class="header-button create-btn-disabled" role="button" aria-disabled="true" title="{{ \App\Services\LanguageService::trans('admin_no_friend_nav', $lang) }}">
                         🤝
                     </span>
                     @else
