@@ -34,8 +34,9 @@
                 </select>
                 <input type="hidden" name="template_key" id="template_key" value="">
             @endif
+            {{-- 送信先プルダウン（本番ソース検証用: admin_users_only が無ければ未デプロイ or viewキャッシュ） chatgo-recipient-ui-v2 --}}
             <label for="target_type">{{ \App\Services\LanguageService::trans('admin_messages_target_type', $lang) }}</label>
-            <select name="target_type" id="target_type" required>
+            <select name="target_type" id="target_type" required data-chatgo-recipient-ui="v2">
                 <option value="all_members">{{ \App\Services\LanguageService::trans('admin_messages_target_all_members', $lang) }}</option>
                 <option value="admin_users_only">{{ \App\Services\LanguageService::trans('admin_messages_target_admin_users_only', $lang) }}</option>
                 <option value="filtered">{{ \App\Services\LanguageService::trans('admin_messages_target_filtered', $lang) }}</option>
