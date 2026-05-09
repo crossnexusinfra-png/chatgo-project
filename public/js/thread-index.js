@@ -22,12 +22,17 @@
     const adUrls = config.adUrls || {};
 
     // 広告動画モーダルを動的に生成
+    // AdSense審査用: 広告動画（リワード動画広告）モーダル / メインページ
+    // ad-placement: rewarded-video-modal / location: index page
     (function setupAdVideoModal() {
         if (document.getElementById('adVideoModal')) return;
 
         const modal = document.createElement('div');
         modal.id = 'adVideoModal';
         modal.className = 'ad-video-modal';
+        modal.setAttribute('data-ad-placement', 'rewarded-video-modal');
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-label', 'Advertisement');
 
         let sourcesHtml = '';
         if (adUrls.mainUrl) {
@@ -41,6 +46,7 @@
 
         modal.innerHTML = `
             <div class="ad-video-container">
+                <span class="ad-review-label ad-review-label--modal" aria-label="ad-placeholder">Ad / 広告</span>
                 <button onclick="closeAdVideoFromIndex()" class="ad-video-close-button">${translations.closeButton}</button>
                 <video id="adVideoMain" controls class="ad-video-player" preload="auto">
                     ${sourcesHtml}

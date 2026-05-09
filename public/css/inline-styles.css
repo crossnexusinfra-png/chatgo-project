@@ -74,6 +74,37 @@ body {
     font-size: 14px;
 }
 
+/* 広告審査用ラベル（動画広告の掲載箇所を明示） */
+.ad-review-label {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-bottom: 8px;
+    border: 1px dashed #b9b9b9;
+    border-radius: 4px;
+    background: #fafafa;
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.ad-review-label--inline {
+    margin-right: 6px;
+    margin-bottom: 0;
+}
+
+.ad-review-label--modal {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    font-size: 13px;
+    z-index: 1;
+}
+
 .watch-ad-button {
     padding: 8px 16px;
     font-size: 14px;

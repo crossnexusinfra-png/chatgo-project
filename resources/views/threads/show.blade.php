@@ -380,9 +380,12 @@
                                         $isInsufficientCoins = $message === $insufficientCoinsMsg;
                                     @endphp
                                     @if ($isInsufficientCoins)
-                                        <div class="alert alert-danger alert-danger-inline">
+                                        {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時 / ルーム詳細） --}}
+                                        <!-- ad-placement: rewarded-video / location: thread-show insufficient-coins error -->
+                                        <div class="alert alert-danger alert-danger-inline" data-ad-placement="rewarded-video" aria-label="Advertisement">
                                             {{ $message }}<br>
                                             @auth
+                                            <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
                                             <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
@@ -439,9 +442,11 @@
     </div>
 
     @auth
-    <!-- このルームページ専用の広告動画モーダル -->
-    <div id="adVideoModalThread" class="ad-video-modal">
+    {{-- AdSense審査用: 広告動画（リワード動画広告）モーダル / ルーム詳細ページ --}}
+    <!-- ad-placement: rewarded-video-modal / location: thread-show -->
+    <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="Advertisement">
         <div class="ad-video-container">
+            <span class="ad-review-label ad-review-label--modal" aria-label="ad-placeholder">Ad / 広告</span>
             <button type="button" class="ad-video-close-button" data-action="close-ad-video-thread">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
             <video id="adVideoThread" controls class="ad-video-player" preload="auto">
                 <source src="{{ config('ads.test_ad_url') }}" type="video/mp4">
