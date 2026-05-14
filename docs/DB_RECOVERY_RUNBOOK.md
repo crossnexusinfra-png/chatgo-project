@@ -8,8 +8,48 @@
 - DB: PostgreSQL 16
 - 本番DB名: `chatgo`
 - アプリ配置: `/var/www/crossnexus/apps/chatgo`
-- WALアーカイブ先: `/var/lib/postgresql/wal_archive`
-- ベースバックアップ保存先: `/var/lib/postgresql/basebackup_*`
+- WALアーカイブ先: `/var/lib/postgresql/wal_archive`（論理パス。実体を専用ボリュームへ逃がす場合は下記「WALアーカイブを専用ボリュームへ移設」）
+- ベースバックアップ保存先: `/var/lib/postgresql/basebackup_*`（容量が逼迫する場合は別マウント配下へ移し、`DB_BASEBACKUP_GLOB` を合わせて変更）
+
+---
+
+## WALアーカイブを専用ボリュームへ移設（推奨）
+
+ルートディスク（`/`）だけで WAL を長期保持すると枯渇しやすいため、**別ボリュームをマウントし、データを移したうえで従来パスをシンボリックリンクにする**運用を推奨します。  
+`postgresql.conf` の `archive_command` や本書の PITR `restore_command` は **`/var/lib/postgresql/wal_archive`** のまま利用できます（リンク先が実ボリューム）。
+
+### 作業前（インフラ）
+
+1. 十分な空きを持つブロックボリュームを用意し、本番方針に合わせてマウントする（例: `/mnt/pg_archive`）。`/etc/fstab` で再起動後もマウントされること。
+2. リポジトリの移設スクリプトをサーバへ配置するか、`git pull` で `scripts/pg/migrate-wal-archive-to-volume.sh` を取り込む。
+
+### 実行手順（メンテナンス時間帯）
+
+```bash
+cd /var/www/crossnexus/apps/chatgo   # リポジトリルートに合わせて変更
+sudo bash scripts/pg/migrate-wal-archive-to-volume.sh --check
+
+sudo systemctl stop postgresql
+# または: sudo pg_ctlcluster 16 main stop
+
+sudo bash scripts/pg/migrate-wal-archive-to-volume.sh --execute
+
+sudo systemctl start postgresql
+sudo -u postgres psql -c "SELECT archived_count, failed_count, last_archived_wal FROM pg_stat_archiver;"
+```
+
+マウントポイントを変える場合は環境変数で指定します（既定は `/mnt/pg_archive` 配下に `wal_archive` ディレクトリを作成）。
+
+```bash
+PG_ARCHIVE_MOUNT=/mnt/pg_archive sudo bash scripts/pg/migrate-wal-archive-to-volume.sh --check
+```
+
+移設後、旧ディレクトリは `wal_archive.pre_volume_日時` にリネーム退避されます。アーカイブが問題なく増えていることを確認したら、十分な猶予を取ってから手動削除してください。
+
+### アプリ側（`.env`）
+
+シンボリックリンク運用では **`DB_WAL_ARCHIVE_DIR` は従来どおり `/var/lib/postgresql/wal_archive` のまま**で構いません（実体は専用ボリューム）。  
+物理パスを直接掃除したい場合のみ、リンク先の絶対パス（例: `/mnt/pg_archive/wal_archive`）へ変更してください。
 
 ---
 
@@ -97,6 +137,8 @@ sudo chmod 700 /var/lib/postgresql/16/main
 ```
 
 ### 6. リカバリ設定
+
+WAL を専用ボリュームへ移し、`/var/lib/postgresql/wal_archive` がそのシンボリックリンクになっている場合も、**`restore_command` のパスはこのまま**で問題ありません。
 
 ```bash
 sudo -u postgres bash -lc "cat >> /var/lib/postgresql/16/main/postgresql.auto.conf <<'EOF'
@@ -227,6 +269,7 @@ tail -n 80 /tmp/pg_restore_verbose.log
 - 日次で `db:backup:s3` を実行
 - 日次で `pg_basebackup` を実行（世代管理あり）
 - WALアーカイブの保存期間を明確化（例: 7日/14日）
+- WAL アーカイブは専用ボリュームへ移設し、ルートディスク枯渇を避ける（手順は「WALアーカイブを専用ボリュームへ移設」）
 - 月1回以上、復元リハーサルを実施
 
 ### 自動クリーンアップ（再発防止）
