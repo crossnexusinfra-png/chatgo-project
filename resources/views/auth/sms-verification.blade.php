@@ -80,6 +80,7 @@
         data-resend-button="{{ \App\Services\LanguageService::trans('resend_verification_code_button', $lang) }}"
         hidden
     ></div>
+    <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script src="{{ asset('js/auth-sms-verification.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 </body>
 </html>
