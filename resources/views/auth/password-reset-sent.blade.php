@@ -1,6 +1,6 @@
 @php
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
-    $showDevLink = app()->environment('local') || config('app.show_verification_code_on_screen');
+    $showDevLink = config('app.show_verification_code_on_screen');
     $devUrl = session('password_reset_dev_url');
 @endphp
 <!DOCTYPE html>

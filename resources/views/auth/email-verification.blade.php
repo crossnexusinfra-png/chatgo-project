@@ -19,7 +19,7 @@
                 @php
                     $registrationData = session('registration_data', []);
                     $email = $registrationData['email'] ?? '';
-                    $showCode = app()->environment('local') || config('app.show_verification_code_on_screen');
+                    $showCode = config('app.show_verification_code_on_screen');
                     $emailVerificationCode = $showCode ? Cache::get("email_verification_{$email}") : null;
                 @endphp
                 <p>{{ str_replace('{email}', $email, \App\Services\LanguageService::trans('email_verification_description', $lang)) }}</p>

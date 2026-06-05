@@ -127,7 +127,13 @@
                     <span>📅 <span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span></span>
                 </div>
                 @auth
-                @if(auth()->id() !== (int) $thread->user_id && empty($threadUser?->is_admin))
+                @php
+                    $threadAuthor = $threadUser ?? $thread->user;
+                    $canReportThread = auth()->check()
+                        && (int) auth()->user()->user_id !== (int) $thread->user_id
+                        && !($threadAuthor && $threadAuthor->isUserFacingAdmin());
+                @endphp
+                @if($canReportThread)
                 <div class="meta-item">
                     {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
                     @if(!(isset($isThreadRestricted) && $isThreadRestricted) && empty($isThreadDeletedByReport))

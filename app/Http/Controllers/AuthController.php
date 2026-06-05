@@ -216,7 +216,7 @@ class AuthController extends Controller
             ['email' => $user->email],
             function (User $u, string $token) use ($lang, &$devUrlForNextPage) {
                 $url = $this->passwordResetUrlForUser($u, $token);
-                if (app()->environment('local') || config('app.show_verification_code_on_screen')) {
+                if (config('app.show_verification_code_on_screen')) {
                     $devUrlForNextPage = $url;
                 }
                 try {
@@ -288,7 +288,7 @@ class AuthController extends Controller
             ['email' => $user->email],
             function (User $u, string $token) use ($internationalPhone, &$devUrlForNextPage) {
                 $url = $this->passwordResetUrlForUser($u, $token);
-                if (app()->environment('local') || config('app.show_verification_code_on_screen')) {
+                if (config('app.show_verification_code_on_screen')) {
                     $devUrlForNextPage = $url;
                 }
                 \Log::info('Password reset link (SMS path)', [

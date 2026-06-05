@@ -1,7 +1,8 @@
     @php
     // 自分のリプライかどうかを判定
-    $responseUser = $users->get($response->user_id);
-    $isMyResponse = $currentUser && $responseUser && $currentUser->user_id === $response->user_id;
+    $responseUser = $users->get($response->user_id) ?? $response->user;
+    $isMyResponse = $currentUser && $currentUser->user_id === $response->user_id;
+    $canReportResponse = !$isMyResponse && !($responseUser && $responseUser->isUserFacingAdmin());
     
     // ユーザー名を取得（削除ユーザー時は翻訳テキストを表示）
     $username = $responseUser
@@ -413,7 +414,7 @@
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
             @auth
-                @if(!$isMyResponse && empty($responseUser?->is_admin))
+                @if($canReportResponse)
                 {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}
                 @if(!$shouldBeHidden && !$isDeletedByReport)
                     @if(isset($isReported) && $isReported)

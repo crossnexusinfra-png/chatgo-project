@@ -19,7 +19,7 @@
                 @php
                     $registrationData = session('registration_data', []);
                     $phone = $registrationData['phone'] ?? '';
-                    $showCode = app()->environment('local') || config('app.show_verification_code_on_screen');
+                    $showCode = config('app.show_verification_code_on_screen');
                     $smsVerificationCode = $showCode ? Cache::get("sms_verification_{$phone}") : null;
                 @endphp
                 <p>{{ str_replace('{phone}', $phone, \App\Services\LanguageService::trans('sms_verification_description', $lang)) }}</p>

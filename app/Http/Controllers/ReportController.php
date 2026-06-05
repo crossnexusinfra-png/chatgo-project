@@ -38,12 +38,18 @@ class ReportController extends Controller
         $thread = null;
         
         if ($threadId) {
-            $thread = Thread::find($threadId);
+            $thread = Thread::with('user')->find($threadId);
+            if ($thread && $thread->user && $thread->user->isUserFacingAdmin()) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
             $report = Report::where('user_id', $userId)
                 ->where('thread_id', $threadId)
                 ->first();
         } elseif ($responseId) {
-            $response = Response::find($responseId);
+            $response = Response::with('user')->find($responseId);
+            if ($response && $response->user && $response->user->isUserFacingAdmin()) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
             if ($response) {
                 $thread = $response->thread;
             }
@@ -172,7 +178,7 @@ class ReportController extends Controller
         if ($validated['thread_id']) {
             $thread = Thread::findOrFail($validated['thread_id']);
             $thread->loadMissing('user');
-            if ($thread->user && !empty($thread->user->is_admin)) {
+            if ($thread->user && $thread->user->isUserFacingAdmin()) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_admin_content', $lang)]);
             }
 
@@ -208,7 +214,7 @@ class ReportController extends Controller
         } elseif ($validated['response_id']) {
             $response = Response::findOrFail($validated['response_id']);
             $response->loadMissing('user');
-            if ($response->user && !empty($response->user->is_admin)) {
+            if ($response->user && $response->user->isUserFacingAdmin()) {
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_cannot_report_admin_content', $lang)]);
             }
 

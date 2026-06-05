@@ -358,8 +358,21 @@ class User extends Authenticatable
         return $totalOutCount;
     }
 
+    /**
+     * ユーザー画面用の管理者アカウント（is_admin）かどうか
+     */
+    public function isUserFacingAdmin(): bool
+    {
+        return !empty($this->is_admin);
+    }
+
     public function requiresPhoneVerificationRestrictions(): bool
     {
+        // ユーザー画面用の管理者アカウントは電話番号未登録でも通常機能を利用可能
+        if ($this->isUserFacingAdmin()) {
+            return false;
+        }
+
         return empty($this->phone) || $this->sms_verified_at === null;
     }
 
