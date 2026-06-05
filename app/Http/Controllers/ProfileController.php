@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\ResidenceTimezoneService;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
+use App\Services\SmsService;
 use App\Services\VeriphoneService;
 use App\Services\ProfilePendingContactService;
 
@@ -288,7 +289,7 @@ class ProfileController extends Controller
         if ($emailChanged && $phoneChanged) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$newPhone})");
+            SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-both');
 
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
@@ -308,7 +309,7 @@ class ProfileController extends Controller
         } elseif ($phoneChanged) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
-            \Log::info("プロフィール更新後のSMS認証コード: {$smsCode} (ユーザーID: {$user->user_id}, 保留電話: {$newPhone})");
+            SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-phone');
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.sms-verification')

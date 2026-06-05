@@ -35,6 +35,16 @@ return [
         ],
     ],
 
+    'sms' => [
+        // true かつ Twilio 設定済みのときのみ実際に SMS を送信。未設定時はログ出力のみ
+        'enabled' => env('SMS_ENABLED', false),
+        'twilio' => [
+            'sid' => env('TWILIO_ACCOUNT_SID'),
+            'token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_FROM_NUMBER'),
+        ],
+    ],
+
     'veriphone' => [
         'api_key' => env('VERIPHONE_API_KEY'),
         // false にすると全環境で検証をスキップ（本番で一時的に無効化したい場合など）

@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Admin;
 use App\Services\PhoneNumberService;
+use App\Services\SmsService;
 use App\Services\VeriphoneService;
 use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
@@ -665,8 +666,7 @@ class AuthController extends Controller
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("sms_verification_{$internationalPhone}", $smsCode, 300); // 5分間有効
 
-        // 実際のSMS送信はここで実装（今回はログに出力）
-        \Log::info("SMS認証コード: {$smsCode} (電話番号: {$internationalPhone})");
+        SmsService::sendVerificationCode($internationalPhone, $smsCode, 'register');
 
         return redirect()->route('register.sms-verification');
     }
@@ -745,7 +745,7 @@ class AuthController extends Controller
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("sms_verification_{$registrationData['phone']}", $smsCode, 300);
 
-        \Log::info("SMS認証コード再送信: {$smsCode} (電話番号: {$registrationData['phone']})");
+        SmsService::sendVerificationCode($registrationData['phone'], $smsCode, 'register-resend');
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));
@@ -1141,7 +1141,7 @@ class AuthController extends Controller
         Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
 
         $logPhone = ProfilePendingContactService::displayPhone($user);
-        \Log::info("既存ユーザーSMS認証コード再送信: {$smsCode} (ユーザーID: {$user->user_id}, 電話番号: {$logPhone})");
+        SmsService::sendVerificationCode($logPhone, $smsCode, 'profile-resend');
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));
