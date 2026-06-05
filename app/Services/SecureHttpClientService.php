@@ -217,8 +217,12 @@ class SecureHttpClientService
             }
 
             // リクエスト実行
+            // GET で空の query を渡すと Guzzle が URL 既存のクエリ文字列を上書きして消すため、
+            // params 未指定時は第2引数なしで呼ぶ（Veriphone 等の ?key=...&phone=... 形式向け）
             $response = match(strtoupper($method)) {
-                'GET' => $client->get($url, $options['params'] ?? []),
+                'GET' => !empty($options['params'])
+                    ? $client->get($url, $options['params'])
+                    : $client->get($url),
                 'POST' => $client->post($url, $options['data'] ?? []),
                 'PUT' => $client->put($url, $options['data'] ?? []),
                 'DELETE' => $client->delete($url, $options['data'] ?? []),
