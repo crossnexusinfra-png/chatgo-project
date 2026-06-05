@@ -2,6 +2,7 @@
     // ViewComposerから渡された$langを使用、なければ取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
     $isExternalRegistration = !empty($externalRegistration);
+    $showPhoneFields = \App\Services\SmsVerificationService::isEnabled();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $lang }}">
@@ -70,6 +71,8 @@
                     @enderror
                 </div>
                 
+                @if($showPhoneFields)
+                {{-- 電話番号入力: SMS_VERIFICATION_ENABLED=true のときのみ表示（再有効化用に残置） --}}
                 <div class="form-group">
                     <label for="phone_country">
                         {{ \App\Services\LanguageService::trans('register_phone_country_label', $lang) }}
@@ -109,6 +112,7 @@
                 
                 <!-- 隠しフィールドで国際表記の電話番号を送信 -->
                 <input type="hidden" id="phone" name="phone" value="{{ old('phone') }}">
+                @endif
                 
                 <div class="form-group">
                     <label for="email">{{ \App\Services\LanguageService::trans('register_email_label', $lang) }} <span class="required">*</span></label>

@@ -576,11 +576,19 @@ class AuthController extends Controller
             }
         }
         
+        $smsVerificationEnabled = SmsVerificationService::isEnabled();
+        $phoneCountryRule = $smsVerificationEnabled
+            ? 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ'
+            : 'nullable|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ';
+        $phoneLocalRule = $smsVerificationEnabled
+            ? 'required|string|max:20'
+            : 'nullable|string|max:20';
+
         $request->validate([
             'username' => 'required|string|min:5|max:10',
             'user_identifier' => 'nullable|string|min:5|max:15|regex:/^[a-z_]+$/|unique:users,user_identifier',
-            'phone_country' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ',
-            'phone_local' => 'required|string|max:20',
+            'phone_country' => $phoneCountryRule,
+            'phone_local' => $phoneLocalRule,
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:16|confirmed',
             'nationality' => 'required|string|in:US,CA,GB,DE,FR,NL,BE,SE,FI,DK,NO,IS,AT,CH,IE,JP,KR,SG,AU,NZ,OTHER',
@@ -603,25 +611,26 @@ class AuthController extends Controller
             return back()->withErrors(['password' => \App\Services\LanguageService::trans('validation_password_complexity', $lang)])->withInput();
         }
 
-        // 国内番号を国際表記に変換
-        try {
-            $internationalPhone = PhoneNumberService::convertToInternational(
-                $request->phone_country,
-                $request->phone_local
-            );
-        } catch (\InvalidArgumentException $e) {
-            return back()->withErrors(['phone_country' => $e->getMessage()])->withInput();
-        }
-
-        // 電話番号の一意性をチェック
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
-        $existingPhoneUser = \App\Models\User::where('phone', $internationalPhone)->first();
-        if ($existingPhoneUser) {
-            // 垢バンされたユーザーの電話番号は使用不可
-            if ($existingPhoneUser->is_permanently_banned) {
-                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('banned_phone_not_usable', $lang)])->withInput();
+        $internationalPhone = null;
+        if ($smsVerificationEnabled) {
+            // 国内番号を国際表記に変換（SMS認証再有効化時に使用）
+            try {
+                $internationalPhone = PhoneNumberService::convertToInternational(
+                    $request->phone_country,
+                    $request->phone_local
+                );
+            } catch (\InvalidArgumentException $e) {
+                return back()->withErrors(['phone_country' => $e->getMessage()])->withInput();
             }
-            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('validation_phone_unique', $lang)])->withInput();
+
+            // 電話番号の一意性をチェック
+            $existingPhoneUser = \App\Models\User::where('phone', $internationalPhone)->first();
+            if ($existingPhoneUser) {
+                if ($existingPhoneUser->is_permanently_banned) {
+                    return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('banned_phone_not_usable', $lang)])->withInput();
+                }
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('validation_phone_unique', $lang)])->withInput();
+            }
         }
 
         if (SmsVerificationService::isEnabled()) {
