@@ -182,9 +182,9 @@ Route::view('/contact', 'legal.contact')->name('legal.contact');
 Route::view('/company', 'legal.company')->name('legal.company');
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:veriphone');
+// SMS（電話番号）認証ルート — SMS_VERIFICATION_ENABLED=true のときのみ利用（無効時はコントローラーがリダイレクト）
 Route::get('/register/sms-verification', [AuthController::class, 'showSmsVerification'])->name('register.sms-verification');
 Route::post('/register/sms-verification', [AuthController::class, 'verifySms'])->name('register.sms-verify');
-// GETリクエストの場合は登録ページにリダイレクト
 Route::get('/register/sms-resend', function() {
     return redirect()->route('register');
 });
@@ -205,10 +205,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/cancel-pending-contact', [ProfileController::class, 'cancelPendingContactVerification'])->name('profile.cancel-pending-contact');
     Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
     
-    // 既存ユーザー向け認証ルート
+    // SMS（電話番号）認証ルート — SMS_VERIFICATION_ENABLED=true のときのみ利用
     Route::get('/profile/sms-verification', [AuthController::class, 'showProfileSmsVerification'])->name('profile.sms-verification');
     Route::post('/profile/sms-verification', [AuthController::class, 'verifyProfileSms'])->name('profile.sms-verify');
-    // GETリクエストの場合はSMS認証ページにリダイレクト
     Route::get('/profile/sms-resend', function() {
         return redirect()->route('profile.sms-verification');
     });

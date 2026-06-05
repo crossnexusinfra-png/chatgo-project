@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Admin;
 use App\Services\PhoneNumberService;
 use App\Services\SmsService;
+use App\Services\SmsVerificationService;
 use App\Services\VeriphoneService;
 use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
@@ -622,28 +623,30 @@ class AuthController extends Controller
             return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('validation_phone_unique', $lang)])->withInput();
         }
 
-        // Veriphone APIで電話番号を検証（VOIP番号を除外）
-        \Log::info('電話番号検証開始', [
-            'phone_country' => $request->phone_country,
-            'phone_local' => $request->phone_local,
-            'international_phone' => $internationalPhone,
-        ]);
-        
-        $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
-        
-        \Log::info('電話番号検証結果', [
-            'international_phone' => $internationalPhone,
-            'is_valid' => $verificationResult['is_valid'],
-            'is_voip' => $verificationResult['is_voip'] ?? false,
-            'message' => $verificationResult['message'] ?? '',
-        ]);
-        
-        if (!$verificationResult['is_valid']) {
-            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
-        }
-        
-        if ($verificationResult['is_voip']) {
-            return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+        if (SmsVerificationService::isEnabled()) {
+            // Veriphone APIで電話番号を検証（VOIP番号を除外）— SMS認証再有効化時に使用
+            \Log::info('電話番号検証開始', [
+                'phone_country' => $request->phone_country,
+                'phone_local' => $request->phone_local,
+                'international_phone' => $internationalPhone,
+            ]);
+
+            $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
+
+            \Log::info('電話番号検証結果', [
+                'international_phone' => $internationalPhone,
+                'is_valid' => $verificationResult['is_valid'],
+                'is_voip' => $verificationResult['is_voip'] ?? false,
+                'message' => $verificationResult['message'] ?? '',
+            ]);
+
+            if (!$verificationResult['is_valid']) {
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+            }
+
+            if ($verificationResult['is_voip']) {
+                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+            }
         }
 
         // 登録データをセッションに保存
@@ -662,13 +665,19 @@ class AuthController extends Controller
             session(['intended_url' => $intendedUrl]);
         }
 
-        // SMS認証コードを生成して送信
-        $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("sms_verification_{$internationalPhone}", $smsCode, 300); // 5分間有効
+        if (SmsVerificationService::isEnabled()) {
+            // SMS認証コードを生成して送信（再有効化時に使用）
+            $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+            Cache::put("sms_verification_{$internationalPhone}", $smsCode, 300); // 5分間有効
+            SmsService::sendVerificationCode($internationalPhone, $smsCode, 'register');
 
-        SmsService::sendVerificationCode($internationalPhone, $smsCode, 'register');
+            return redirect()->route('register.sms-verification');
+        }
 
-        return redirect()->route('register.sms-verification');
+        // SMS認証無効時: メール認証へ直接進む
+        session(['registration_data.sms_verified' => true]);
+
+        return $this->redirectToRegisterEmailVerification($registrationData);
     }
 
     /**
@@ -676,6 +685,11 @@ class AuthController extends Controller
      */
     public function showSmsVerification()
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return session('registration_data')
+                ? redirect()->route('register.email-verification')
+                : redirect()->route('register');
+        }
         if (!session('registration_data')) {
             return redirect()->route('register');
         }
@@ -687,6 +701,9 @@ class AuthController extends Controller
      */
     public function verifySms(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('register');
+        }
         $request->validate([
             'sms_code' => 'required|string|size:6',
         ]);
@@ -725,6 +742,9 @@ class AuthController extends Controller
      */
     public function resendSms(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('register');
+        }
         $registrationData = session('registration_data');
         if (!$registrationData) {
             return redirect()->route('register');
@@ -756,7 +776,10 @@ class AuthController extends Controller
      */
     public function showEmailVerification()
     {
-        if (!session('registration_data') || !session('registration_data.sms_verified')) {
+        if (!session('registration_data')) {
+            return redirect()->route('register');
+        }
+        if (SmsVerificationService::isEnabled() && !session('registration_data.sms_verified')) {
             return redirect()->route('register');
         }
         return view('auth.email-verification');
@@ -811,7 +834,7 @@ class AuthController extends Controller
             'password' => $registrationData['password'],
             'is_verified' => true,
             'email_verified_at' => now(),
-            'sms_verified_at' => now(), // SMS 認証はこの前段階で完了している
+            'sms_verified_at' => SmsVerificationService::isEnabled() ? now() : null,
             'language' => $language,
             'coins' => 0, // 初期コインは0
         ]);
@@ -873,7 +896,10 @@ class AuthController extends Controller
     public function resendEmail(Request $request)
     {
         $registrationData = session('registration_data');
-        if (!$registrationData || !session('registration_data.sms_verified')) {
+        if (!$registrationData) {
+            return redirect()->route('register');
+        }
+        if (SmsVerificationService::isEnabled() && !session('registration_data.sms_verified')) {
             return redirect()->route('register');
         }
 
@@ -990,6 +1016,9 @@ class AuthController extends Controller
      */
     public function showProfileSmsVerification(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('profile.index');
+        }
         if (!Auth::check()) {
             return redirect()->route('login');
         }
@@ -1024,6 +1053,9 @@ class AuthController extends Controller
      */
     public function verifyProfileSms(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('profile.index');
+        }
         if (!Auth::check()) {
             return redirect()->route('login');
         }
@@ -1119,6 +1151,9 @@ class AuthController extends Controller
      */
     public function resendProfileSms(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('profile.index');
+        }
         if (!Auth::check()) {
             return redirect()->route('login');
         }
@@ -1277,6 +1312,20 @@ class AuthController extends Controller
     }
 
     /**
+     * 新規登録: メール認証コードを発行してメール認証画面へ遷移
+     */
+    private function redirectToRegisterEmailVerification(array $registrationData): \Illuminate\Http\RedirectResponse
+    {
+        $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600); // 10分間有効
+
+        // 実際のメール送信はここで実装（今回はログに出力）
+        \Log::info("メール認証コード: {$emailCode} (メール: {$registrationData['email']})");
+
+        return redirect()->route('register.email-verification');
+    }
+
+    /**
      * 国籍から言語設定を取得
      */
     private function getLanguageFromNationality($nationality)
@@ -1363,12 +1412,14 @@ class AuthController extends Controller
                 return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('validation_phone_unique', $lang)])->withInput();
             }
 
-            $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
-            if (!$verificationResult['is_valid']) {
-                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
-            }
-            if (!empty($verificationResult['is_voip'])) {
-                return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+            if (SmsVerificationService::isEnabled()) {
+                $verificationResult = VeriphoneService::verifyPhone($internationalPhone);
+                if (!$verificationResult['is_valid']) {
+                    return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('phone_number_not_usable', $lang)])->withInput();
+                }
+                if (!empty($verificationResult['is_voip'])) {
+                    return back()->withErrors(['phone_local' => \App\Services\LanguageService::trans('voip_number_not_allowed', $lang)])->withInput();
+                }
             }
         }
 
@@ -1383,7 +1434,7 @@ class AuthController extends Controller
             'password' => Hash::make(Str::random(64)),
             'is_verified' => true,
             'email_verified_at' => now(),
-            'sms_verified_at' => $internationalPhone ? now() : null,
+            'sms_verified_at' => (SmsVerificationService::isEnabled() && $internationalPhone) ? now() : null,
             'language' => $language,
             'coins' => 0,
             $providerColumn => (string) $externalRegistration['provider_id'],

@@ -368,6 +368,11 @@ class User extends Authenticatable
 
     public function requiresPhoneVerificationRestrictions(): bool
     {
+        // SMS 認証無効時は電話番号未登録・未認証による利用制限を適用しない
+        if (!\App\Services\SmsVerificationService::isEnabled()) {
+            return false;
+        }
+
         // ユーザー画面用の管理者アカウントは電話番号未登録でも通常機能を利用可能
         if ($this->isUserFacingAdmin()) {
             return false;

@@ -36,6 +36,8 @@ return [
     ],
 
     'sms' => [
+        // 電話番号（SMS）認証フローと未認証時の利用制限。false で無効（メール認証のみ）
+        'verification_enabled' => env('SMS_VERIFICATION_ENABLED', false),
         // true かつ Twilio 設定済みのときのみ実際に SMS を送信。未設定時はログ出力のみ
         'enabled' => env('SMS_ENABLED', false),
         'twilio' => [

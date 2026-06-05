@@ -14,6 +14,7 @@ use App\Services\ResidenceTimezoneService;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
 use App\Services\SmsService;
+use App\Services\SmsVerificationService;
 use App\Services\VeriphoneService;
 use App\Services\ProfilePendingContactService;
 
@@ -213,7 +214,8 @@ class ProfileController extends Controller
             ProfilePendingContactService::clear($user->user_id);
         }
 
-        if ($phoneChanged && $newPhone !== null) {
+        if ($phoneChanged && $newPhone !== null && SmsVerificationService::isEnabled()) {
+            // SMS認証再有効化時: Veriphone で電話番号を検証
             $verificationResult = VeriphoneService::verifyPhone($newPhone);
 
             if (!$verificationResult['is_valid']) {
@@ -228,7 +230,8 @@ class ProfileController extends Controller
         if (!$emailChanged) {
             $data['email'] = $request->email;
         }
-        if (!$phoneChanged) {
+        // SMS認証無効時は電話番号を即時反映。有効時は認証完了まで保留
+        if (!$phoneChanged || !SmsVerificationService::isEnabled()) {
             $data['phone'] = $newPhone;
         }
 
@@ -275,18 +278,20 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        if ($emailChanged || $phoneChanged) {
+        $needsPhoneReauth = $phoneChanged && SmsVerificationService::isEnabled();
+        if ($emailChanged || $needsPhoneReauth) {
             $user->refresh();
             ProfilePendingContactService::put($user->user_id, [
                 'email' => $emailChanged ? $request->email : null,
-                'phone' => $phoneChanged ? $newPhone : null,
+                'phone' => $needsPhoneReauth ? $newPhone : null,
                 'email_changed' => $emailChanged,
-                'phone_changed' => $phoneChanged,
+                'phone_changed' => $needsPhoneReauth,
             ]);
         }
 
         // メールアドレスまたは電話番号が変更された場合、認証コードを生成して認証画面にリダイレクト
-        if ($emailChanged && $phoneChanged) {
+        if ($emailChanged && $needsPhoneReauth) {
+            // SMS + メール認証（再有効化時）
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
             SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-both');
@@ -306,7 +311,7 @@ class ProfileController extends Controller
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.email-verification')
                 ->with('success', \App\Services\LanguageService::trans('profile_updated_reauth_email', $lang));
-        } elseif ($phoneChanged) {
+        } elseif ($needsPhoneReauth) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
             SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-phone');

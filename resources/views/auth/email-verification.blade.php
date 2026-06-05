@@ -65,9 +65,11 @@
                 </form>
             </div>
             
+            @if(\App\Services\SmsVerificationService::isEnabled())
             <div class="auth-footer">
                 <a href="{{ route('register.sms-verification') }}" class="back-link">← {{ \App\Services\LanguageService::trans('back_to_sms_verification', $lang) }}</a>
             </div>
+            @endif
         </div>
     </div>
     
