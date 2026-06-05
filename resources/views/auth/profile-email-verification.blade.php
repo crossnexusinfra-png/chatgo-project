@@ -43,7 +43,7 @@
                            maxlength="6" 
                            pattern="[0-9]{6}"
                            required autofocus>
-                    <small class="form-help">{{ \App\Services\LanguageService::trans('verification_code_help', $lang) }}</small>
+                    <small class="form-help">{{ \App\Services\LanguageService::trans('email_verification_code_help', $lang) }}</small>
                     @error('email_code')
                         <span class="error-message">{{ $message }}</span>
                     @enderror

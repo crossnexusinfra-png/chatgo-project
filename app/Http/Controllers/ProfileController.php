@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\ResidenceTimezoneService;
 use App\Models\ResidenceHistory;
 use App\Models\AccessLog;
+use App\Services\EmailVerificationService;
 use App\Services\SmsService;
 use App\Services\SmsVerificationService;
 use App\Services\VeriphoneService;
@@ -298,7 +299,13 @@ class ProfileController extends Controller
 
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
-            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$request->email})");
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            EmailVerificationService::sendVerificationCode(
+                $request->email,
+                $emailCode,
+                $lang,
+                'profile-both'
+            );
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.sms-verification')
@@ -306,7 +313,13 @@ class ProfileController extends Controller
         } elseif ($emailChanged) {
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
-            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$request->email})");
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            EmailVerificationService::sendVerificationCode(
+                $request->email,
+                $emailCode,
+                $lang,
+                'profile-email'
+            );
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             return redirect()->route('profile.email-verification')

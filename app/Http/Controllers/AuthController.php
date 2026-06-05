@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Admin;
 use App\Services\PhoneNumberService;
+use App\Services\EmailVerificationService;
 use App\Services\SmsService;
 use App\Services\SmsVerificationService;
 use App\Services\VeriphoneService;
@@ -731,8 +732,12 @@ class AuthController extends Controller
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600); // 10分間有効
 
-        // 実際のメール送信はここで実装（今回はログに出力）
-        \Log::info("メール認証コード: {$emailCode} (メール: {$registrationData['email']})");
+        EmailVerificationService::sendVerificationCode(
+            $registrationData['email'],
+            $emailCode,
+            $lang,
+            'register-after-sms'
+        );
 
         return redirect()->route('register.email-verification');
     }
@@ -906,9 +911,14 @@ class AuthController extends Controller
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600);
 
-        \Log::info("メール認証コード再送信: {$emailCode} (メール: {$registrationData['email']})");
-
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        EmailVerificationService::sendVerificationCode(
+            $registrationData['email'],
+            $emailCode,
+            $lang,
+            'register-resend'
+        );
+
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));
     }
 
@@ -1106,7 +1116,13 @@ class AuthController extends Controller
                 if (!Cache::has("email_verification_user_{$user->user_id}")) {
                     $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
                     Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
-                    \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, 保留メール: {$pending['email']})");
+                    $lang = \App\Services\LanguageService::getCurrentLanguage();
+                    EmailVerificationService::sendVerificationCode(
+                        $pending['email'],
+                        $emailCode,
+                        $lang,
+                        'profile-after-sms'
+                    );
                 }
                 $lang = \App\Services\LanguageService::getCurrentLanguage();
                 return redirect()->route('profile.email-verification')->with('success', \App\Services\LanguageService::trans('sms_verification_completed_next_email', $lang));
@@ -1139,7 +1155,13 @@ class AuthController extends Controller
         if (!Cache::has("email_verification_user_{$user->user_id}")) {
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
-            \Log::info("プロフィール更新後のメール認証コード: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$user->email})");
+            $lang = \App\Services\LanguageService::getCurrentLanguage();
+            EmailVerificationService::sendVerificationCode(
+                $user->email,
+                $emailCode,
+                $lang,
+                'profile-after-sms'
+            );
         }
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -1305,9 +1327,14 @@ class AuthController extends Controller
         Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
 
         $logEmail = ProfilePendingContactService::displayEmail($user);
-        \Log::info("既存ユーザーメール認証コード再送信: {$emailCode} (ユーザーID: {$user->user_id}, メール: {$logEmail})");
-
         $lang = \App\Services\LanguageService::getCurrentLanguage();
+        EmailVerificationService::sendVerificationCode(
+            $logEmail,
+            $emailCode,
+            $lang,
+            'profile-resend'
+        );
+
         return back()->with('success', \App\Services\LanguageService::trans('verification_code_resent', $lang));
     }
 
@@ -1319,8 +1346,13 @@ class AuthController extends Controller
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600); // 10分間有効
 
-        // 実際のメール送信はここで実装（今回はログに出力）
-        \Log::info("メール認証コード: {$emailCode} (メール: {$registrationData['email']})");
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
+        EmailVerificationService::sendVerificationCode(
+            $registrationData['email'],
+            $emailCode,
+            $lang,
+            'register'
+        );
 
         return redirect()->route('register.email-verification');
     }
