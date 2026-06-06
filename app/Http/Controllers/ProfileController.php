@@ -188,16 +188,25 @@ class ProfileController extends Controller
         $phoneRule = $hasExistingPhone
             ? 'required|string|max:20|unique:users,phone,' . $user->user_id . ',user_id'
             : 'nullable|string|max:20|unique:users,phone,' . $user->user_id . ',user_id';
-        $newPhone = trim((string) $request->input('phone', ''));
-        $newPhone = $newPhone === '' ? null : $newPhone;
-        
-        $request->validate([
+        $smsVerificationEnabled = SmsVerificationService::isEnabled();
+        if ($smsVerificationEnabled) {
+            $newPhone = trim((string) $request->input('phone', ''));
+            $newPhone = $newPhone === '' ? null : $newPhone;
+        } else {
+            $newPhone = $user->phone;
+        }
+
+        $validationRules = [
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
-            'phone' => $phoneRule,
             'residence' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
             'default_avatar' => ['nullable', 'string', 'regex:#^(none|(man|woman)\d+\.png)$#'],
             'language' => 'required|string|in:JA,EN',
-        ], $messages);
+        ];
+        if ($smsVerificationEnabled) {
+            $validationRules['phone'] = $phoneRule;
+        }
+
+        $request->validate($validationRules, $messages);
 
         // 重複実行防止
         $lock = \App\Services\DuplicateSubmissionLockService::acquire('profile.update', $user->user_id);
@@ -208,7 +217,7 @@ class ProfileController extends Controller
 
         // usernameとuser_identifierは変更不可（bioはUI廃止のためフォームから除外、DBカラムは残置）
         $emailChanged = $user->email !== $request->email;
-        $phoneChanged = $user->phone !== $newPhone;
+        $phoneChanged = $smsVerificationEnabled && ($user->phone !== $newPhone);
 
         // 連絡先を変えずに保存した場合、未完了の保留変更があれば破棄
         if (!$emailChanged && !$phoneChanged && ProfilePendingContactService::get($user->user_id)) {
@@ -231,8 +240,8 @@ class ProfileController extends Controller
         if (!$emailChanged) {
             $data['email'] = $request->email;
         }
-        // SMS認証無効時は電話番号を即時反映。有効時は認証完了まで保留
-        if (!$phoneChanged || !SmsVerificationService::isEnabled()) {
+        // SMS認証無効時は電話番号を触らない。有効時は変更なしなら即反映、変更ありは認証完了まで保留
+        if ($smsVerificationEnabled && !$phoneChanged) {
             $data['phone'] = $newPhone;
         }
 

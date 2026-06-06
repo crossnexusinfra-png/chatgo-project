@@ -247,6 +247,9 @@ class AuthController extends Controller
      */
     public function showPasswordResetPhoneForm()
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('login.password-reset');
+        }
         return view('auth.password-reset-phone');
     }
 
@@ -255,6 +258,9 @@ class AuthController extends Controller
      */
     public function requestPasswordResetPhone(Request $request)
     {
+        if (!SmsVerificationService::isEnabled()) {
+            return redirect()->route('login.password-reset');
+        }
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $request->validate([
             'phone_country' => 'required|string|max:10',

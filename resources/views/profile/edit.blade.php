@@ -4,6 +4,7 @@
     // コントローラーから渡された$langを使用、なければ取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
     $phoneIsRequired = !empty($user->phone);
+    $showPhoneFields = \App\Services\SmsVerificationService::isEnabled();
 @endphp
 
 @section('title')
@@ -56,6 +57,8 @@
                     <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required>
                 </div>
 
+                @if($showPhoneFields)
+                {{-- 電話番号: SMS_VERIFICATION_ENABLED=true のときのみ表示（再有効化用に残置） --}}
                 <div class="form-group">
                     <label for="phone">
                         {{ \App\Services\LanguageService::trans('phone', $lang) }}
@@ -70,6 +73,7 @@
                         <span class="error-message error-message-inline">{{ $message }}</span>
                     @enderror
                 </div>
+                @endif
 
                 <div class="form-group">
                     <label for="residence">{{ \App\Services\LanguageService::trans('residence', $lang) }} <span class="required">*</span></label>

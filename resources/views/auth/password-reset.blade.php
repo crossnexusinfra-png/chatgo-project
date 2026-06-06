@@ -31,9 +31,12 @@
                 <button type="submit" class="auth-submit-btn">{{ \App\Services\LanguageService::trans('password_reset_send_link', $lang) }}</button>
             </form>
 
+            @if(\App\Services\SmsVerificationService::isEnabled())
+            {{-- 電話番号による再設定: SMS_VERIFICATION_ENABLED=true のときのみ表示 --}}
             <p class="auth-link-spacing-md">
                 <a href="{{ route('login.password-reset.phone') }}" class="back-link back-link--inline">{{ \App\Services\LanguageService::trans('password_reset_forgot_email_link', $lang) }}</a>
             </p>
+            @endif
 
             <div class="auth-footer">
                 <a href="{{ route('login') }}" class="back-link">{{ \App\Services\LanguageService::trans('login_back', $lang) }}</a>

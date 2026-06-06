@@ -94,10 +94,12 @@
                         <label>{{ \App\Services\LanguageService::trans('email_label', $lang) }}</label>
                         <span>{{ $user->email }}</span>
                     </div>
+                    @if(\App\Services\SmsVerificationService::isEnabled())
                     <div class="detail-item">
                         <label>{{ \App\Services\LanguageService::trans('phone_label', $lang) }}</label>
                         <span>{{ $user->phone }}</span>
                     </div>
+                    @endif
                     <div class="detail-item">
                         <label>{{ \App\Services\LanguageService::trans('birthdate', $lang) }}</label>
                         <span>{{ $user->birthdate ? $user->birthdate->format('Y-m-d') : '-' }}</span>
