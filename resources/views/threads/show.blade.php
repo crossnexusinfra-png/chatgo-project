@@ -243,7 +243,8 @@
                     'isReported' => $isReported ?? false,
                     'isReportRejected' => $isReportRejected ?? false,
                     'existingReportByResponseId' => $existingReportByResponseId ?? [],
-                    'lang' => $lang
+                    'lang' => $lang,
+                    'canReplyToThread' => $canReplyToThread ?? true,
                 ])
                 @if($loop->iteration >= 10 && $loop->iteration % 10 === 0)
                 <div class="adsense-thread-reply-inline">
@@ -293,6 +294,11 @@
                             <p>{{ !empty($viewerFrozenUiMessage) ? $viewerFrozenUiMessage : \App\Services\LanguageService::trans('user_frozen_message', $lang) }}</p>
                         </div>
                     @endif
+                @else
+                @if(empty($canReplyToThread))
+                    <div class="thread-restriction-info">
+                        <p>{{ \App\Services\LanguageService::trans('thread_user_replies_disabled_info', $lang) }}</p>
+                    </div>
                 @else
                 @if(isset($isResponseLimitReached) && $isResponseLimitReached && !isset($continuationThread))
                 <!-- 続きルーム要望アンケート -->
@@ -429,6 +435,7 @@
 
                 @endif
                 @endif
+                @endif
             @else
                 <div class="login-required-message">
                     <h3>{{ \App\Services\LanguageService::trans('login_required_for_comment', $lang) }}</h3>
@@ -484,6 +491,7 @@
         'phpUploadMaxSize' => $phpUploadMaxSize ?? (2 * 1024 * 1024),
         'lang' => strtolower($lang),
         'isCurrentUserThreadOwner' => isset($isCurrentUserThreadOwner) && $isCurrentUserThreadOwner,
+        'canReplyToThread' => !empty($canReplyToThread),
         'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
         'continuationRequestThreshold' => $continuationRequestThreshold ?? 3,
         'csrfToken' => csrf_token(),

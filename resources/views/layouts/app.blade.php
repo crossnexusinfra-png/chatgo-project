@@ -87,6 +87,7 @@
                         </div>
                         @php
                             $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
+                            $viewerIsAdminUser = auth()->check() && auth()->user() ? auth()->user()->isUserFacingAdmin() : false;
                         @endphp
                         <div class="form-group">
                             <label for="tag">{{ \App\Services\LanguageService::trans('thread_tag', $lang) }}:</label>
@@ -221,6 +222,15 @@
                                 <input type="checkbox" id="is_r18" name="is_r18" value="1" {{ old('is_r18') ? 'checked' : '' }}>
                             </label>
                             <small>{{ \App\Services\LanguageService::trans('r18_thread_checkbox_description', $lang) }}</small>
+                        </div>
+                        @endif
+                        @if($viewerIsAdminUser)
+                        <div class="form-group">
+                            <label class="label-flex">
+                                {{ \App\Services\LanguageService::trans('thread_allow_user_replies_label', $lang) }}
+                                <input type="checkbox" id="allows_user_replies" name="allows_user_replies" value="1" {{ old('allows_user_replies') ? 'checked' : '' }}>
+                            </label>
+                            <small>{{ \App\Services\LanguageService::trans('thread_allow_user_replies_description', $lang) }}</small>
                         </div>
                         @endif
                         <div class="form-group">

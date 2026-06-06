@@ -54,9 +54,31 @@ class Thread extends Model
         'access_count',
         'is_r18',
         'image_path',
+        'allows_user_replies',
         'parent_thread_id',
         'continuation_thread_id',
     ];
+
+    protected $casts = [
+        'allows_user_replies' => 'boolean',
+        'is_r18' => 'boolean',
+    ];
+
+    /**
+     * 指定ユーザーがこのルームにリプライ（メディア含む）できるか
+     */
+    public function allowsRepliesFromUser(?User $user): bool
+    {
+        if ($this->allows_user_replies !== false) {
+            return true;
+        }
+
+        if (!$user) {
+            return false;
+        }
+
+        return (int) $user->user_id === (int) $this->user_id;
+    }
 
     /**
      * このスレッドを作成したユーザーを取得します。

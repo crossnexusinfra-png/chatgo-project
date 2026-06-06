@@ -28,6 +28,9 @@
         'restrictionReasons' => []
     ];
     $shouldBeHidden = $restrictionData['shouldBeHidden'];
+    $canReplyToThread = isset($canReplyToThread)
+        ? $canReplyToThread
+        : $thread->allowsRepliesFromUser($currentUser ?? auth()->user());
     $isDeletedByReport = $restrictionData['isDeletedByReport'];
     $isAcknowledged = session('acknowledged_response_' . $response->response_id);
     $restrictionReasons = $restrictionData['restrictionReasons'];
@@ -410,9 +413,11 @@
     <div class="response-actions">
         <div class="response-time" data-utc-datetime="{{ $response->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $response->created_at->format('Y-m-d H:i') }}</div>
         <div class="response-actions-buttons">
+            @if($canReplyToThread)
             <button class="reply-btn" data-response-id="{{ $response->response_id }}" data-user-name="{{ $username }}" data-response-body="{{ !empty($response->translation_pending) ? $response->body : ($response->display_body ?? $response->body) }}">
                 {{ \App\Services\LanguageService::trans('reply_button', $lang) }}
             </button>
+            @endif
             @auth
                 @if($canReportResponse)
                 {{-- 通報拒否/制限後は追加通報・修正不可のためボタン非表示 --}}

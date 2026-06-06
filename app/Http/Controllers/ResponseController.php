@@ -89,9 +89,14 @@ class ResponseController extends Controller
             return back()->withErrors(['restricted' => \App\Services\LanguageService::trans('thread_restricted_no_post', $lang)]);
         }
 
+        $currentUser = auth()->user();
+        if (!$thread->allowsRepliesFromUser($currentUser)) {
+            return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_user_replies_disabled_error', $lang)]);
+        }
+
         // 通報による制限中の追加制限（ファイル/URL）
         $limits = new \App\Services\ReportRestrictionLimitsService();
-        $userIdForLimits = auth()->user()->user_id;
+        $userIdForLimits = $currentUser->user_id;
         if ($request->hasFile('media_file')) {
             $fileLimit = $limits->fileUploadLimitPerDay((int) $userIdForLimits);
             $todayFiles = $limits->todayFileUploadCount((int) $userIdForLimits);
@@ -107,7 +112,6 @@ class ResponseController extends Controller
             return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_response_limit_reached', $lang)]);
         }
 
-        $currentUser = auth()->user();
         $maxBodyLength = $currentUser->responseBodyMaxLength();
 
         // フォームから送信されたリクエストデータを検証します。
@@ -561,9 +565,14 @@ class ResponseController extends Controller
             return back()->withErrors(['restricted' => \App\Services\LanguageService::trans('thread_restricted_no_post', $lang)]);
         }
 
+        $currentUser = auth()->user();
+        if (!$thread->allowsRepliesFromUser($currentUser)) {
+            return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_user_replies_disabled_error', $lang)]);
+        }
+
         // 通報による制限中の追加制限（ファイル/URL）
         $limits = new \App\Services\ReportRestrictionLimitsService();
-        $userIdForLimits = auth()->user()->user_id;
+        $userIdForLimits = $currentUser->user_id;
         if ($request->hasFile('media_file')) {
             $fileLimit = $limits->fileUploadLimitPerDay((int) $userIdForLimits);
             $todayFiles = $limits->todayFileUploadCount((int) $userIdForLimits);
@@ -579,7 +588,6 @@ class ResponseController extends Controller
             return back()->withErrors(['body' => \App\Services\LanguageService::trans('thread_response_limit_reached', $lang)]);
         }
 
-        $currentUser = auth()->user();
         $maxBodyLength = $currentUser->responseBodyMaxLength();
 
         // フォームから送信されたリクエストデータを検証します。

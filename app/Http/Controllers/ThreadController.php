@@ -837,6 +837,11 @@ class ThreadController extends Controller
         // 最初のレスポンスがあるか（文字が1文字でもあれば1件・trim しない）
         $hasFirstResponse = mb_strlen((string) $bodyForCost) > 0;
 
+        $allowsUserReplies = true;
+        if ($user->isUserFacingAdmin()) {
+            $allowsUserReplies = $request->boolean('allows_user_replies');
+        }
+
         // スレッドを作成（送信時の表示言語を保存）
         $thread = Thread::create([
             'title' => $request->title,
@@ -846,6 +851,7 @@ class ThreadController extends Controller
             'responses_count' => $hasFirstResponse ? 1 : 0,
             'is_r18' => $isR18,
             'image_path' => $imagePath,
+            'allows_user_replies' => $allowsUserReplies,
         ]);
 
         // ルーム作成時に他言語へ翻訳してキャッシュに保存（一覧の言語切り替え用）
@@ -1227,6 +1233,8 @@ class ThreadController extends Controller
         $continuationThread = $thread->continuationThread;
         $continuationNumber = $thread->getContinuationNumber();
 
+        $canReplyToThread = $currentUser ? $thread->allowsRepliesFromUser($currentUser) : false;
+
         return view('threads.show', compact(
             'thread', 'users', 'currentUser', 'userReportedThread', 'userReportedThreadRejected',
             'userReportedResponses', 'userReportedResponseRejected', 'existingReportByResponseId', 'existingThreadReport',
@@ -1236,7 +1244,7 @@ class ThreadController extends Controller
             'isResponseLimitReached', 'continuationRequestCount', 'hasUserContinuationRequest',
             'parentThread', 'continuationThread', 'isContinuationRequestLimitReached', 'continuationRequestThreshold',
             'hasOwnerContinuationRequest', 'isCurrentUserThreadOwner', 'continuationNumber',
-            'profileRestrictedUserIds'
+            'profileRestrictedUserIds', 'canReplyToThread'
         ));
     }
 
@@ -1404,6 +1412,7 @@ class ThreadController extends Controller
         // HTMLを生成
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $this->applyTranslationsForResponses($responses, $lang, $users, true);
+        $canReplyToThread = $currentUser ? $thread->allowsRepliesFromUser($currentUser) : false;
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -1419,6 +1428,7 @@ class ThreadController extends Controller
                 'lang' => $lang,
                 'responseRestrictionData' => $responseRestrictionData,
                 'currentUser' => $currentUser,
+                'canReplyToThread' => $canReplyToThread,
             ])->render();
         }
         
@@ -1605,6 +1615,7 @@ class ThreadController extends Controller
         // HTMLを生成（未キャッシュは translation_pending。フロントが最新リプライから順に翻訳 POST）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $this->applyTranslationsForResponses($responses, $lang, $users, true);
+        $canReplyToThread = $currentUser ? $thread->allowsRepliesFromUser($currentUser) : false;
         $html = '';
         foreach ($responses as $response) {
             $isReported = $userReportedResponses->contains($response->response_id);
@@ -1620,6 +1631,7 @@ class ThreadController extends Controller
                 'lang' => $lang,
                 'responseRestrictionData' => $responseRestrictionData,
                 'currentUser' => $currentUser,
+                'canReplyToThread' => $canReplyToThread,
             ])->render();
         }
         

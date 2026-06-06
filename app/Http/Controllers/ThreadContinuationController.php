@@ -145,6 +145,7 @@ class ThreadContinuationController extends Controller
                 'access_count' => 0,
                 'is_r18' => $parentThread->is_r18,
                 'image_path' => $continuationImagePath,
+                'allows_user_replies' => $parentThread->allows_user_replies,
                 'parent_thread_id' => $parentThread->thread_id,
             ]);
 
