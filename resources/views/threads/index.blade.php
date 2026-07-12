@@ -64,7 +64,8 @@
                     <div class="guest-index-hero-inner">
                         <p class="guest-index-hero-text">
                             <button type="button" class="guest-index-about-link" id="openChatgoAboutModal" aria-haspopup="dialog" aria-controls="chatgoAboutModal">
-                                {{ \App\Services\LanguageService::trans('guest_index_about_link', $lang) }}
+                                <span class="guest-index-about-link-icon" aria-hidden="true"></span>
+                                <span class="guest-index-about-link-label">{{ \App\Services\LanguageService::trans('guest_index_about_link', $lang) }}</span>
                             </button>
                         </p>
                     </div>
@@ -98,6 +99,10 @@
 
                                 <section class="chatgo-about-section">
                                     <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_recommended_title', $lang) }}</h3>
+                                    @php $recommendedIntro = trim(\App\Services\LanguageService::trans('guest_index_about_section_recommended_intro', $lang)); @endphp
+                                    @if ($recommendedIntro !== '')
+                                        <p class="chatgo-about-paragraph">{{ $recommendedIntro }}</p>
+                                    @endif
                                     <ul class="chatgo-about-list">
                                         @for ($i = 1; $i <= 5; $i++)
                                             <li>{{ \App\Services\LanguageService::trans('guest_index_about_recommended_' . $i, $lang) }}</li>

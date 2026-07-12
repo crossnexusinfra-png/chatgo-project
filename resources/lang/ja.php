@@ -546,6 +546,7 @@ return [
     'guest_index_about_feature_7' => '世界中の利用者との交流',
     'guest_index_about_feature_8' => '語学学習にも活用可能',
     'guest_index_about_section_recommended_title' => 'こんな方におすすめ',
+    'guest_index_about_section_recommended_intro' => '',
     'guest_index_about_recommended_1' => '海外の友達を作りたい',
     'guest_index_about_recommended_2' => '英語を実践で勉強したい',
     'guest_index_about_recommended_3' => '海外の文化を知りたい',

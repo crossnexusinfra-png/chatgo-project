@@ -542,36 +542,89 @@ body {
 .guest-index-hero-text {
     margin: 0 auto;
     max-width: 42em;
-    font-size: 16px;
-    line-height: 1.6;
-    font-weight: 500;
-    color: #2c3d4f;
-    letter-spacing: 0.01em;
     text-align: center;
 }
 
 .guest-index-about-link {
-    background: none;
-    border: none;
-    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px 22px;
     margin: 0;
-    font: inherit;
+    border: 1px solid rgba(102, 126, 234, 0.32);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.08) 55%, rgba(43, 159, 216, 0.06) 100%);
+    color: #3f4f9f;
+    font-size: 15px;
     font-weight: 600;
-    color: #4a5fc1;
-    text-decoration: underline;
-    text-underline-offset: 3px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: color 0.2s;
+    box-shadow:
+        0 2px 10px rgba(102, 126, 234, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.guest-index-about-link-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.35);
+}
+
+.guest-index-about-link-icon::before {
+    content: 'i';
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
 }
 
 .guest-index-about-link:hover,
 .guest-index-about-link:focus-visible {
-    color: #3648a8;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 55%, #5b8fd4 100%);
+    border-color: transparent;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.32);
     outline: none;
+}
+
+.guest-index-about-link:hover .guest-index-about-link-icon,
+.guest-index-about-link:focus-visible .guest-index-about-link-icon {
+    background: rgba(255, 255, 255, 0.22);
+    box-shadow: none;
 }
 
 .chatgo-about-modal-content {
     max-width: 640px;
+}
+
+.chatgo-about-modal-content .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+}
+
+.chatgo-about-modal-content .modal-header h2 {
+    color: #fff;
+    font-size: 1.35rem;
+}
+
+.chatgo-about-modal-content .modal-close-btn {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.chatgo-about-modal-content .modal-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 .chatgo-about-box {
@@ -594,6 +647,8 @@ body {
 
 .chatgo-about-section-title {
     margin: 0 0 10px;
+    padding-left: 12px;
+    border-left: 4px solid #667eea;
     font-size: 15px;
     font-weight: 700;
     color: #1a2b3c;
@@ -616,18 +671,16 @@ body {
     margin-top: 4px;
 }
 
-.guest-index-hero-text::first-line {
-    font-weight: 600;
-    color: #1a2b3c;
-}
-
 @media (max-width: 520px) {
     .guest-index-hero-inner {
         padding: 16px 16px 18px;
     }
 
-    .guest-index-hero-text {
-        font-size: 15px;
+    .guest-index-about-link {
+        width: 100%;
+        max-width: 280px;
+        padding: 10px 18px;
+        font-size: 14px;
     }
 }
 
