@@ -207,8 +207,9 @@ body {
     box-sizing: border-box;
 }
 
-/* サイドバー */
+/* サイドバー（ソース順はメインの後でも見た目は左） */
 .sidebar {
+    order: 1;
     width: 280px;
     background: #fff;
     padding: 20px;
@@ -272,6 +273,10 @@ body {
     min-width: 0;
     max-width: none;
     padding-top: 0px;
+}
+
+.main-container > .main-content {
+    order: 2;
 }
 
 /* 投稿一覧 */
@@ -1212,6 +1217,10 @@ body {
         padding: 15px;
         gap: 15px;
         margin-top: 0;
+    }
+
+    .main-container > .main-content {
+        order: 1;
     }
     
     .sidebar {

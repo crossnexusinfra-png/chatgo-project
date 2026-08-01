@@ -180,6 +180,8 @@ Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
 Route::view('/terms', 'legal.terms')->name('legal.terms');
 Route::view('/contact', 'legal.contact')->name('legal.contact');
 Route::view('/company', 'legal.company')->name('legal.company');
+Route::view('/guide', 'legal.guide')->name('legal.guide');
+Route::view('/faq', 'legal.faq')->name('legal.faq');
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:veriphone');
 // SMS（電話番号）認証ルート — SMS_VERIFICATION_ENABLED=true のときのみ利用（無効時はコントローラーがリダイレクト）

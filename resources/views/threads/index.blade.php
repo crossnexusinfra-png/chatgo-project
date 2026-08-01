@@ -11,14 +11,88 @@
 
 @section('content')
 <div class="main-container">
-    <!-- 左サイドバー：タグ一覧 -->
-    <aside class="sidebar">
-        <h3>{{ \App\Services\LanguageService::trans('tags', $lang) }}</h3>
-        @include('components.tag-list', ['lang' => $lang])
-    </aside>
-
-    <!-- メインコンテンツ -->
+    <!-- メインコンテンツ（ソース順を先に。見た目は CSS order でサイドバー左を維持） -->
     <main class="main-content">
+                @guest
+                <section class="chatgo-about-panel is-open post-list-margin" id="chatgoAboutPanel" aria-labelledby="chatgoAboutTitle">
+                    <div class="chatgo-about-panel-accent" aria-hidden="true"></div>
+                    <div class="chatgo-about-panel-header">
+                        <h1 id="chatgoAboutTitle" class="chatgo-about-panel-title">{{ \App\Services\LanguageService::trans('guest_index_about_modal_title', $lang) }}</h1>
+                        <button
+                            type="button"
+                            class="chatgo-about-toggle"
+                            id="chatgoAboutToggle"
+                            aria-expanded="true"
+                            aria-controls="chatgoAboutBody"
+                            aria-label="{{ \App\Services\LanguageService::trans('guest_index_about_collapse', $lang) }}"
+                            data-label-collapse="{{ \App\Services\LanguageService::trans('guest_index_about_collapse', $lang) }}"
+                            data-label-expand="{{ \App\Services\LanguageService::trans('guest_index_about_expand', $lang) }}"
+                        >
+                            <span class="chatgo-about-toggle-icon" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="chatgo-about-panel-body" id="chatgoAboutBody">
+                        <div class="chatgo-about-box">
+                            <section class="chatgo-about-section">
+                                <h2 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_what_title', $lang) }}</h2>
+                                @foreach (preg_split('/\R/u', \App\Services\LanguageService::trans('guest_index_about_section_what_body', $lang)) as $paragraph)
+                                    @if (trim($paragraph) !== '')
+                                        <p class="chatgo-about-paragraph">{{ $paragraph }}</p>
+                                    @endif
+                                @endforeach
+                            </section>
+
+                            <section class="chatgo-about-section">
+                                <h2 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_features_title', $lang) }}</h2>
+                                <ul class="chatgo-about-list">
+                                    @for ($i = 1; $i <= 8; $i++)
+                                        <li>{{ \App\Services\LanguageService::trans('guest_index_about_feature_' . $i, $lang) }}</li>
+                                    @endfor
+                                </ul>
+                            </section>
+
+                            <section class="chatgo-about-section">
+                                <h2 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_recommended_title', $lang) }}</h2>
+                                @php $recommendedIntro = trim(\App\Services\LanguageService::trans('guest_index_about_section_recommended_intro', $lang)); @endphp
+                                @if ($recommendedIntro !== '')
+                                    <p class="chatgo-about-paragraph">{{ $recommendedIntro }}</p>
+                                @endif
+                                <ul class="chatgo-about-list">
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <li>{{ \App\Services\LanguageService::trans('guest_index_about_recommended_' . $i, $lang) }}</li>
+                                    @endfor
+                                </ul>
+                            </section>
+
+                            <section class="chatgo-about-section">
+                                <h2 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_title', $lang) }}</h2>
+                                <p class="chatgo-about-paragraph">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_intro', $lang) }}</p>
+                                <ul class="chatgo-about-list">
+                                    @for ($i = 1; $i <= 5; $i++)
+                                        <li>{{ \App\Services\LanguageService::trans('guest_index_about_safety_' . $i, $lang) }}</li>
+                                    @endfor
+                                </ul>
+                                <p class="chatgo-about-paragraph">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_note', $lang) }}</p>
+                            </section>
+
+                            <section class="chatgo-about-section">
+                                <h2 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_getting_started_title', $lang) }}</h2>
+                                <ul class="chatgo-about-list">
+                                    @for ($i = 1; $i <= 2; $i++)
+                                        <li>{{ \App\Services\LanguageService::trans('guest_index_about_getting_started_' . $i, $lang) }}</li>
+                                    @endfor
+                                </ul>
+                            </section>
+                        </div>
+                        <nav class="chatgo-about-links" aria-label="{{ \App\Services\LanguageService::trans('guest_index_about_links_label', $lang) }}">
+                            <a href="{{ route('legal.guide') }}">{{ \App\Services\LanguageService::trans('footer_guide', $lang) }}</a>
+                            <span class="chatgo-about-links-sep" aria-hidden="true">|</span>
+                            <a href="{{ route('legal.faq') }}">{{ \App\Services\LanguageService::trans('footer_faq', $lang) }}</a>
+                        </nav>
+                    </div>
+                </section>
+                @endguest
+
                 <!-- 成功メッセージ表示 -->
                 @if (session('success'))
                     <div class="alert alert-success">
@@ -57,83 +131,6 @@
                         </ul>
                     </div>
                 @endif
-
-                @guest
-                <section class="guest-index-hero post-list-margin" role="region" aria-label="{{ \App\Services\LanguageService::trans('guest_index_about_link', $lang) }}">
-                    <div class="guest-index-hero-accent" aria-hidden="true"></div>
-                    <div class="guest-index-hero-inner">
-                        <p class="guest-index-hero-text">
-                            <button type="button" class="guest-index-about-link" id="openChatgoAboutModal" aria-haspopup="dialog" aria-controls="chatgoAboutModal">
-                                <span class="guest-index-about-link-icon" aria-hidden="true"></span>
-                                <span class="guest-index-about-link-label">{{ \App\Services\LanguageService::trans('guest_index_about_link', $lang) }}</span>
-                            </button>
-                        </p>
-                    </div>
-                </section>
-
-                <div class="modal-overlay" id="chatgoAboutModal" role="dialog" aria-modal="true" aria-labelledby="chatgoAboutModalTitle" aria-hidden="true">
-                    <div class="modal-content chatgo-about-modal-content">
-                        <div class="modal-header">
-                            <h2 id="chatgoAboutModalTitle">{{ \App\Services\LanguageService::trans('guest_index_about_modal_title', $lang) }}</h2>
-                            <button type="button" class="modal-close-btn" id="closeChatgoAboutModal" aria-label="{{ \App\Services\LanguageService::trans('close_button', $lang) }}">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="chatgo-about-box" tabindex="0" aria-readonly="true">
-                                <section class="chatgo-about-section">
-                                    <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_what_title', $lang) }}</h3>
-                                    @foreach (preg_split('/\R/u', \App\Services\LanguageService::trans('guest_index_about_section_what_body', $lang)) as $paragraph)
-                                        @if (trim($paragraph) !== '')
-                                            <p class="chatgo-about-paragraph">{{ $paragraph }}</p>
-                                        @endif
-                                    @endforeach
-                                </section>
-
-                                <section class="chatgo-about-section">
-                                    <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_features_title', $lang) }}</h3>
-                                    <ul class="chatgo-about-list">
-                                        @for ($i = 1; $i <= 8; $i++)
-                                            <li>{{ \App\Services\LanguageService::trans('guest_index_about_feature_' . $i, $lang) }}</li>
-                                        @endfor
-                                    </ul>
-                                </section>
-
-                                <section class="chatgo-about-section">
-                                    <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_recommended_title', $lang) }}</h3>
-                                    @php $recommendedIntro = trim(\App\Services\LanguageService::trans('guest_index_about_section_recommended_intro', $lang)); @endphp
-                                    @if ($recommendedIntro !== '')
-                                        <p class="chatgo-about-paragraph">{{ $recommendedIntro }}</p>
-                                    @endif
-                                    <ul class="chatgo-about-list">
-                                        @for ($i = 1; $i <= 5; $i++)
-                                            <li>{{ \App\Services\LanguageService::trans('guest_index_about_recommended_' . $i, $lang) }}</li>
-                                        @endfor
-                                    </ul>
-                                </section>
-
-                                <section class="chatgo-about-section">
-                                    <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_title', $lang) }}</h3>
-                                    <p class="chatgo-about-paragraph">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_intro', $lang) }}</p>
-                                    <ul class="chatgo-about-list">
-                                        @for ($i = 1; $i <= 5; $i++)
-                                            <li>{{ \App\Services\LanguageService::trans('guest_index_about_safety_' . $i, $lang) }}</li>
-                                        @endfor
-                                    </ul>
-                                    <p class="chatgo-about-paragraph">{{ \App\Services\LanguageService::trans('guest_index_about_section_safety_note', $lang) }}</p>
-                                </section>
-
-                                <section class="chatgo-about-section">
-                                    <h3 class="chatgo-about-section-title">{{ \App\Services\LanguageService::trans('guest_index_about_section_getting_started_title', $lang) }}</h3>
-                                    <ul class="chatgo-about-list">
-                                        @for ($i = 1; $i <= 2; $i++)
-                                            <li>{{ \App\Services\LanguageService::trans('guest_index_about_getting_started_' . $i, $lang) }}</li>
-                                        @endfor
-                                    </ul>
-                                </section>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endguest
 
                 <!-- メインページのコンテンツ -->
 
@@ -867,37 +864,34 @@
                     </form>
                 </section>
             </main>
+
+    <!-- 左サイドバー：タグ一覧（ソース順はメインの後。見た目は CSS order で左に配置） -->
+    <aside class="sidebar">
+        <h3>{{ \App\Services\LanguageService::trans('tags', $lang) }}</h3>
+        @include('components.tag-list', ['lang' => $lang])
+    </aside>
         </div>
 
 @guest
     <script nonce="{{ $csp_nonce ?? '' }}">
     (function () {
-        var openBtn = document.getElementById('openChatgoAboutModal');
-        var modal = document.getElementById('chatgoAboutModal');
-        var closeBtn = document.getElementById('closeChatgoAboutModal');
-        if (!openBtn || !modal || !closeBtn) return;
+        var panel = document.getElementById('chatgoAboutPanel');
+        var toggle = document.getElementById('chatgoAboutToggle');
+        var body = document.getElementById('chatgoAboutBody');
+        if (!panel || !toggle || !body) return;
 
-        function openModal() {
-            modal.classList.add('show');
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
-            closeBtn.focus();
+        function setOpen(isOpen) {
+            panel.classList.toggle('is-open', isOpen);
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            body.hidden = !isOpen;
+            var label = isOpen
+                ? toggle.getAttribute('data-label-collapse')
+                : toggle.getAttribute('data-label-expand');
+            if (label) toggle.setAttribute('aria-label', label);
         }
 
-        function closeModal() {
-            modal.classList.remove('show');
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = '';
-            openBtn.focus();
-        }
-
-        openBtn.addEventListener('click', openModal);
-        closeBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) closeModal();
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && modal.classList.contains('show')) closeModal();
+        toggle.addEventListener('click', function () {
+            setOpen(!panel.classList.contains('is-open'));
         });
     })();
     </script>

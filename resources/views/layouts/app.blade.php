@@ -36,6 +36,10 @@
         @yield('content')
         @if(request()->routeIs('threads.index'))
         <footer class="site-footer site-footer-main">
+            <a href="{{ route('legal.guide') }}">{{ \App\Services\LanguageService::trans('footer_guide', $lang) }}</a>
+            <span> | </span>
+            <a href="{{ route('legal.faq') }}">{{ \App\Services\LanguageService::trans('footer_faq', $lang) }}</a>
+            <span> | </span>
             <a href="{{ route('legal.terms') }}">{{ \App\Services\LanguageService::trans('footer_terms', $lang) }}</a>
             <span> | </span>
             <a href="{{ route('legal.privacy') }}">{{ \App\Services\LanguageService::trans('footer_privacy', $lang) }}</a>
