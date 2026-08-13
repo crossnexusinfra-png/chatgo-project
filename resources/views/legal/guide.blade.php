@@ -22,6 +22,7 @@
         <article class="legal-article">
             <h1 class="legal-article-title">{{ $t('guide_page_h1') }}</h1>
 
+            <div class="legal-article-box">
             <section class="legal-article-section">
                 @foreach ($paragraphs('guide_intro') as $paragraph)
                     <p>{{ $paragraph }}</p>
@@ -153,6 +154,7 @@
                     <p>{{ $paragraph }}</p>
                 @endforeach
             </section>
+            </div>
         </article>
     </x-content-with-rails>
 

@@ -16,9 +16,11 @@
     <x-content-with-rails instance-prefix="articles">
         <article class="legal-article">
             <h1 class="legal-article-title">{{ \App\Services\LanguageService::trans('articles_page_h1', $lang) }}</h1>
-            <section class="legal-article-section">
-                <p>{{ \App\Services\LanguageService::trans('articles_page_placeholder', $lang) }}</p>
-            </section>
+            <div class="legal-article-box">
+                <section class="legal-article-section">
+                    <p>{{ \App\Services\LanguageService::trans('articles_page_placeholder', $lang) }}</p>
+                </section>
+            </div>
         </article>
     </x-content-with-rails>
 
