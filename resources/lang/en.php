@@ -1145,11 +1145,248 @@ Even everyday topics can become interesting conversations when people from aroun
 You may discover new ideas, different lifestyles, and perspectives you hadn't considered before.
 Sometimes, one simple conversation is enough to make the world feel a little more connected.
 TXT,
-    'article_travel-with-chatgo_title' => 'Make Your Next Trip More Enjoyable with Chatgo',
+    'article_travel-with-chatgo_title' => 'Make the Most of Your Travels with Chatgo',
+    'article_travel-with-chatgo_body' => <<<'TXT'
+## Ask Local People Before You Travel
+When planning a trip, you'll find plenty of information in travel guides and review websites.
+Of course, those resources are helpful when organizing your trip.
+But have you ever wondered,
+"Where would local people recommend visiting?"
+"Are there any hidden places that most tourists don't know about?"
+With Chatgo, you can connect with people from around the world, ask questions about travel destinations, and hear recommendations directly from those who know them best.
+You might discover local experiences and insights that you wouldn't find in a typical travel guide.
+
+## Look for Rooms with These Tags
+If you'd like to talk about travel, try looking for Rooms with tags like these.
+Recommended Tags:
+• Travel & Tourist Spots
+• Local Community
+• Food & Recipes
+• Transport & Transit
+• Traditional Culture
+If you find a Room that interests you, post a reply and join the conversation.
+If you can't find the topic you're looking for, you can always create your own Room.
+
+## Try Creating a Room Like These
+If there's something you'd like to ask about traveling, why not create your own Room?
+For example:
+• Where would you recommend for a first trip?
+• Which restaurants do local people usually go to?
+• What's a must-try dish in your country?
+• What souvenirs would you recommend?
+• Are there any hidden places that aren't in travel guides?
+You don't need to come up with complicated questions.
+Sometimes a simple thought like,
+"I wonder what local people would say?"
+is enough to start a conversation.
+
+## You May Receive Replies from People Around the World
+Even for the same question, the answers can vary depending on where people live and their personal experiences.
+Some people may recommend famous tourist attractions, while others might introduce places that only locals know about.
+Their replies could help you discover new destinations and ideas that you might never have found on your own.
+Receiving different perspectives from people around the world is one of the unique experiences Chatgo offers.
+
+## Make Planning Your Next Trip Even More Enjoyable
+Travel begins long before you arrive at your destination.
+Thinking about where to go, deciding what foods you'd like to try, and talking with people who live there.
+All of these moments are part of the excitement of traveling.
+The next time you're planning a trip, why not ask your questions on Chatgo?
+A conversation with people from around the world might lead you to unexpected recommendations and new discoveries.
+TXT,
     'article_language-learning-with-chatgo_title' => 'Learn Languages Through Conversations on Chatgo',
-    'article_hobbies-with-chatgo_title' => 'Connect with People Around the World Through Your Hobbies',
+    'article_language-learning-with-chatgo_body' => <<<'TXT'
+## Conversations with People Around the World Can Support Your Language Learning
+When you're learning a new language, have you ever thought,
+"How do people actually say this in everyday conversations?"
+"I'd like to learn expressions that aren't in textbooks."
+With Chatgo, you can connect with people from around the world and naturally experience different languages through conversation.
+Chatgo isn't designed specifically as a language-learning platform, but communicating with people from different countries gives you opportunities to discover natural expressions, everyday vocabulary, and cultural differences that are difficult to learn from textbooks alone.
+
+## Look for Rooms with These Tags
+If you'd like to talk about languages or other countries, try looking for Rooms with tags like these.
+Recommended Tags:
+• Language Learning & Studying Abroad
+• School & University
+• Culture, Religion & History
+• Casual Chat
+• General Q&A
+If you find a Room that interests you, post a reply and join the conversation.
+If you can't find the topic you're looking for, you can always create your own Room.
+
+## Try Creating a Room Like These
+For example:
+• Do people use this expression in your country?
+• Does this phrase sound natural?
+• How do people greet each other where you live?
+• Are there any popular slang words right now?
+• What's one word in your language that's difficult to explain?
+Sometimes the most interesting things aren't found in textbooks.
+By asking people who actually use the language every day, you may discover expressions and perspectives you've never encountered before.
+
+## You Can Also View the Original Message
+Chatgo lets you view not only AI translations but also the original message.
+Instead of reading only the translated version, you can check,
+"What did they actually write?"
+Comparing the original text with the translation can help you discover new vocabulary, sentence structures, and natural ways of expressing ideas.
+As you enjoy conversations, you'll naturally become more familiar with different languages.
+
+## Enjoy the Process of Learning
+Learning a language isn't about memorizing everything at once.
+The most important thing is to keep learning little by little.
+Talk about topics that interest you.
+Look up expressions you're curious about.
+Learn from real conversations with people around the world.
+Those small experiences can gradually build your understanding of another language.
+Join a Room that interests you, or create your own.
+You may discover not only new words, but also new ways of communicating with people around the world.
+TXT,
+    'article_hobbies-with-chatgo_title' => 'Connect with People Around the World Through Your Hobbies on Chatgo',
+    'article_hobbies-with-chatgo_body' => <<<'TXT'
+## It's Easier to Start a Conversation When You Share the Same Interests
+Have you ever wondered,
+"Is this game popular in other countries?"
+"Do people in different countries listen to different artists?"
+"Can anyone recommend a good movie?"
+Hobbies are one of the easiest ways to connect with people, even if you speak different languages or come from different cultures.
+On Chatgo, you can talk with people from around the world about games, music, movies, anime, sports, and many other interests.
+Sharing the same hobby often makes conversations feel natural and enjoyable.
+
+## Look for Rooms with These Tags
+If you'd like to talk about your hobbies, try looking for Rooms with tags like these.
+Recommended Tags:
+• Games
+• Music
+• Movies & TV
+• Anime & Manga
+• Sports
+• Art & Craft
+If you find a Room that interests you, post a reply and join the conversation.
+If you can't find the topic you're looking for, you can always create your own Room.
+
+## Try Creating a Room Like These
+For example:
+• What's the most popular game in your country?
+• Have you watched any great movies lately?
+• Who's your favorite artist right now?
+• What cartoons or anime did you grow up watching?
+• What's the most popular sport where you live?
+If there's something you'd like to ask people from around the world, it's a great topic for a Room.
+Sometimes, a simple question can lead to an unexpected conversation.
+
+## The Same Hobby Can Be Different Around the World
+Even when people enjoy the same hobby, their experiences can be very different depending on where they live.
+The most popular games may vary from country to country.
+People might introduce you to movies or music you've never heard before.
+Something that feels completely normal where you live may be something entirely new to someone else.
+Talking with people from around the world can introduce you to new entertainment, different cultures, and fresh perspectives.
+That's one of the things that makes Chatgo unique.
+
+## Start Your Next Conversation with Something You Enjoy
+If you're talking with people from around the world for the first time, starting with one of your hobbies is a great choice.
+Having a shared interest makes conversations feel more natural.
+Join a Room that catches your attention.
+Or create your own Room about something you'd like to talk about.
+Your favorite hobby could become the beginning of a new conversation with people from all over the world.
+TXT,
     'article_world-lifestyle-with-chatgo_title' => 'Discover Everyday Life Around the World with Chatgo',
-    'article_ask-the-world-on-chatgo_title' => 'Ask People Around the World on Chatgo',
+    'article_world-lifestyle-with-chatgo_body' => <<<'TXT'
+## What's Everyday Life Like in Other Countries?
+Have you ever wondered,
+"What's school like in other countries?"
+"How do people usually spend their weekends?"
+"What do people eat for breakfast?"
+People around the world live in many different ways.
+You can search for information online, but hearing directly from people who actually live there can lead to discoveries you might never expect.
+With Chatgo, you can connect with people from around the world and casually talk about everyday life in different countries.
+
+## Look for Rooms with These Tags
+If you'd like to learn about everyday life around the world, try looking for Rooms with tags like these.
+Recommended Tags:
+• Life & Daily Living
+• School & University
+• Wellness & Lifestyle
+• Local Community
+• Culture, Religion & History
+• Casual Chat
+If you find a Room that interests you, post a reply and join the conversation.
+If you can't find the topic you're looking for, you can always create your own Room.
+
+## Try Creating a Room Like These
+For example:
+• What's school like in your country?
+• What do people usually do on weekends where you live?
+• What do you usually eat for breakfast?
+• What games did you play when you were a child?
+• Is there a unique tradition or custom in your country?
+Your questions don't have to be complicated.
+Even simple conversations about everyday life can help you discover different cultures and ways of thinking.
+
+## Everyday Differences Can Lead to New Discoveries
+People may live similar daily lives, but customs and lifestyles often differ from country to country.
+School life, weekend activities, eating habits, and daily routines can all be surprisingly different.
+Something that feels completely normal where you live may be completely unfamiliar somewhere else.
+Talking with people from around the world can introduce you to new lifestyles, cultures, and perspectives.
+That's one of the unique experiences Chatgo offers.
+
+## Start with Everyday Conversations
+You don't need any special knowledge to connect with people around the world.
+Ask about everyday life.
+Share your own experiences.
+Even ordinary topics can become meaningful conversations.
+Join a Room that interests you.
+Or create your own Room about something you'd like to discuss.
+You may discover that learning about everyday life in other countries is one of the most enjoyable ways to connect with people around the world on Chatgo.
+TXT,
+    'article_ask-the-world-on-chatgo_title' => 'Ask People Around the World with Chatgo',
+    'article_ask-the-world-on-chatgo_body' => <<<'TXT'
+"What do people around the world think?"
+When you search online, you can find an incredible amount of information.
+But have you ever wondered,
+"What do people around the world actually think?"
+For example:
+• Is this movie popular in other countries?
+• How are people using AI around the world?
+• What kinds of jobs are popular where you live?
+Questions like these rarely have just one correct answer.
+That's why asking people from different countries can lead to new discoveries and perspectives you wouldn't find through a search engine alone.
+With Chatgo, you can start a conversation about a single topic and learn about the experiences and opinions of people from around the world.
+
+## Look for Rooms with These Tags
+If you'd like to ask questions to people around the world, try looking for Rooms with tags like these.
+Recommended Tags:
+• General Q&A
+• News
+• International Affairs
+• Science & Technology
+• AI & Machine Learning
+• Casual Chat
+If you find a Room that interests you, post a reply and join the conversation.
+If you can't find the topic you're looking for, you can always create your own Room.
+
+## Try Creating a Room Like These
+For example:
+• How is AI used in your country?
+• What's been in the news recently where you live?
+• What jobs are popular in your country?
+• What's your dream job?
+• What's the best thing you've bought recently?
+The more open-ended your question is, the more likely you are to receive a variety of replies from people with different backgrounds and experiences.
+
+## You May Discover Answers You Never Expected
+Even when people are answering the same question, their replies can vary depending on their country, culture, age, and personal experiences.
+You might find yourself thinking,
+"I've never thought about it that way."
+"That's completely different from my experience."
+One of the most enjoyable parts of Chatgo is discovering real experiences and perspectives that are difficult to find through online searches alone.
+
+## Don't Be Afraid to Ask
+You don't have to ask complicated questions.
+Sometimes all it takes is wondering,
+"How is it in other countries?"
+Join a Room that interests you.
+Or create your own Room about something you're curious about.
+A simple question can lead to new discoveries, meaningful conversations, and connections with people from all over the world.
+TXT,
     'terms_agree_text' => 'I agree to the Terms of Service and Privacy Policy',
     'terms_back' => 'Back',
     'terms_submit' => 'Agree and Continue',
