@@ -40,6 +40,8 @@
             <span> | </span>
             <a href="{{ route('legal.faq') }}">{{ \App\Services\LanguageService::trans('footer_faq', $lang) }}</a>
             <span> | </span>
+            <a href="{{ route('legal.articles') }}">{{ \App\Services\LanguageService::trans('footer_articles', $lang) }}</a>
+            <span> | </span>
             <a href="{{ route('legal.terms') }}">{{ \App\Services\LanguageService::trans('footer_terms', $lang) }}</a>
             <span> | </span>
             <a href="{{ route('legal.privacy') }}">{{ \App\Services\LanguageService::trans('footer_privacy', $lang) }}</a>

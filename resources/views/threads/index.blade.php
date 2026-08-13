@@ -88,6 +88,8 @@
                             <a href="{{ route('legal.guide') }}">{{ \App\Services\LanguageService::trans('footer_guide', $lang) }}</a>
                             <span class="chatgo-about-links-sep" aria-hidden="true">|</span>
                             <a href="{{ route('legal.faq') }}">{{ \App\Services\LanguageService::trans('footer_faq', $lang) }}</a>
+                            <span class="chatgo-about-links-sep" aria-hidden="true">|</span>
+                            <a href="{{ route('legal.articles') }}">{{ \App\Services\LanguageService::trans('footer_articles', $lang) }}</a>
                         </nav>
                     </div>
                 </section>
