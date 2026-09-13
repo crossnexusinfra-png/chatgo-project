@@ -184,6 +184,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(\App\Http\Middleware\RequestCorrelationId::class);
+        $middleware->prepend(\App\Http\Middleware\InitializeLocale::class);
 
         // リプライ・ルーム1リプライ目のコイン計算は先頭末尾の空白・改行も1文字と数える（フロントと一致させる）
         $middleware->trimStrings(except: [
@@ -208,6 +209,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // 凍結チェックは web グループ内（StartSession 後）で実行する。
         // グローバルに置くとセッション前に走り Auth::check() が常に false になり、凍結が無効化される。
         $middleware->web(append: [
+            \App\Http\Middleware\SetRequestLocale::class,
             \App\Http\Middleware\CheckUserFrozen::class,
         ]);
         

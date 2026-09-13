@@ -200,7 +200,7 @@ class ProfileController extends Controller
             'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
             'residence' => 'required|string|in:JP,US,GB,CA,AU,OTHER',
             'default_avatar' => ['nullable', 'string', 'regex:#^(none|(man|woman)\d+\.png)$#'],
-            'language' => 'required|string|in:JA,EN',
+            'language' => 'required|string|in:'.implode(',', \App\Services\LanguageService::appLanguages()),
         ];
         if ($smsVerificationEnabled) {
             $validationRules['phone'] = $phoneRule;
@@ -245,10 +245,13 @@ class ProfileController extends Controller
             $data['phone'] = $newPhone;
         }
 
-        // 言語設定が変更された場合、セッションキャッシュをクリア
+        // 言語設定が変更された場合、表示ロケールを合わせてリダイレクトする
         $oldLanguage = $user->language ?? 'JA';
         if ($oldLanguage !== $request->language) {
             session()->forget('current_language');
+            \App\Services\LanguageService::applyRequestLocale(
+                \App\Services\LanguageService::toUrlLocale($request->language)
+            );
         }
 
         if ($emailChanged || $phoneChanged) {

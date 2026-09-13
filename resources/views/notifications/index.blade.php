@@ -94,6 +94,7 @@
         'currentPage' => $messages->currentPage(),
         'hasMorePages' => $messages->hasMorePages(),
         'notificationFilter' => $filter ?? 'all',
+        'indexUrl' => route('notifications.index'),
     ];
 @endphp
 <script type="application/json" id="notifications-index-bootstrap" nonce="{{ $csp_nonce ?? '' }}">@json($notificationsIndexBootstrap)</script>

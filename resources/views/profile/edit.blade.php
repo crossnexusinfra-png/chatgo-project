@@ -280,8 +280,9 @@
                             }
                             $currentLanguage = \App\Services\TranslationService::normalizeLang((string) $rawLang);
                         @endphp
-                        <option value="JA" {{ $currentLanguage === 'JA' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_ja', $lang) }}</option>
-                        <option value="EN" {{ $currentLanguage === 'EN' ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_en', $lang) }}</option>
+                        @foreach (\App\Services\LanguageService::appLanguages() as $appLang)
+                            <option value="{{ $appLang }}" {{ $currentLanguage === $appLang ? 'selected' : '' }}>{{ \App\Services\LanguageService::trans('language_'.strtolower($appLang), $lang) }}</option>
+                        @endforeach
                     </select>
                     <p class="help-text">{{ \App\Services\LanguageService::trans('language_help', $lang) }}</p>
                 </div>

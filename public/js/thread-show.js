@@ -29,6 +29,7 @@
     const canUseMediaPostsFromConfig = config.canUseMediaPosts !== false;
     const continuationRequestThreshold = config.continuationRequestThreshold || 3;
     const csrfToken = config.csrfToken || '';
+    const adsEnabled = !!config.adsEnabled;
 
     const jsonApiHeaders = {
         'Accept': 'application/json',
@@ -1390,7 +1391,9 @@
 
     // 広告動画視聴処理
     window.watchAdFromThread = function() {
+        if (!adsEnabled) return;
         window.watchAdVideo({
+            adsEnabled: true,
             modalId: 'adVideoModalThread',
             videoId: 'adVideoThread',
             statusId: 'adWatchStatusThread',
@@ -1408,6 +1411,7 @@
     };
 
     window.closeAdVideoFromThread = function() {
+        if (!adsEnabled) return;
         const modal = document.getElementById('adVideoModalThread');
         const video = document.getElementById('adVideoThread');
         if (!modal || !video) return;

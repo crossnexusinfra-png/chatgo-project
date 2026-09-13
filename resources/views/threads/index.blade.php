@@ -115,6 +115,7 @@
                                     <li>
                                         {{ $error }}
                                         @auth
+                                        @if(config('ads.enabled'))
                                         {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時） --}}
                                         <!-- ad-placement: rewarded-video / location: insufficient-coins error -->
                                         <div class="error-message-margin-top" data-ad-placement="rewarded-video" aria-label="Advertisement">
@@ -124,6 +125,7 @@
                                             </button>
                                             <span id="adWatchStatusMain" class="ad-status-inline"></span>
                                         </div>
+                                        @endif
                                         @endauth
                                     </li>
                                 @else
@@ -176,6 +178,7 @@
                 </section>
                     @endif
                 @endif
+                @if(config('ads.enabled'))
                 <!-- 広告報酬ルーレット用オーバーレイ -->
                 <div id="coinRouletteOverlay" class="coin-roulette-overlay">
                     <div class="coin-roulette-container">
@@ -186,6 +189,7 @@
                         <button id="coinRouletteOkButton" class="btn btn-primary coin-roulette-ok-button">OK</button>
                     </div>
                 </div>
+                @endif
 
                 {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所 --}}
                 <!-- ad-placement: rewarded-video / location: index page (top of popular rooms) -->
@@ -197,6 +201,7 @@
                         </h3>
                         <div class="thread-scroll-container thread-scroll-container-padding">
                             <span class="ad-review-label" aria-label="ad-placeholder">Ad / 広告</span>
+                            @if(config('ads.enabled'))
                             <p class="ad-section-description">
                                 {{ \App\Services\LanguageService::trans('ad_video_description', $lang) }}
                             </p>
@@ -204,6 +209,7 @@
                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                             </button>
                             <div id="adWatchStatusMain" class="ad-status"></div>
+                            @endif
                         </div>
                     </div>
                 </section>
@@ -902,12 +908,16 @@
 @auth
     <meta name="thread-index-config" content="{{ json_encode([
         'csrfToken' => csrf_token(),
+        'adsEnabled' => (bool) config('ads.enabled'),
         'routes' => [
             'watchAdRoute' => route('coins.watch-ad')
         ],
-        'adUrls' => [
+        'adUrls' => config('ads.enabled') ? [
             'mainUrl' => config('ads.test_ad_url'),
             'fallbackUrls' => config('ads.test_ad_fallback_urls', [])
+        ] : [
+            'mainUrl' => '',
+            'fallbackUrls' => []
         ],
         'translations' => [
             'closeButton' => \App\Services\LanguageService::trans('close_button', $lang),

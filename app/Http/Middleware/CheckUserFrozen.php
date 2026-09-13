@@ -123,7 +123,7 @@ class CheckUserFrozen
                     // フレンド削除のみ許可（フレンド画面への導線はUI上無効化）
                     'friends.delete',
                 ];
-                $isAllowedNonGet = in_array($routeName, $allowedNonGetRoutes, true) || $request->is('logout');
+                $isAllowedNonGet = in_array($routeName, $allowedNonGetRoutes, true) || $request->routeIs('logout');
                 if (!$request->isMethod('GET') && !$isAllowedNonGet) {
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
                     $message = $manualPermanent
@@ -206,7 +206,7 @@ class CheckUserFrozen
                 'notifications.mandatory-consent',
                 'notifications.receive-coin',
             ];
-            if (!$request->isMethod('GET') && !in_array($routeName, $allowedNonGetRoutes, true) && !$request->is('logout')) {
+            if (!$request->isMethod('GET') && !in_array($routeName, $allowedNonGetRoutes, true) && !$request->routeIs('logout')) {
                 $lang = \App\Services\LanguageService::getCurrentLanguage();
 
                 return back()->withErrors([

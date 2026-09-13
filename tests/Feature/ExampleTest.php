@@ -14,6 +14,8 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertRedirect();
+        $location = $response->headers->get('Location') ?? '';
+        $this->assertMatchesRegularExpression('#/(ja|en)$#', parse_url($location, PHP_URL_PATH) ?: $location);
     }
 }

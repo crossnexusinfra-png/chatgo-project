@@ -130,6 +130,14 @@ body {
     margin: 0 15px;
 }
 
+.header-logo-only .header-top {
+    justify-content: flex-start;
+}
+
+.header-logo-only .header-left .logo {
+    margin-left: 0;
+}
+
 .logo-image {
     height: 58px;
     width: auto;
@@ -2268,6 +2276,26 @@ form.form-submitting input[readonly] {
     margin-right: auto;
 }
 
+.site-footer-article {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px 0;
+    max-width: none;
+    margin: 12px 0 0;
+    padding: 12px 4px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #7a8094;
+}
+
+.site-footer-article span {
+    color: #c0c5d4;
+    user-select: none;
+}
+
 .back-link {
     color: #999;
     text-decoration: none;
@@ -2766,6 +2794,13 @@ button.back-link--button {
 
     .legal-article-box {
         padding: 14px 12px 16px;
+    }
+
+    .site-footer-article {
+        margin-top: 10px;
+        padding-top: 10px;
+        font-size: 12px;
+        gap: 4px 0;
     }
 
     .faq-q,

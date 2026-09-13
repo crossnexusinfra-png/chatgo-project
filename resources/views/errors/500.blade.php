@@ -8,6 +8,8 @@
     {{ \App\Services\LanguageService::trans('error_500_title', $lang) ?? '500 - サーバーエラー' }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/error-pages.css') }}">
 @endpush

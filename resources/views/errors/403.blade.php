@@ -8,6 +8,8 @@
     {{ \App\Services\LanguageService::trans('error_403_title', $lang) ?? '403 - アクセス拒否' }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/error-pages.css') }}">
 @endpush

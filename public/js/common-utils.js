@@ -175,6 +175,7 @@
      */
     window.watchAdVideo = function(options) {
         const {
+            adsEnabled = false,
             modalId,
             videoId,
             statusId,
@@ -184,7 +185,9 @@
             watchAdRoute = '/coins/watch-ad',
             onSuccess,
             onClose
-        } = options;
+        } = options || {};
+
+        if (!adsEnabled) return;
 
         const btn = document.getElementById(btnId);
         const status = document.getElementById(statusId);

@@ -7,6 +7,8 @@
     {{ $error_title ?? \App\Services\LanguageService::trans('thread_deleted_title', $lang) }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
 @endpush

@@ -9,6 +9,8 @@
     {{ \App\Services\LanguageService::trans('r18_thread_warning_title', $lang) }}
 @endsection
 
+@section('robots', 'noindex, follow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
 @endpush

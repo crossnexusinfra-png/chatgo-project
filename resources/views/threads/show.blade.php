@@ -397,11 +397,13 @@
                                         <div class="alert alert-danger alert-danger-inline" data-ad-placement="rewarded-video" aria-label="Advertisement">
                                             {{ $message }}<br>
                                             @auth
+                                            @if(config('ads.enabled'))
                                             <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
                                             <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
                                             <span id="adWatchStatusThread" class="ad-status-thread"></span>
+                                            @endif
                                             @endauth
                                         </div>
                                     @else
@@ -455,6 +457,7 @@
     </div>
 
     @auth
+    @if(config('ads.enabled'))
     {{-- AdSense審査用: 広告動画（リワード動画広告）モーダル / ルーム詳細ページ --}}
     <!-- ad-placement: rewarded-video-modal / location: thread-show -->
     <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="Advertisement">
@@ -481,6 +484,7 @@
             <button id="coinRouletteOkButtonThread" class="btn btn-primary coin-roulette-ok-button">OK</button>
         </div>
     </div>
+    @endif
     @endauth
 
     <meta name="thread-show-config" content="{{ json_encode([
@@ -493,6 +497,7 @@
         'isCurrentUserThreadOwner' => isset($isCurrentUserThreadOwner) && $isCurrentUserThreadOwner,
         'canReplyToThread' => !empty($canReplyToThread),
         'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
+        'adsEnabled' => (bool) config('ads.enabled'),
         'continuationRequestThreshold' => $continuationRequestThreshold ?? 3,
         'csrfToken' => csrf_token(),
         'routes' => [

@@ -8,6 +8,8 @@
     {{ \App\Services\LanguageService::trans('error_419_title', $lang) ?? '419 - セッション期限切れ' }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/error-pages.css') }}">
 @endpush

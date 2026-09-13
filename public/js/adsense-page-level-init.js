@@ -147,7 +147,8 @@
         var eeaCfg = parseConfig('adsense-eea-test-config') || {};
         var forceEeaUk = !!eeaCfg.forceEeaUk || readForceEeaUkFallback();
         window.__chatgoEeaForceFlag = forceEeaUk;
-        // テスト強制時は、AdSense有効/official条件の前でも同意UIを表示して検証可能にする
+        if (!cfg || !cfg.enabled) return;
+        // テスト強制時は、official 条件の前でも同意UIを表示して検証可能にする
         if (forceEeaUk) {
             var forcedChoice = getConsentChoice();
             if (forcedChoice === 'granted') {
@@ -198,7 +199,6 @@
             return;
         }
 
-        if (!cfg || !cfg.enabled) return;
         if (cfg.interstitialMode !== 'official') return;
         if (!cfg.client) return;
 

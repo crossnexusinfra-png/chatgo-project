@@ -3,19 +3,38 @@
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ $lang }}">
+<html lang="{{ \App\Services\LanguageService::htmlLang($lang) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', \App\Services\LanguageService::trans('site_title', $lang ?? 'ja'))</title>
+    @php
+        $seoService = $seoService ?? app(\App\Services\SeoService::class);
+        $canonicalHref = $seoCanonical ?? $seoService->canonicalUrl();
+        $defaultRobots = $seoRobots ?? $seoService->robotsMeta(
+            $thread ?? null,
+            isset($isR18Thread) ? (bool) $isR18Thread : null,
+        );
+    @endphp
+    @hasSection('robots')
+    <meta name="robots" content="@yield('robots')">
+    @else
+    <meta name="robots" content="{{ $defaultRobots }}">
+    @endif
+    <link rel="canonical" href="{{ $canonicalHref }}">
+    @foreach ($seoService->hreflangLinks() as $hreflangLink)
+    <link rel="alternate" hreflang="{{ $hreflangLink['hreflang'] }}" href="{{ $hreflangLink['href'] }}">
+    @endforeach
     @include('layouts.favicon')
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
     @stack('styles')
-    {{-- Google AdSense（審査用） --}}
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1438145064622040"
+    @if(!request()->routeIs('admin.*') && config('adsense.enabled') && config('adsense.client'))
+    {{-- Google AdSense。ADSENSE_ENABLED=false のときはスクリプト自体を読み込まない --}}
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ e(config('adsense.client')) }}"
          crossorigin="anonymous"></script>
+    @endif
 </head>
 <body data-csp-nonce="{{ $csp_nonce ?? '' }}">
     @if(!request()->routeIs('admin.*'))
@@ -35,21 +54,7 @@
         @endif
         @yield('content')
         @if(request()->routeIs('threads.index'))
-        <footer class="site-footer site-footer-main">
-            <a href="{{ route('legal.guide') }}">{{ \App\Services\LanguageService::trans('footer_guide', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.faq') }}">{{ \App\Services\LanguageService::trans('footer_faq', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.articles') }}">{{ \App\Services\LanguageService::trans('footer_articles', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.terms') }}">{{ \App\Services\LanguageService::trans('footer_terms', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.privacy') }}">{{ \App\Services\LanguageService::trans('footer_privacy', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.company') }}">{{ \App\Services\LanguageService::trans('footer_company', $lang) }}</a>
-            <span> | </span>
-            <a href="{{ route('legal.contact') }}">{{ \App\Services\LanguageService::trans('footer_contact', $lang) }}</a>
-        </footer>
+            @include('layouts.site-footer', ['footerVariant' => 'main'])
         @endif
     </main>
     

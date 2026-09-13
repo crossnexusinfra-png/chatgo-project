@@ -2,13 +2,14 @@
 @php
     // $langが定義されていない場合は取得
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $logoOnly = !empty($logoOnly);
 @endphp
-<header class="header">
+<header class="header{{ $logoOnly ? ' header-logo-only' : '' }}">
     <div class="header-content">
         <div class="header-top">
             <div class="header-left">
                 <!-- モバイルメニューボタン（threads.indexページのみ表示） -->
-                @if(Route::currentRouteName() === 'threads.index')
+                @if(!$logoOnly && Route::currentRouteName() === 'threads.index')
                 <button class="mobile-menu-btn" id="mobileMenuBtn" title="{{ \App\Services\LanguageService::trans('menu', $lang) }}">
                     <span class="hamburger-line"></span>
                     <span class="hamburger-line"></span>
@@ -21,7 +22,7 @@
                 </a>
             </div>
             
-            @if(!isset($hideSearch) || !$hideSearch)
+            @if(!$logoOnly && (!isset($hideSearch) || !$hideSearch))
             <div class="header-center">
                 <form action="{{ route('threads.search') }}" method="GET" class="search-form" id="searchForm">
                     <div class="search-box">
@@ -41,6 +42,7 @@
             <script src="{{ asset('js/common-header.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
             @endif
             
+            @if(!$logoOnly)
             <div class="header-right">
                 @auth
                     @php
@@ -90,12 +92,13 @@
                     </a>
                 @endauth
             </div>
+            @endif
         </div>
     </div>
 </header>
 
 <!-- モバイルタグ一覧オーバーレイ（threads.indexページのみ表示） -->
-@if(Route::currentRouteName() === 'threads.index')
+@if(!$logoOnly && Route::currentRouteName() === 'threads.index')
 <div class="mobile-tags-overlay" id="mobileTagsOverlay">
     <div class="overlay-header">
         <h3>{{ \App\Services\LanguageService::trans('tags', $lang) }}</h3>

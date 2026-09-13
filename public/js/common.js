@@ -95,11 +95,12 @@
         const searchForm = document.getElementById('searchForm');
         const currentPath = window.location.pathname;
         
-        if (searchForm && currentPath.startsWith('/tag/')) {
-            const tagMatch = currentPath.match(/^\/tag\/(.+)$/);
+        if (searchForm) {
+            const tagMatch = currentPath.match(/^\/(?:[a-z]{2}\/)?tag\/(.+)$/);
             if (tagMatch) {
+                const localePrefix = currentPath.match(/^\/([a-z]{2})\//) ? `/${currentPath.match(/^\/([a-z]{2})\//)[1]}` : '';
                 const tag = decodeURIComponent(tagMatch[1]);
-                searchForm.action = `/tag/${tag}`;
+                searchForm.action = `${localePrefix}/tag/${tag}`;
             }
         }
         

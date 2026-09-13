@@ -120,6 +120,9 @@
     }
 
     var cfg = parseConfig() || {};
+    if (!cfg.enabled) {
+        return;
+    }
 
     function threadPathMatch(pathname) {
         return /^\/(?:[^/]+\/)?threads\/[^/?#]+\/?$/.test(pathname);

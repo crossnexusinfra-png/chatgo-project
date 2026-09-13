@@ -20,11 +20,13 @@
     const csrfToken = config.csrfToken || '';
     const routes = config.routes || {};
     const adUrls = config.adUrls || {};
+    const adsEnabled = !!config.adsEnabled;
 
     // 広告動画モーダルを動的に生成
     // AdSense審査用: 広告動画（リワード動画広告）モーダル / メインページ
     // ad-placement: rewarded-video-modal / location: index page
     (function setupAdVideoModal() {
+        if (!adsEnabled) return;
         if (document.getElementById('adVideoModal')) return;
 
         const modal = document.createElement('div');
@@ -59,7 +61,9 @@
     })();
 
     window.watchAdFromIndex = function() {
+        if (!adsEnabled) return;
         window.watchAdVideo({
+            adsEnabled: true,
             modalId: 'adVideoModal',
             videoId: 'adVideoMain',
             statusId: 'adWatchStatusMain',
@@ -85,6 +89,7 @@
     };
 
     window.closeAdVideoFromIndex = function() {
+        if (!adsEnabled) return;
         const modal = document.getElementById('adVideoModal');
         const video = document.getElementById('adVideoMain');
         if (!modal || !video) return;

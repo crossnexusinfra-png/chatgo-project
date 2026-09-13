@@ -34,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
         
         // パフォーマンス設定の初期化
         $this->initializePerformanceSettings();
+
+        \Illuminate\Support\Facades\URL::defaults([
+            'locale' => \App\Services\LanguageService::fallbackLocale(),
+        ]);
         
         // ViewComposerは一時的に無効化（無限ループの問題を回避）
         // 各ビューで直接$langを取得する方式に戻す

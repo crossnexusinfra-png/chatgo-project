@@ -7,6 +7,9 @@ return [
     |--------------------------------------------------------------------------
     | AdSense 管理画面で作成した広告ユニットの data-ad-slot を .env に設定してください。
     | 未設定のスロットは HTML を出力しません（レイアウトのみの場合は enabled=false）。
+    | enabled=false のときはプレースホルダ枠のみ残し、adsbygoogle.js と
+    | AdSense 初期化・push・インタースティシャル用スクリプトは読み込みません。
+    | 広告動画（config/ads.php）も同じ ADSENSE_ENABLED で停止します。
     */
     'enabled' => env('ADSENSE_ENABLED', false),
 

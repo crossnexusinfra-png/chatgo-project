@@ -8,6 +8,8 @@
     {{ \App\Services\LanguageService::trans('error_404_title', $lang) ?? '404 - ページが見つかりません' }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/error-pages.css') }}">
 @endpush

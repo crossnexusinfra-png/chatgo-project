@@ -8,6 +8,8 @@
     {{ \App\Services\LanguageService::trans('error_503_title', $lang) ?? '503 - サービス一時停止中' }}
 @endsection
 
+@section('robots', 'noindex, nofollow')
+
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/error-pages.css') }}">
 @endpush

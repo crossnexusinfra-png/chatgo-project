@@ -49,6 +49,8 @@
                     </section>
                 @endforelse
             </div>
+
+            @include('layouts.site-footer', ['footerVariant' => 'article'])
         </article>
     </x-content-with-rails>
 

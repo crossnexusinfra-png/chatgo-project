@@ -747,8 +747,13 @@
         try {
             const nextPage = currentPage + 1;
             const filter = (config.notificationFilter || 'all').trim() || 'all';
-            const filterQs = filter === 'all' ? '' : '&filter=' + encodeURIComponent(filter);
-            const response = await fetch('/notifications?page=' + nextPage + filterQs, {
+            const params = new URLSearchParams();
+            params.set('page', String(nextPage));
+            if (filter !== 'all') {
+                params.set('filter', filter);
+            }
+            const indexUrl = config.indexUrl || window.location.pathname;
+            const response = await fetch(indexUrl + '?' + params.toString(), {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',

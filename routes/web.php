@@ -2,18 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThreadController;
-use App\Http\Controllers\ResponseController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\AcknowledgmentController;
 use App\Http\Controllers\NotificationsController;
-use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\CoinController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\ThreadContinuationController;
-use App\Http\Controllers\FreezeAppealController;
-use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\SeoController;
+use App\Http\Controllers\LocaleRedirectController;
+use App\Services\LanguageService;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,12 +19,13 @@ use App\Http\Controllers\ArticleController;
 |--------------------------------------------------------------------------
 | 管理者ルートは先に登録し、ADMIN_PREFIX のURLが他ルートに奪われないようにする。
 |
+| 人間が直接見る UI → /{locale}/... （routes/ui.php、実装は言語で複製しない）
+| 機械が利用するエンドポイント → locale なし
+|
 */
 
-// 管理者専用ルート（必ず最初に登録）
 require __DIR__.'/admin.php';
 
-// ブラウザは /favicon.ico を先に取りに行くことが多い。images/favicon-16.png と同一内容を返す
 Route::get('/favicon.ico', function () {
     $path = public_path('images/favicon-16.png');
     if (! is_file($path)) {
@@ -39,10 +38,9 @@ Route::get('/favicon.ico', function () {
     ]);
 });
 
-// トップページにアクセスされたら、ThreadControllerのindexメソッドを呼び出す
-Route::get('/', [ThreadController::class, 'index'])->name('threads.index');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
-// API ルート（/api プレフィックス・Cloudflare 等で一括制限可能）
 Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {
     if (config('app.debug')) {
         Route::get('/upload-limits', function () {
@@ -76,41 +74,6 @@ Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {
     Route::get('/user/{user}/residence-history', [ProfileController::class, 'getResidenceHistory'])->name('api.user.residence-history');
 });
 
-// サイト改善要望の投稿
-Route::post('/suggestions', [SuggestionController::class, 'store'])->middleware(['throttle:suggestions', 'request.user'])->name('suggestions.store');
-
-// 凍結中の異議申し立て（1凍結期間につき1回）
-Route::post('/freeze-appeals', [FreezeAppealController::class, 'store'])
-    ->middleware(['auth', 'throttle:freeze_appeals', 'request.user'])
-    ->name('freeze-appeals.store');
-// GETリクエストの場合はトップページにリダイレクト
-Route::get('/suggestions', function() {
-    return redirect()->route('threads.index');
-});
-
-// 検索機能（初回はHTML、続き読みは /api/search/more）
-Route::get('/search', [ThreadController::class, 'search'])->middleware('throttle:search')->name('threads.search');
-
-// タグ検索機能（続き読みは /api/tag/{tag}/more）
-Route::get('/tag/{tag}', [ThreadController::class, 'searchByTag'])->name('threads.tag');
-
-// カテゴリ詳細ページ（続き読みは /api/category/{category}/more）
-Route::get('/category/{category}', [ThreadController::class, 'category'])->name('threads.category');
-
-// スレッド作成ページは削除（モーダルで表示するため）
-// 直接メインページにリダイレクト
-Route::get('/threads/create', function() {
-    return redirect()->route('threads.index');
-})->name('threads.create');
-
-// /threads というURLでPOSTリクエストがあった場合、ThreadControllerのstoreメソッドを呼び出す
-Route::post('/threads', [ThreadController::class, 'store'])->middleware(['throttle:post', 'request.user'])->name('threads.store');
-// GETリクエストの場合はトップページにリダイレクト
-Route::get('/threads', function() {
-    return redirect()->route('threads.index');
-});
-
-// リプライの JSON 取得は /api 配下に置かない（fetch が CDN で 403 になる事例があるため）
 Route::get('/threads/{thread}/responses/search', [ThreadController::class, 'searchResponses'])
     ->middleware('throttle:api')
     ->name('api.threads.responses.search');
@@ -126,138 +89,14 @@ Route::post('/threads/{thread}/responses/{response}/translate', [ThreadControlle
 Route::post('/threads/{thread}/translate-title', [ThreadController::class, 'translateThreadTitle'])
     ->middleware('throttle:api')
     ->name('threads.translate-title');
+Route::post('/threads/{thread}/continuation-request', [ThreadContinuationController::class, 'toggleRequest'])
+    ->middleware('auth')
+    ->name('threads.continuation-request');
 
-// スレッドの個別表示
-Route::get('/threads/{thread}', [ThreadController::class, 'show'])->name('threads.show');
-
-// お気に入り（認証が必要）
-Route::post('/threads/{thread}/favorite', [ThreadController::class, 'toggleFavorite'])->middleware('auth')->name('threads.favorite.toggle');
-
-// 続きスレッド要望（認証が必要）
-Route::post('/threads/{thread}/continuation-request', [ThreadContinuationController::class, 'toggleRequest'])->middleware('auth')->name('threads.continuation-request');
-
-// レスポンス投稿（認証が必要）
-Route::post('/threads/{thread}/responses', [ResponseController::class, 'store'])->middleware(['throttle:post', 'request.user'])->name('responses.store');
-
-// レスポンス返信（認証が必要）
-Route::post('/threads/{thread}/responses/{response}/reply', [ResponseController::class, 'reply'])->middleware(['throttle:post', 'request.user'])->name('responses.reply');
-
-// スレッド編集機能は削除（ユーザーはスレッドを編集できない）
-// 直接アクセスされた場合はスレッド詳細ページにリダイレクト
-Route::get('/threads/{thread}/edit', function($thread) {
-    return redirect()->route('threads.show', $thread);
-});
-Route::put('/threads/{thread}', function($thread) {
-    return redirect()->route('threads.show', $thread);
-});
-
-// スレッド削除
-Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
-
-// 認証関連のルート
-Route::get('/auth', [AuthController::class, 'showAuthChoice'])->name('auth.choice');
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider'])->where('provider', 'google')->name('auth.provider.redirect');
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback'])->where('provider', 'google')->name('auth.provider.callback');
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
-// パスワード再設定（メール／SMS のワンタイムリンク）
-Route::get('/login/password-reset', [AuthController::class, 'showPasswordResetForm'])->name('login.password-reset');
-Route::post('/login/password-reset', [AuthController::class, 'requestPasswordResetEmail'])->middleware('throttle:password_reset_email')->name('login.password-reset.request');
-Route::get('/login/password-reset/phone', [AuthController::class, 'showPasswordResetPhoneForm'])->name('login.password-reset.phone');
-Route::post('/login/password-reset/phone', [AuthController::class, 'requestPasswordResetPhone'])->middleware('throttle:password_reset_phone')->name('login.password-reset.phone.submit');
-Route::get('/login/password-reset/sent', [AuthController::class, 'showPasswordResetSent'])->name('login.password-reset.sent');
-Route::get('/login/password-reset/complete/{token}', [AuthController::class, 'showPasswordResetComplete'])->name('login.password-reset.complete');
-Route::post('/login/password-reset/complete', [AuthController::class, 'submitPasswordResetFromToken'])->name('login.password-reset.complete.submit');
-// GETリクエストの場合はログインページにリダイレクト
-Route::get('/logout', function() {
-    return redirect()->route('login');
-});
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// 新規登録フロー
-Route::get('/auth/terms', [AuthController::class, 'showTermsForm'])->name('auth.terms');
-Route::post('/auth/terms', [AuthController::class, 'acceptTerms'])->name('register.terms');
-Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
-Route::view('/terms', 'legal.terms')->name('legal.terms');
-Route::view('/contact', 'legal.contact')->name('legal.contact');
-Route::view('/company', 'legal.company')->name('legal.company');
-Route::view('/guide', 'legal.guide')->name('legal.guide');
-Route::view('/faq', 'legal.faq')->name('legal.faq');
-Route::get('/articles', [ArticleController::class, 'index'])->name('legal.articles');
-Route::get('/articles/{slug}', [ArticleController::class, 'show'])
-    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
-    ->name('legal.articles.show');
-Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:veriphone');
-// SMS（電話番号）認証ルート — SMS_VERIFICATION_ENABLED=true のときのみ利用（無効時はコントローラーがリダイレクト）
-Route::get('/register/sms-verification', [AuthController::class, 'showSmsVerification'])->name('register.sms-verification');
-Route::post('/register/sms-verification', [AuthController::class, 'verifySms'])->name('register.sms-verify');
-Route::get('/register/sms-resend', function() {
-    return redirect()->route('register');
-});
-Route::post('/register/sms-resend', [AuthController::class, 'resendSms'])->middleware('throttle:verification_initial_sms')->middleware('throttle:veriphone')->name('register.sms-resend');
-Route::get('/register/email-verification', [AuthController::class, 'showEmailVerification'])->name('register.email-verification');
-Route::post('/register/email-verification', [AuthController::class, 'verifyEmail'])->name('register.email-verify');
-// GETリクエストの場合は登録ページにリダイレクト
-Route::get('/register/email-resend', function() {
-    return redirect()->route('register');
-});
-Route::post('/register/email-resend', [AuthController::class, 'resendEmail'])->middleware('throttle:verification_initial_email')->name('register.email-resend');
-
-// マイページ関連のルート（認証が必要）
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
-    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [ProfileController::class, 'update'])->middleware('request.user')->name('profile.update');
-    Route::post('/profile/cancel-pending-contact', [ProfileController::class, 'cancelPendingContactVerification'])->name('profile.cancel-pending-contact');
-    Route::post('/logout', [ProfileController::class, 'logout'])->name('logout');
-    
-    // SMS（電話番号）認証ルート — SMS_VERIFICATION_ENABLED=true のときのみ利用
-    Route::get('/profile/sms-verification', [AuthController::class, 'showProfileSmsVerification'])->name('profile.sms-verification');
-    Route::post('/profile/sms-verification', [AuthController::class, 'verifyProfileSms'])->name('profile.sms-verify');
-    Route::get('/profile/sms-resend', function() {
-        return redirect()->route('profile.sms-verification');
-    });
-    Route::post('/profile/sms-resend', [AuthController::class, 'resendProfileSms'])->middleware('throttle:verification_profile')->middleware('throttle:veriphone')->name('profile.sms-resend');
-    Route::get('/profile/email-verification', [AuthController::class, 'showProfileEmailVerification'])->name('profile.email-verification');
-    Route::post('/profile/email-verification', [AuthController::class, 'verifyProfileEmail'])->name('profile.email-verify');
-    // GETリクエストの場合はメール認証ページにリダイレクト
-    Route::get('/profile/email-resend', function() {
-        return redirect()->route('profile.email-verification');
-    });
-    Route::post('/profile/email-resend', [AuthController::class, 'resendProfileEmail'])->middleware('throttle:verification_profile')->name('profile.email-resend');
-});
-
-// ユーザープロフィール表示（認証不要）
-Route::get('/user/{user}', [ProfileController::class, 'show'])->name('profile.show');
-
-// 通報機能（認証が必要）（existing は /api/reports/existing）
-Route::middleware('auth')->group(function () {
-    Route::post('/reports', [ReportController::class, 'store'])->middleware(['throttle:reports', 'request.user'])->name('reports.store');
-    // GETリクエストの場合はトップページにリダイレクト
-    Route::get('/reports', function() {
-        return redirect()->route('threads.index');
-    });
-});
-
-// スレッド制限了承機能（非ログイン時でも可能）
-Route::post('/threads/{thread}/acknowledge', [AcknowledgmentController::class, 'acknowledgeThread'])->middleware('throttle:notice_reply')->name('threads.acknowledge');
-
-// レスポンス制限了承機能（非ログイン時でも可能）
-Route::post('/threads/{thread}/responses/{response}/acknowledge', [AcknowledgmentController::class, 'acknowledgeResponse'])->middleware('throttle:notice_reply')->name('responses.acknowledge');
-// GETリクエストの場合はスレッド詳細ページにリダイレクト
-Route::get('/threads/{thread}/acknowledge', function($thread) {
-    return redirect()->route('threads.show', $thread);
-});
-
-// GETリクエストの場合はスレッド詳細ページにリダイレクト
-Route::get('/threads/{thread}/responses/{response}/acknowledge', function($thread) {
-    return redirect()->route('threads.show', $thread);
-});
-
-// お知らせ（通知）— ログイン時のみ利用可能
-Route::middleware('auth')->group(function () {
-    Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{message}/read', [NotificationsController::class, 'markAsRead'])->name('notifications.mark-as-read');
     Route::post('/notifications/{message}/mandatory-consent', [NotificationsController::class, 'consentMandatory'])->name('notifications.mandatory-consent');
     Route::post('/notifications/{message}/reply', [NotificationsController::class, 'reply'])->middleware('throttle:notice_reply')->name('notifications.reply');
@@ -265,69 +104,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{message}/r18-approve', [NotificationsController::class, 'approveR18Change'])->name('notifications.r18-approve');
     Route::post('/notifications/{message}/r18-reject', [NotificationsController::class, 'rejectR18Change'])->name('notifications.r18-reject');
     Route::post('/notifications/{message}/report-acknowledge', [NotificationsController::class, 'acknowledgeReportRestriction'])->name('notifications.report-acknowledge');
-});
-// GETで直接アクセスされた場合はお知らせページまたはログインへ
-Route::get('/notifications/{message}/read', function() {
-    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
-})->where('message', '[0-9]+');
-Route::get('/notifications/{message}/reply', function() {
-    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
-})->where('message', '[0-9]+');
-Route::get('/notifications/{message}/receive-coin', function() {
-    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
-})->where('message', '[0-9]+');
-Route::get('/notifications/{message}/r18-approve', function() {
-    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
-})->where('message', '[0-9]+');
-Route::get('/notifications/{message}/r18-reject', function() {
-    return auth()->check() ? redirect()->route('notifications.index') : redirect()->route('login');
-})->where('message', '[0-9]+');
 
-// コイン機能（認証が必要）
-Route::middleware('auth')->group(function () {
     Route::post('/coins/watch-ad', [CoinController::class, 'watchAd'])->middleware('throttle:ad_api')->name('coins.watch-ad');
-    // GETリクエストの場合はマイページにリダイレクト
-    Route::get('/coins/watch-ad', function() {
-        return redirect()->route('profile.index');
-    });
     Route::post('/coins/claim-login-reward', [CoinController::class, 'claimLoginReward'])->name('coins.claim-login-reward');
-    // GETリクエストの場合はマイページにリダイレクト
-    Route::get('/coins/claim-login-reward', function() {
-        return redirect()->route('profile.index');
-    });
+
+    Route::post('/friends/reject-available', [FriendController::class, 'rejectAvailable'])->name('friends.reject-available');
+    Route::post('/friends/delete', [FriendController::class, 'deleteFriend'])->name('friends.delete');
+    Route::post('/friends/send-coins', [FriendController::class, 'sendCoins'])->middleware(['throttle:coins_send', 'request.user'])->name('friends.send-coins');
 });
 
-// フレンド機能（認証が必要）
-Route::middleware('auth')->group(function () {
-    Route::get('/friends', [FriendController::class, 'index'])->name('friends.index');
-    Route::post('/friends/request', [FriendController::class, 'sendRequest'])->name('friends.send-request');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/request', function() {
-        return redirect()->route('friends.index');
-    });
-    Route::post('/friends/{friendRequest}/accept', [FriendController::class, 'acceptRequest'])->name('friends.accept-request');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/{friendRequest}/accept', function() {
-        return redirect()->route('friends.index');
-    });
-    Route::post('/friends/{friendRequest}/reject', [FriendController::class, 'rejectRequest'])->name('friends.reject-request');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/{friendRequest}/reject', function() {
-        return redirect()->route('friends.index');
-    });
-    Route::post('/friends/reject-available', [FriendController::class, 'rejectAvailable'])->name('friends.reject-available');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/reject-available', function() {
-        return redirect()->route('friends.index');
-    });
-    Route::post('/friends/delete', [FriendController::class, 'deleteFriend'])->name('friends.delete');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/delete', function() {
-        return redirect()->route('friends.index');
-    });
-    Route::post('/friends/send-coins', [FriendController::class, 'sendCoins'])->middleware(['throttle:coins_send', 'request.user'])->name('friends.send-coins');
-    // GETリクエストの場合はフレンドページにリダイレクト
-    Route::get('/friends/send-coins', function() {
-        return redirect()->route('friends.index');
-    });
-});
+$supportedLocales = LanguageService::supportedLocales();
+
+Route::prefix('{locale}')
+    ->whereIn('locale', $supportedLocales)
+    ->group(base_path('routes/ui.php'));
+
+Route::get('/', [LocaleRedirectController::class, 'home']);
+
+Route::any('{unprefixed}', [LocaleRedirectController::class, 'legacy'])
+    ->where('unprefixed', LanguageService::unprefixedUiPattern());

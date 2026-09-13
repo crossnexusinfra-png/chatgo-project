@@ -105,7 +105,9 @@ class TranslationService
     public static function normalizeLang(string $lang): string
     {
         $lang = strtoupper(trim($lang));
-        return in_array($lang, ['JA', 'EN'], true) ? $lang : 'EN';
+        return in_array($lang, LanguageService::appLanguages(), true)
+            ? $lang
+            : LanguageService::toAppLanguage(LanguageService::fallbackLocale());
     }
 
     /**

@@ -2,41 +2,162 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\URL;
+
 class LanguageService
 {
+    private static ?string $requestLocale = null;
+
+    /**
+     * URL に使うロケール一覧（小文字）。言語追加は config のみ。
+     *
+     * @return list<string>
+     */
+    public static function supportedLocales(): array
+    {
+        $locales = config('localization.supported', ['ja', 'en']);
+        if (! is_array($locales)) {
+            return ['ja', 'en'];
+        }
+
+        $normalized = [];
+        foreach ($locales as $locale) {
+            if (! is_string($locale) || $locale === '') {
+                continue;
+            }
+            $normalized[] = strtolower($locale);
+        }
+
+        return $normalized !== [] ? array_values(array_unique($normalized)) : ['ja', 'en'];
+    }
+
+    public static function fallbackLocale(): string
+    {
+        $fallback = strtolower((string) config('localization.fallback', 'en'));
+
+        return in_array($fallback, self::supportedLocales(), true) ? $fallback : (self::supportedLocales()[0] ?? 'en');
+    }
+
+    public static function isSupported(string $locale): bool
+    {
+        return in_array(strtolower($locale), self::supportedLocales(), true);
+    }
+
+    /**
+     * DB / 既存コードの JA, EN など。
+     *
+     * @return list<string>
+     */
+    public static function appLanguages(): array
+    {
+        return array_map('strtoupper', self::supportedLocales());
+    }
+
+    public static function toUrlLocale(?string $language): string
+    {
+        if ($language === null || $language === '') {
+            return self::fallbackLocale();
+        }
+
+        $normalized = strtolower($language);
+        if (self::isSupported($normalized)) {
+            return $normalized;
+        }
+
+        return self::fallbackLocale();
+    }
+
+    public static function toAppLanguage(?string $language): string
+    {
+        return strtoupper(self::toUrlLocale($language));
+    }
+
+    public static function htmlLang(?string $language): string
+    {
+        return self::toUrlLocale($language);
+    }
+
+    public static function clearRequestLocale(): void
+    {
+        self::$requestLocale = null;
+    }
+
+    /**
+     * UI の URL ロケールをこのリクエストの正とする。
+     */
+    public static function applyRequestLocale(string $locale, bool $persistSession = true): void
+    {
+        $locale = self::toUrlLocale($locale);
+        self::$requestLocale = $locale;
+        app()->setLocale($locale);
+        URL::defaults(['locale' => $locale]);
+
+        if (! $persistSession) {
+            return;
+        }
+
+        $appLanguage = self::toAppLanguage($locale);
+        try {
+            if (session('current_language') !== $appLanguage) {
+                session(['current_language' => $appLanguage]);
+            }
+            if (session('detected_language') !== $appLanguage) {
+                session(['detected_language' => $appLanguage]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('ロケールのセッション保存に失敗', [
+                'error' => $e->getMessage(),
+                'locale' => $locale,
+            ]);
+        }
+    }
+
+    /**
+     * locale なしエンドポイント向け。route() が {locale} を要求しても落ちないようにする。
+     */
+    public static function applyUrlDefaults(): void
+    {
+        $locale = self::preferredUrlLocaleFromSessionOrDetect();
+        URL::defaults(['locale' => $locale]);
+        app()->setLocale($locale);
+    }
+
+    public static function preferredUrlLocale(): string
+    {
+        return self::toUrlLocale(self::detectPreferredAppLanguage());
+    }
+
     /**
      * 翻訳文字列を取得
-     * 
-     * @param string $key 翻訳キー
-     * @param string|null $language 言語コード（JA, EN）
-     * @param array $replace 置換パラメータ（例: ['days' => 5, 'coins' => 10]）
+     *
+     * @param  string  $key  翻訳キー
+     * @param  string|null  $language  言語コード（JA, EN または ja, en）
+     * @param  array  $replace  置換パラメータ（例: ['days' => 5, 'coins' => 10]）
      * @return string 翻訳された文字列
      */
     public static function trans($key, $language = null, $replace = [])
     {
         $language = $language ?? self::getCurrentLanguage();
-        
-        // 英語コード（JA, EN）を小文字に変換（既存の翻訳ファイルとの互換性）
-        $langCode = strtolower($language);
-        if ($langCode === 'ja') $langCode = 'ja';
-        elseif ($langCode === 'en') $langCode = 'en';
-        else $langCode = 'ja'; // デフォルト
-        
+        $langCode = self::toUrlLocale($language);
+        $fallback = self::fallbackLocale();
+
         $translations = self::getTranslations();
-        
-        $translated = $translations[$langCode][$key] ?? $translations['ja'][$key] ?? $key;
-        
-        // 置換パラメータがある場合は置換（:name と {name} の両方に対応）
-        if (!empty($replace)) {
+
+        $translated = $translations[$langCode][$key]
+            ?? $translations[$fallback][$key]
+            ?? $translations['ja'][$key]
+            ?? $key;
+
+        if (! empty($replace)) {
             foreach ($replace as $search => $value) {
                 $valueStr = $value instanceof \Stringable || is_scalar($value)
                     ? (string) $value
                     : '';
                 $translated = str_replace(":{$search}", $valueStr, $translated);
-                $translated = str_replace('{' . $search . '}', $valueStr, $translated);
+                $translated = str_replace('{'.$search.'}', $valueStr, $translated);
             }
         }
-        
+
         return $translated;
     }
 
@@ -46,15 +167,10 @@ class LanguageService
     public static function transTag($tag, $language = null)
     {
         $language = $language ?? self::getCurrentLanguage();
-        
-        // 英語コード（JA, EN）を小文字に変換（既存の翻訳ファイルとの互換性）
-        $langCode = strtolower($language);
-        if ($langCode === 'ja') $langCode = 'ja';
-        elseif ($langCode === 'en') $langCode = 'en';
-        else $langCode = 'ja'; // デフォルト
-        
+        $langCode = self::toUrlLocale($language);
+
         $tagTranslations = self::getTagTranslations();
-        
+
         return $tagTranslations[$langCode][$tag] ?? $tag;
     }
 
@@ -64,18 +180,18 @@ class LanguageService
     public static function getValidTags()
     {
         $tagTranslations = self::getTagTranslations();
-        // 英語の翻訳キーから有効なタグを取得（カテゴリ名を除く）
-        $validTags = array_keys($tagTranslations['en']);
-        
-        // カテゴリ名を除外
+        $keyLocale = self::toUrlLocale((string) config('localization.tag_key_locale', 'en'));
+        $source = $tagTranslations[$keyLocale] ?? $tagTranslations[self::fallbackLocale()] ?? [];
+        $validTags = array_keys($source);
+
         $categories = [
             '生活・日常', '健康・医療', '仕事・キャリア', '学び・教育', 'テクノロジー・デジタル',
             'テクノロジー・ガジェット', '趣味・エンタメ', '旅行・地域', '恋愛・人間関係',
             'お金・法律・制度', '社会・政治・国際', '文化・宗教・歴史', '科学・自然・宇宙',
             'ペット・動物', '植物・ガーデニング', '不思議・オカルト', '雑談・ユーモア',
-            'R18・アダルト', 'Q&A・その他'
+            'R18・アダルト', 'Q&A・その他',
         ];
-        
+
         return array_diff($validTags, $categories);
     }
 
@@ -85,13 +201,40 @@ class LanguageService
     public static function isValidTag($tag)
     {
         $validTags = self::getValidTags();
+
         return in_array($tag, $validTags);
     }
 
     /**
-     * 現在のユーザーの言語を取得（キャッシュを使用してパフォーマンス向上）
+     * 現在の表示言語を取得（キャッシュを使用してパフォーマンス向上）
      */
     public static function getCurrentLanguage()
+    {
+        try {
+            if (self::$requestLocale !== null) {
+                return self::toAppLanguage(self::$requestLocale);
+            }
+
+            $sessionLanguage = self::validAppLanguageFromSession('current_language');
+            if ($sessionLanguage !== null) {
+                return $sessionLanguage;
+            }
+
+            return self::detectPreferredAppLanguage();
+        } catch (\Exception $e) {
+            \Log::error('getCurrentLanguageで致命的なエラーが発生', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return self::toAppLanguage(self::fallbackLocale());
+        }
+    }
+
+    /**
+     * / や旧 URL からの入場時に使うロケール（URL が無いときの推定）。
+     */
+    public static function detectPreferredAppLanguage(): string
     {
         try {
             \Log::info('getCurrentLanguage呼び出し', [
@@ -101,40 +244,32 @@ class LanguageService
                 'detected_language' => session('detected_language', 'N/A'),
                 'has_current_language' => session()->has('current_language'),
                 'current_language' => session('current_language', 'N/A'),
-                'country_code' => self::getCountryCodeFromRequest()
+                'country_code' => self::getCountryCodeFromRequest(),
             ]);
-            
-            $language = 'EN'; // デフォルト（英語コード）
-            
+
+            $language = self::toAppLanguage(self::fallbackLocale());
+
             try {
                 if (auth()->check()) {
                     $user = auth()->user();
                     if ($user) {
-                        // ログインユーザーの場合、ユーザー設定を優先
-                        $language = $user->language ?? 'EN';
-                        
-                        // 既存データとの互換性：小文字の場合は大文字に変換
-                        if ($language === 'ja') $language = 'JA';
-                        if ($language === 'en') $language = 'EN';
-                        
+                        $language = self::toAppLanguage($user->language ?? self::fallbackLocale());
+
                         \Log::info('ログインユーザーの言語を取得', [
                             'user_id' => $user->user_id,
                             'language' => $language,
-                            'user_language_setting' => $user->language
+                            'user_language_setting' => $user->language,
                         ]);
-                        
-                        // セッションキャッシュと異なる場合は更新
+
                         if (session('current_language') !== $language) {
                             session(['current_language' => $language]);
                         }
                     }
                 } else {
-                    // 未ログインユーザー：国コード（CF-IPCountry）を最優先。IPは使わない
                     $countryCode = self::getCountryCodeFromRequest();
 
-                    // 国コードが取得できた場合は常に国コードで言語を決定（セッションより優先）
                     if ($countryCode !== null) {
-                        $language = ($countryCode === 'JP') ? 'JA' : 'EN';
+                        $language = self::toAppLanguage(self::localeFromCountryCode($countryCode));
                         if (session('current_language') !== $language) {
                             session(['current_language' => $language]);
                         }
@@ -144,27 +279,25 @@ class LanguageService
                         \Log::info('未ログインユーザー：国コードを最優先で言語を決定', [
                             'country_code' => $countryCode,
                             'language' => $language,
-                            'session_id' => session()->getId()
+                            'session_id' => session()->getId(),
                         ]);
+
                         return $language;
                     }
 
-                    // 国コードが取れない場合のみセッションのキャッシュを使用
-                    if (session()->has('detected_language')) {
-                        $lang = session('detected_language');
-                        if ($lang === 'ja') $lang = 'JA';
-                        if ($lang === 'en') $lang = 'EN';
-                        if (session('current_language') !== $lang) {
-                            session(['current_language' => $lang]);
+                    $sessionDetected = self::validAppLanguageFromSession('detected_language');
+                    if ($sessionDetected !== null) {
+                        if (session('current_language') !== $sessionDetected) {
+                            session(['current_language' => $sessionDetected]);
                         }
                         \Log::info('未ログインユーザー：国コードなしのためセッションの言語を使用', [
-                            'language' => $lang,
-                            'session_id' => session()->getId()
+                            'language' => $sessionDetected,
+                            'session_id' => session()->getId(),
                         ]);
-                        return $lang;
+
+                        return $sessionDetected;
                     }
 
-                    // 国コードもセッションもない場合：開発用フォールバックのみ（IPは使わない）
                     $language = self::getLanguageFromCountryCode();
                     try {
                         session(['current_language' => $language]);
@@ -174,22 +307,21 @@ class LanguageService
                     }
                 }
             } catch (\Exception $e) {
-                // エラーが発生した場合はデフォルト値を使用
                 \Log::warning('getCurrentLanguageでエラーが発生', [
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
-                $language = 'EN';
+                $language = self::toAppLanguage(self::fallbackLocale());
             }
-            
+
             return $language;
         } catch (\Exception $e) {
-            // すべてのエラーをキャッチしてデフォルト値を返す
             \Log::error('getCurrentLanguageで致命的なエラーが発生', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return 'EN';
+
+            return self::toAppLanguage(self::fallbackLocale());
         }
     }
 
@@ -209,11 +341,24 @@ class LanguageService
             return null;
         }
         $code = strtoupper(trim((string) $code));
-        // Cloudflare の特殊コードは無視（XX=不明, T1=Tor）
         if ($code === 'XX' || $code === 'T1' || strlen($code) !== 2) {
             return null;
         }
+
         return $code;
+    }
+
+    private static function localeFromCountryCode(string $countryCode): string
+    {
+        $map = config('localization.country_locales', ['JP' => 'ja']);
+        if (! is_array($map)) {
+            $map = ['JP' => 'ja'];
+        }
+
+        $countryCode = strtoupper($countryCode);
+        $locale = $map[$countryCode] ?? self::fallbackLocale();
+
+        return self::toUrlLocale(is_string($locale) ? $locale : self::fallbackLocale());
     }
 
     /**
@@ -235,19 +380,17 @@ class LanguageService
             'has_detected_language' => session()->has('detected_language'),
         ]);
 
-        // Cloudflare 経由で有効な国コードがある場合：国コードで判定
         if ($countryCode !== null) {
-            $language = ($countryCode === 'JP') ? 'JA' : 'EN';
+            $language = self::toAppLanguage(self::localeFromCountryCode($countryCode));
             \Log::info('国コードから言語を判定成功', [
                 'country_code' => $countryCode,
-                'language' => $language
+                'language' => $language,
             ]);
             session(['detected_language' => $language]);
+
             return $language;
         }
 
-        // CF-IPCountry がない場合（Cloudflare 未経由・ローカル等）：IPは使わずデフォルト扱い
-        // 開発環境でプライベートIPのときのみ FORCE_JA_ON_PRIVATE_IP を参照（TrustProxies により request()->ip() でクライアントIP取得）
         $ip = request()->ip() ?? '';
         $isPrivateIp = empty($ip) || $ip === '127.0.0.1' || $ip === '::1' ||
             strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0 ||
@@ -256,11 +399,43 @@ class LanguageService
         if ($isPrivateIp && env('FORCE_JA_ON_PRIVATE_IP', false)) {
             \Log::info('Cloudflare未経由・プライベートIPのため開発環境設定で日本語を返す', ['ip' => $ip]);
             session(['detected_language' => 'JA']);
+
             return 'JA';
         }
 
         \Log::info('国コードが取得できないためデフォルト（英語）を返す', ['reason' => 'CF-IPCountryなしまたは無効']);
-        return 'EN';
+
+        return self::toAppLanguage(self::fallbackLocale());
+    }
+
+    private static function preferredUrlLocaleFromSessionOrDetect(): string
+    {
+        $sessionLanguage = self::validAppLanguageFromSession('current_language')
+            ?? self::validAppLanguageFromSession('detected_language');
+        if ($sessionLanguage !== null) {
+            return self::toUrlLocale($sessionLanguage);
+        }
+
+        return self::preferredUrlLocale();
+    }
+
+    private static function validAppLanguageFromSession(string $key): ?string
+    {
+        if (! session()->has($key)) {
+            return null;
+        }
+
+        $value = session($key);
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        $locale = strtolower($value);
+        if (! self::isSupported($locale)) {
+            return null;
+        }
+
+        return self::toAppLanguage($locale);
     }
 
     /**
@@ -269,12 +444,10 @@ class LanguageService
     private static function getTranslations()
     {
         static $translations = null;
-        
+
         if ($translations === null) {
             $translations = [];
-            $languages = ['ja', 'en'];
-            
-            foreach ($languages as $lang) {
+            foreach (self::supportedLocales() as $lang) {
                 $filePath = resource_path("lang/{$lang}.php");
                 if (file_exists($filePath)) {
                     $translations[$lang] = require $filePath;
@@ -283,7 +456,7 @@ class LanguageService
                 }
             }
         }
-        
+
         return $translations;
     }
 
@@ -293,12 +466,10 @@ class LanguageService
     private static function getTagTranslations()
     {
         static $tagTranslations = null;
-        
+
         if ($tagTranslations === null) {
             $tagTranslations = [];
-            $languages = ['ja', 'en'];
-            
-            foreach ($languages as $lang) {
+            foreach (self::supportedLocales() as $lang) {
                 $filePath = resource_path("lang/tags/{$lang}.php");
                 if (file_exists($filePath)) {
                     $tagTranslations[$lang] = require $filePath;
@@ -307,8 +478,29 @@ class LanguageService
                 }
             }
         }
-        
+
         return $tagTranslations;
     }
-}
 
+    public static function unprefixedUiPattern(): string
+    {
+        $prefixes = config('localization.unprefixed_ui_prefixes', []);
+        if (! is_array($prefixes) || $prefixes === []) {
+            return 'threads(?:/.*)?';
+        }
+
+        $safe = [];
+        foreach ($prefixes as $prefix) {
+            if (! is_string($prefix) || $prefix === '') {
+                continue;
+            }
+            $safe[] = preg_quote($prefix, '#');
+        }
+
+        if ($safe === []) {
+            return 'threads(?:/.*)?';
+        }
+
+        return '(?:'.implode('|', $safe).')(?:/.*)?';
+    }
+}
