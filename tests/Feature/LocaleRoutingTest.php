@@ -47,6 +47,13 @@ class LocaleRoutingTest extends TestCase
         $en->assertSee('<html lang="en"', false);
     }
 
+    public function test_article_detail_uses_slug_not_locale(): void
+    {
+        $this->get('/en/articles/how-to-connect-worldwide')->assertOk();
+        $this->get('/ja/articles/how-to-connect-worldwide')->assertOk();
+        $this->get('/en/articles/en')->assertNotFound();
+    }
+
     public function test_unsupported_locale_prefix_is_not_found(): void
     {
         $this->get('/fr/profile')->assertNotFound();

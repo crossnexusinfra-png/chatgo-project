@@ -48,10 +48,10 @@ Route::post('/threads/{thread}/favorite', [ThreadController::class, 'toggleFavor
 Route::post('/threads/{thread}/responses', [ResponseController::class, 'store'])->middleware(['throttle:post', 'request.user'])->name('responses.store');
 Route::post('/threads/{thread}/responses/{response}/reply', [ResponseController::class, 'reply'])->middleware(['throttle:post', 'request.user'])->name('responses.reply');
 
-Route::get('/threads/{thread}/edit', function ($thread) {
+Route::get('/threads/{thread}/edit', function (string $locale, $thread) {
     return redirect()->route('threads.show', $thread);
 });
-Route::put('/threads/{thread}', function ($thread) {
+Route::put('/threads/{thread}', function (string $locale, $thread) {
     return redirect()->route('threads.show', $thread);
 });
 Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->name('threads.destroy');
@@ -129,10 +129,10 @@ Route::middleware('auth')->group(function () {
 
 Route::post('/threads/{thread}/acknowledge', [AcknowledgmentController::class, 'acknowledgeThread'])->middleware('throttle:notice_reply')->name('threads.acknowledge');
 Route::post('/threads/{thread}/responses/{response}/acknowledge', [AcknowledgmentController::class, 'acknowledgeResponse'])->middleware('throttle:notice_reply')->name('responses.acknowledge');
-Route::get('/threads/{thread}/acknowledge', function ($thread) {
+Route::get('/threads/{thread}/acknowledge', function (string $locale, $thread) {
     return redirect()->route('threads.show', $thread);
 });
-Route::get('/threads/{thread}/responses/{response}/acknowledge', function ($thread) {
+Route::get('/threads/{thread}/responses/{response}/acknowledge', function (string $locale, $thread) {
     return redirect()->route('threads.show', $thread);
 });
 

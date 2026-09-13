@@ -2291,9 +2291,18 @@ form.form-submitting input[readonly] {
     color: #7a8094;
 }
 
-.site-footer-article span {
-    color: #c0c5d4;
+.site-footer-sep {
+    color: #6b7388;
+    font-weight: 500;
     user-select: none;
+}
+
+.site-footer-article .site-footer-sep {
+    padding: 0 8px;
+    color: #5f667a;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .back-link {
@@ -2801,6 +2810,11 @@ button.back-link--button {
         padding-top: 10px;
         font-size: 12px;
         gap: 4px 0;
+    }
+
+    .site-footer-article .site-footer-sep {
+        padding: 0 6px;
+        font-size: 13px;
     }
 
     .faq-q,
