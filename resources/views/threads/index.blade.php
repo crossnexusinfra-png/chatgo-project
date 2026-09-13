@@ -13,6 +13,47 @@
 <div class="main-container">
     <!-- メインコンテンツ（ソース順を先に。見た目は CSS order でサイドバー左を維持） -->
     <main class="main-content">
+                <!-- 成功メッセージ表示 -->
+                @if (session('success'))
+                    <div class="alert alert-success">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                <!-- バリデーションエラー表示 -->
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                @php
+                                    $insufficientCoinsMsg = \App\Services\LanguageService::trans('insufficient_coins', $lang);
+                                    $isInsufficientCoins = $error === $insufficientCoinsMsg;
+                                @endphp
+                                @if ($isInsufficientCoins)
+                                    <li>
+                                        {{ $error }}
+                                        @auth
+                                        @if(config('ads.enabled'))
+                                        {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時） --}}
+                                        <!-- ad-placement: rewarded-video / location: insufficient-coins error -->
+                                        <div class="error-message-margin-top" data-ad-placement="rewarded-video" aria-label="Advertisement">
+                                            <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
+                                            <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" data-action="watch-ad-index">
+                                                {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
+                                            </button>
+                                            <span id="adWatchStatusMain" class="ad-status-inline"></span>
+                                        </div>
+                                        @endif
+                                        @endauth
+                                    </li>
+                                @else
+                                    <li>{{ $error }}</li>
+                                @endif
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 @guest
                 <section class="chatgo-about-panel is-open post-list-margin" id="chatgoAboutPanel" aria-labelledby="chatgoAboutTitle">
                     <div class="chatgo-about-panel-accent" aria-hidden="true"></div>
@@ -94,47 +135,6 @@
                     </div>
                 </section>
                 @endguest
-
-                <!-- 成功メッセージ表示 -->
-                @if (session('success'))
-                    <div class="alert alert-success">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                <!-- バリデーションエラー表示 -->
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                @php
-                                    $insufficientCoinsMsg = \App\Services\LanguageService::trans('insufficient_coins', $lang);
-                                    $isInsufficientCoins = $error === $insufficientCoinsMsg;
-                                @endphp
-                                @if ($isInsufficientCoins)
-                                    <li>
-                                        {{ $error }}
-                                        @auth
-                                        @if(config('ads.enabled'))
-                                        {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時） --}}
-                                        <!-- ad-placement: rewarded-video / location: insufficient-coins error -->
-                                        <div class="error-message-margin-top" data-ad-placement="rewarded-video" aria-label="Advertisement">
-                                            <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
-                                            <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" data-action="watch-ad-index">
-                                                {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
-                                            </button>
-                                            <span id="adWatchStatusMain" class="ad-status-inline"></span>
-                                        </div>
-                                        @endif
-                                        @endauth
-                                    </li>
-                                @else
-                                    <li>{{ $error }}</li>
-                                @endif
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
 
                 <!-- メインページのコンテンツ -->
 
