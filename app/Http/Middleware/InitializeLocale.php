@@ -20,7 +20,7 @@ class InitializeLocale
 
         $first = $request->segment(1);
         if (is_string($first) && LanguageService::isSupported($first)) {
-            LanguageService::applyRequestLocale($first, false);
+            LanguageService::applyRequestLocale($first);
         }
 
         return $next($request);

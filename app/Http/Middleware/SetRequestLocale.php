@@ -10,17 +10,15 @@ use Symfony\Component\HttpFoundation\Response;
 class SetRequestLocale
 {
     /**
-     * UI の {locale} があればそれを正とし、機械エンドポイントでは URL 生成用のデフォルトだけ置く。
+     * 表示言語は URL の {locale}。リンクの locale は設定／国判定のデフォルト。
      */
     public function handle(Request $request, Closure $next): Response
     {
-        LanguageService::clearRequestLocale();
-
         $locale = $request->route('locale');
         if (is_string($locale) && LanguageService::isSupported($locale)) {
             LanguageService::applyRequestLocale($locale);
-
-            return $next($request);
+        } else {
+            LanguageService::clearRequestLocale();
         }
 
         LanguageService::applyUrlDefaults();

@@ -245,14 +245,7 @@ class ProfileController extends Controller
             $data['phone'] = $newPhone;
         }
 
-        // 言語設定が変更された場合、表示ロケールを合わせてリダイレクトする
         $oldLanguage = $user->language ?? 'JA';
-        if ($oldLanguage !== $request->language) {
-            session()->forget('current_language');
-            \App\Services\LanguageService::applyRequestLocale(
-                \App\Services\LanguageService::toUrlLocale($request->language)
-            );
-        }
 
         if ($emailChanged || $phoneChanged) {
             ProfilePendingContactService::clear($user->user_id);
@@ -290,6 +283,11 @@ class ProfileController extends Controller
         }
 
         $user->update($data);
+
+        if ($oldLanguage !== $request->language) {
+            session()->forget(['current_language', 'detected_language']);
+            \App\Services\LanguageService::applyUrlDefaults();
+        }
 
         $needsPhoneReauth = $phoneChanged && SmsVerificationService::isEnabled();
         if ($emailChanged || $needsPhoneReauth) {

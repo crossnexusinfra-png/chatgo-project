@@ -83,43 +83,25 @@ class LanguageService
     }
 
     /**
-     * UI の URL ロケールをこのリクエストの正とする。
+     * 今開いている URL の表示言語だけ変える。リンク生成や言語設定は変えない。
      */
-    public static function applyRequestLocale(string $locale, bool $persistSession = true): void
+    public static function applyRequestLocale(string $locale): void
     {
         $locale = self::toUrlLocale($locale);
         self::$requestLocale = $locale;
         app()->setLocale($locale);
-        URL::defaults(['locale' => $locale]);
-
-        if (! $persistSession) {
-            return;
-        }
-
-        $appLanguage = self::toAppLanguage($locale);
-        try {
-            if (session('current_language') !== $appLanguage) {
-                session(['current_language' => $appLanguage]);
-            }
-            if (session('detected_language') !== $appLanguage) {
-                session(['detected_language' => $appLanguage]);
-            }
-        } catch (\Throwable $e) {
-            \Log::warning('ロケールのセッション保存に失敗', [
-                'error' => $e->getMessage(),
-                'locale' => $locale,
-            ]);
-        }
     }
 
     /**
-     * locale なしエンドポイント向け。route() が {locale} を要求しても落ちないようにする。
+     * route() の {locale} はユーザーのデフォルト言語（設定 / 国判定）を使う。
      */
     public static function applyUrlDefaults(): void
     {
-        $locale = self::preferredUrlLocaleFromSessionOrDetect();
+        $locale = self::preferredUrlLocale();
         URL::defaults(['locale' => $locale]);
-        app()->setLocale($locale);
+        if (self::$requestLocale === null) {
+            app()->setLocale($locale);
+        }
     }
 
     public static function preferredUrlLocale(): string
@@ -213,11 +195,6 @@ class LanguageService
         try {
             if (self::$requestLocale !== null) {
                 return self::toAppLanguage(self::$requestLocale);
-            }
-
-            $sessionLanguage = self::validAppLanguageFromSession('current_language');
-            if ($sessionLanguage !== null) {
-                return $sessionLanguage;
             }
 
             return self::detectPreferredAppLanguage();
@@ -406,17 +383,6 @@ class LanguageService
         \Log::info('国コードが取得できないためデフォルト（英語）を返す', ['reason' => 'CF-IPCountryなしまたは無効']);
 
         return self::toAppLanguage(self::fallbackLocale());
-    }
-
-    private static function preferredUrlLocaleFromSessionOrDetect(): string
-    {
-        $sessionLanguage = self::validAppLanguageFromSession('current_language')
-            ?? self::validAppLanguageFromSession('detected_language');
-        if ($sessionLanguage !== null) {
-            return self::toUrlLocale($sessionLanguage);
-        }
-
-        return self::preferredUrlLocale();
     }
 
     private static function validAppLanguageFromSession(string $key): ?string

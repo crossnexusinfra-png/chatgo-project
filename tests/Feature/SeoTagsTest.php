@@ -75,7 +75,7 @@ class SeoTagsTest extends TestCase
 
     public function test_standalone_legal_pages_have_logo_link_to_home(): void
     {
-        $homeHref = route('threads.index', ['locale' => 'en']);
+        $homeHref = route('threads.index', ['locale' => \App\Services\LanguageService::preferredUrlLocale()]);
 
         foreach (['/en/terms', '/en/privacy', '/en/company', '/en/contact'] as $path) {
             $response = $this->get($path);

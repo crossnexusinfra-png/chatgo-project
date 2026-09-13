@@ -47,6 +47,23 @@ class LocaleRoutingTest extends TestCase
         $en->assertSee('<html lang="en"', false);
     }
 
+    public function test_url_locale_is_temporary_and_links_use_default_language(): void
+    {
+        $default = \App\Services\LanguageService::preferredUrlLocale();
+        $other = $default === 'ja' ? 'en' : 'ja';
+
+        $this->get('/'.$other.'/login')->assertOk();
+
+        $this->assertSame(
+            '/'.$default,
+            parse_url(route('threads.index', absolute: false), PHP_URL_PATH)
+        );
+        $this->assertSame(
+            '/'.$default.'/terms',
+            parse_url(route('legal.terms', absolute: false), PHP_URL_PATH)
+        );
+    }
+
     public function test_article_detail_uses_slug_not_locale(): void
     {
         $this->get('/en/articles/how-to-connect-worldwide')->assertOk();

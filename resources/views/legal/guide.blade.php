@@ -155,6 +155,8 @@
                 @endforeach
             </section>
             </div>
+
+            @include('layouts.site-footer', ['footerVariant' => 'article'])
         </article>
     </x-content-with-rails>
 
