@@ -2330,6 +2330,10 @@ form.form-submitting input[readonly] {
     user-select: none;
 }
 
+.legal-compliance-links--search {
+    border-top: none;
+}
+
 .site-footer-article .site-footer-sep {
     padding: 0 8px;
     color: #5f667a;

@@ -170,14 +170,48 @@ body {
     font-size: 16px;
 }
 
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.room-search-toggle {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.room-search-toggle:hover,
+.room-search-toggle[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.35);
+}
+
 /* 検索欄 */
 .search-container {
+    display: none;
     position: sticky;
-    top: 116.19px;
+    top: 0;
     background-color: #f8f9fa;
     padding: 8px 20px;
     border-bottom: 1px solid #e9ecef;
     z-index: 100;
+}
+
+.search-container.is-open {
+    display: block;
 }
 
 .search-input-wrapper {

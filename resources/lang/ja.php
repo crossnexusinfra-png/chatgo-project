@@ -241,6 +241,8 @@ return [
     'favorite' => '☆ お気に入り',
     'unfavorite' => '★ お気に入り解除',
     'search_responses_placeholder' => 'リプライを検索...',
+    'toggle_room_search' => 'リプライを検索',
+    'close_room_search' => '検索を閉じる',
     'thread_deleted_by_report' => 'このルームは通報により削除されました',
     'thread_deleted_title' => 'ルームが削除されました',
     'thread_deleted_message' => 'このルームは通報の承認により削除されました。利用規約に違反する内容が含まれていたため、閲覧できなくなっています。',

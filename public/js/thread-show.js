@@ -2015,6 +2015,34 @@
             if (tid && typeof window.toggleContinuationRequest === 'function') window.toggleContinuationRequest(parseInt(tid, 10));
             return;
         }
+        const searchToggle = e.target.closest('[data-action="toggle-room-search"]');
+        if (searchToggle) {
+            e.preventDefault();
+            const container = document.getElementById('roomSearchContainer');
+            const input = document.getElementById('searchInput');
+            if (!container) {
+                return;
+            }
+            const willOpen = !container.classList.contains('is-open');
+            container.classList.toggle('is-open', willOpen);
+            searchToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            const openLabel = searchToggle.getAttribute('data-label-open') || '';
+            const closeLabel = searchToggle.getAttribute('data-label-close') || openLabel;
+            const nextLabel = willOpen ? closeLabel : openLabel;
+            if (nextLabel) {
+                searchToggle.setAttribute('aria-label', nextLabel);
+                searchToggle.setAttribute('title', nextLabel);
+            }
+            if (willOpen && input) {
+                input.focus();
+            } else if (!willOpen && typeof exitSearchMode === 'function') {
+                if (input) {
+                    input.value = '';
+                }
+                exitSearchMode();
+            }
+            return;
+        }
         const watchAdBtn = e.target.closest('[data-action="watch-ad-thread"]');
         if (watchAdBtn) {
             e.preventDefault();

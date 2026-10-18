@@ -241,6 +241,8 @@ return [
     'favorite' => '☆ Favorite',
     'unfavorite' => '★ Remove from Favorites',
     'search_responses_placeholder' => 'Search replies...',
+    'toggle_room_search' => 'Search replies',
+    'close_room_search' => 'Close search',
     'thread_deleted_by_report' => 'This room has been deleted due to a report',
     'thread_deleted_title' => 'Room Deleted',
     'thread_deleted_message' => 'This room has been deleted following the approval of reports. It contained content that violated our terms of service and is no longer available for viewing.',
