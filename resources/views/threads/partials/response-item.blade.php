@@ -47,7 +47,7 @@
     };
     
     // 国コードから国旗または「その他」マークを表示するHTMLを生成する関数
-    $renderCountryFlag = function($countryCode) use ($getCountryFlagUrl) {
+    $renderCountryFlag = function($countryCode) use ($getCountryFlagUrl, $lang) {
         if (empty($countryCode)) {
             return '';
         }
