@@ -137,15 +137,27 @@ body {
 }
 
 .legal-compliance-links--room {
-    margin: 8px 0 4px;
+    justify-content: flex-start;
+    margin: 10px 0 2px;
+    padding: 8px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .legal-compliance-links--room a {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 500;
+}
+
+.legal-compliance-links--room a:hover {
+    color: #fff;
+    text-decoration: underline;
 }
 
 .legal-compliance-links--room .legal-compliance-sep {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .meta-item {

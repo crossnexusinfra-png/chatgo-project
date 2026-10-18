@@ -2301,18 +2301,32 @@ form.form-submitting input[readonly] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    margin: 12px 0;
-    font-size: 13px;
+    justify-content: center;
+    gap: 2px 0;
+    margin: 16px 0 0;
+    padding: 16px 12px 6px;
+    border-top: 1px solid #e5e9f2;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #7a8094;
 }
 
 .legal-compliance-links a {
-    color: #1967d2;
-    text-decoration: underline;
+    color: #5b6fd8;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.legal-compliance-links a:hover {
+    color: #3f56c4;
+    text-decoration: none;
 }
 
 .legal-compliance-sep {
+    padding: 0 8px;
     color: #6b7388;
+    font-weight: 500;
     user-select: none;
 }
 

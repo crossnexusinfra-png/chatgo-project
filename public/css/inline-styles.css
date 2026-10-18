@@ -981,6 +981,11 @@ body {
     color: #333;
 }
 
+.r18-warning-content .legal-compliance-links {
+    margin-top: 20px;
+    padding-top: 16px;
+}
+
 .r18-warning-actions {
     display: flex;
     justify-content: center;

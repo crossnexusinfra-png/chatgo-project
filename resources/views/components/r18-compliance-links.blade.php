@@ -10,7 +10,7 @@
         <a href="{{ route('legal.usc2257') }}">{{ \App\Services\LanguageService::trans('footer_usc2257', $lang) }}</a>
     @endif
     @if($showUsc2257 && $showDmca)
-        <span class="legal-compliance-sep" aria-hidden="true">|</span>
+        <span class="site-footer-sep legal-compliance-sep" aria-hidden="true">|</span>
     @endif
     @if($showDmca)
         <a href="{{ route('legal.dmca') }}">{{ \App\Services\LanguageService::trans('footer_dmca', $lang) }}</a>
