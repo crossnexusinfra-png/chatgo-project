@@ -550,31 +550,6 @@
         return badge;
     }
 
-    function createAdPlaceholder(network) {
-        const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
-        const nameMap = {
-            adsense: labels.adsense || 'Google AdSense',
-            gam: labels.gam || 'Google Ad Manager',
-            exoclick: labels.exoclick || 'ExoClick'
-        };
-        const noteMap = {
-            adsense: labels.noteAdsense || '',
-            gam: labels.noteGam || '',
-            exoclick: labels.noteExoclick || ''
-        };
-        const name = nameMap[network] || nameMap.adsense;
-        const placeholder = document.createElement('div');
-        placeholder.className = 'ad-slot-placeholder ad-slot-placeholder--inline ad-slot--' + network;
-        placeholder.setAttribute('data-ad-network', network);
-        placeholder.setAttribute('aria-label', name);
-        placeholder.appendChild(createAdNetworkBadge(network, name));
-        const note = document.createElement('span');
-        note.className = 'ad-slot-note';
-        note.textContent = noteMap[network] || '';
-        placeholder.appendChild(note);
-        return placeholder;
-    }
-
     function createReplyInlineAdNode(adIndex, anchorResponseId) {
         const wrapper = document.createElement('div');
         wrapper.className = 'adsense-thread-reply-inline';
@@ -582,12 +557,19 @@
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
         const network = getReplyAdNetwork();
         const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
+        const nameMap = {
+            adsense: labels.adsense || 'Google AdSense',
+            gam: labels.gam || 'Google Ad Manager',
+            exoclick: labels.exoclick || 'ExoClick'
+        };
+        const name = nameMap[network] || nameMap.adsense;
         const banner = document.createElement('div');
-        banner.className = 'adsense-inline-banner ad-slot ad-slot--inline ad-slot--' + network;
+        banner.className = 'ad-slot ad-slot--inline ad-slot--' + network;
         banner.setAttribute('data-ad-network', network);
+        banner.setAttribute('aria-label', name);
+        banner.appendChild(createAdNetworkBadge(network, name));
         if (network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
             banner.setAttribute('data-adsense-inline', '1');
-            banner.appendChild(createAdNetworkBadge('adsense', labels.adsense || 'Google AdSense'));
             const ins = document.createElement('ins');
             ins.className = 'adsbygoogle';
             ins.style.display = 'block';
@@ -600,7 +582,6 @@
             banner.appendChild(ins);
         } else {
             banner.setAttribute('data-adsense-inline', '0');
-            banner.appendChild(createAdPlaceholder(network));
         }
         wrapper.appendChild(banner);
         return wrapper;

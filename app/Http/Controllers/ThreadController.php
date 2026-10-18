@@ -2205,7 +2205,8 @@ class ThreadController extends Controller
     }
 
     /**
-     * 検索でR18ルームを含める選択ができるか（ログイン中の未成年は不可）
+     * 検索でR18ルームを含める選択ができるか
+     * 元ルール: ゲストと18歳以上は可。ログイン中の未成年のみ不可。
      */
     private function viewerCanIncludeR18Search(): bool
     {

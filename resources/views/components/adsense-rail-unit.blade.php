@@ -7,22 +7,21 @@
     $slot = config('adsense.slots.'.$slotKey) ?: config('adsense.slots.display_banner');
     $instanceId = $instanceId ?? 'rail-'.$side.'-'.uniqid();
     $serveAdsense = $network === 'adsense' && $enabled && $client && $slot;
+    $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $name = \App\Services\LanguageService::trans('ad_network_'.$network, $lang);
 @endphp
-<div class="adsense-rail-unit ad-slot ad-slot--rail ad-slot--{{ $network }}" data-adsense-rail="{{ $side }}" data-ad-network="{{ $network }}">
+<div class="adsense-rail-unit ad-slot ad-slot--rail ad-slot--{{ $network }}"
+     data-adsense-rail="{{ $side }}"
+     data-ad-network="{{ $network }}"
+     aria-label="{{ $name }}">
+    @include('components.ad-network-badge', ['network' => $network])
     @if($serveAdsense)
-    <div class="adsense-rail-refresh-wrap" data-client="{{ $client }}" data-slot="{{ $slot }}">
-        @include('components.ad-network-badge', ['network' => $network])
-        <ins class="adsbygoogle"
-             style="display:block;"
-             data-ad-client="{{ $client }}"
-             data-ad-slot="{{ $slot }}"
-             data-ad-format="vertical"
-             data-full-width-responsive="false"
-             id="adsense-{{ $instanceId }}"></ins>
-    </div>
-    @else
-    <div class="adsense-rail-refresh-wrap">
-        @include('components.ad-placeholder', ['network' => $network, 'format' => 'rail'])
-    </div>
+    <ins class="adsbygoogle"
+         style="display:block;"
+         data-ad-client="{{ $client }}"
+         data-ad-slot="{{ $slot }}"
+         data-ad-format="vertical"
+         data-full-width-responsive="false"
+         id="adsense-{{ $instanceId }}"></ins>
     @endif
 </div>

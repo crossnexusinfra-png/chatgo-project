@@ -5,10 +5,15 @@
     $slot = config('adsense.slots.display_banner');
     $instanceId = $instanceId ?? 'banner-'.uniqid();
     $serveAdsense = $network === 'adsense' && $enabled && $client && $slot;
+    $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
+    $name = \App\Services\LanguageService::trans('ad_network_'.$network, $lang);
 @endphp
-<div class="adsense-inline-banner ad-slot ad-slot--inline ad-slot--{{ $network }}" data-ad-network="{{ $network }}" data-adsense-inline="{{ $serveAdsense ? '1' : '0' }}">
-    @if($serveAdsense)
+<div class="ad-slot ad-slot--inline ad-slot--{{ $network }}"
+     data-ad-network="{{ $network }}"
+     data-adsense-inline="{{ $serveAdsense ? '1' : '0' }}"
+     aria-label="{{ $name }}">
     @include('components.ad-network-badge', ['network' => $network])
+    @if($serveAdsense)
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="{{ $client }}"
@@ -16,7 +21,5 @@
          data-ad-format="horizontal"
          data-full-width-responsive="true"
          id="adsense-{{ e($instanceId) }}"></ins>
-    @else
-        @include('components.ad-placeholder', ['network' => $network, 'format' => 'inline'])
     @endif
 </div>

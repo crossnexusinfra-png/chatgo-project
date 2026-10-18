@@ -7,11 +7,9 @@
         $network = 'adsense';
     }
     $name = \App\Services\LanguageService::trans('ad_network_'.$network, $lang);
-    $note = \App\Services\LanguageService::trans('ad_slot_note_'.$network, $lang);
 @endphp
-<div class="ad-slot-placeholder ad-slot-placeholder--{{ $format }} ad-slot--{{ $network }}"
+<div class="ad-slot ad-slot--{{ $format }} ad-slot--{{ $network }}"
      data-ad-network="{{ $network }}"
      aria-label="{{ $name }}">
-    <span class="ad-slot-badge ad-slot-badge--{{ $network }}">{{ $name }}</span>
-    <span class="ad-slot-note">{{ $note }}</span>
+    @include('components.ad-network-badge', ['network' => $network])
 </div>

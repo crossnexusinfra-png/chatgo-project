@@ -199,7 +199,6 @@
                         </h3>
                         <div class="thread-scroll-container thread-scroll-container-padding">
                             @include('components.ad-network-badge', ['network' => 'gam'])
-                            <p class="ad-slot-note ad-slot-note--inline">{{ \App\Services\LanguageService::trans('ad_slot_note_gam', $lang) }}</p>
                             @if(config('ads.enabled'))
                             <p class="ad-section-description">
                                 {{ \App\Services\LanguageService::trans('ad_video_description', $lang) }}

@@ -476,93 +476,6 @@ body {
     font-size: 14px;
 }
 
-.ad-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    width: 100%;
-}
-
-.ad-slot-badge {
-    display: inline-block;
-    align-self: flex-start;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1.3;
-}
-
-.ad-slot-badge--adsense {
-    background: #e8f0fe;
-    color: #174ea6;
-    border: 1px solid #4285f4;
-}
-
-.ad-slot-badge--gam {
-    background: #e6f4ea;
-    color: #0d652d;
-    border: 1px solid #0f9d58;
-}
-
-.ad-slot-badge--exoclick {
-    background: #fef7e0;
-    color: #8a4b08;
-    border: 1px solid #e37400;
-}
-
-.ad-slot-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    border-radius: 8px;
-    text-align: center;
-    box-sizing: border-box;
-}
-
-.ad-slot-placeholder--inline {
-    min-height: 90px;
-    padding: 12px;
-}
-
-.ad-slot-placeholder--rail {
-    min-height: 250px;
-    height: 100%;
-    padding: 16px;
-}
-
-.ad-slot-placeholder.ad-slot--adsense {
-    border: 1px dashed #4285f4;
-    background: #f8fbff;
-}
-
-.ad-slot-placeholder.ad-slot--gam {
-    border: 1px dashed #0f9d58;
-    background: #f4fbf6;
-}
-
-.ad-slot-placeholder.ad-slot--exoclick {
-    border: 1px dashed #e37400;
-    background: #fffaf0;
-}
-
-.ad-slot-note {
-    font-size: 12px;
-    color: #555;
-    line-height: 1.4;
-    max-width: 18em;
-}
-
-.ad-slot-note--inline {
-    margin: 4px 0 8px;
-    max-width: none;
-}
-
 .adsense-rail-placeholder {
     width: 100%;
     min-height: 250px;
@@ -3912,4 +3825,79 @@ a.mandatory-notice-open-btn:focus-visible {
 .error-actions .btn-primary:hover {
     background: #5568d3;
     text-decoration: none;
+}
+
+.ad-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.ad-slot--inline {
+    min-height: 90px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.ad-slot--rail {
+    min-height: 250px;
+    height: 100%;
+    padding: 16px;
+}
+
+.ad-slot--rewarded {
+    min-height: 72px;
+    padding: 12px;
+}
+
+.ad-slot--adsense {
+    border: 2px dashed #4285f4;
+    background: #e8f0fe;
+}
+
+.ad-slot--gam {
+    border: 2px dashed #0f9d58;
+    background: #e6f4ea;
+}
+
+.ad-slot--exoclick {
+    border: 2px dashed #e37400;
+    background: #fef7e0;
+}
+
+.ad-slot-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+}
+
+.ad-slot-badge--adsense {
+    background: #1967d2;
+    color: #fff;
+    border: 1px solid #174ea6;
+}
+
+.ad-slot-badge--gam {
+    background: #137333;
+    color: #fff;
+    border: 1px solid #0d652d;
+}
+
+.ad-slot-badge--exoclick {
+    background: #e37400;
+    color: #fff;
+    border: 1px solid #b06000;
+}
+
+.ad-slot .adsbygoogle {
+    width: 100%;
 }
