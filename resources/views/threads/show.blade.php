@@ -29,23 +29,20 @@
                 <div class="back-link">
                     <a href="{{ route('threads.index') }}">{{ \App\Services\LanguageService::trans('back_to_threads', $lang) }}</a>
                 </div>
-                <div class="chat-header-actions">
-                    @if(isset($parentThread) && $parentThread || isset($continuationThread) && $continuationThread)
-                    <div class="thread-navigation-buttons-container">
-                        @if(isset($parentThread) && $parentThread)
-                        <a href="{{ route('threads.show', $parentThread) }}" class="thread-navigation-link-white">
-                            ← {{ \App\Services\LanguageService::trans('continuation_thread_previous', $lang) }}
-                        </a>
-                        @endif
-                        @if(isset($continuationThread) && $continuationThread)
-                        <a href="{{ route('threads.show', $continuationThread) }}" class="thread-navigation-link-white">
-                            {{ \App\Services\LanguageService::trans('continuation_thread_next', $lang) }} →
-                        </a>
-                        @endif
-                    </div>
+                @if(isset($parentThread) && $parentThread || isset($continuationThread) && $continuationThread)
+                <div class="thread-navigation-buttons-container">
+                    @if(isset($parentThread) && $parentThread)
+                    <a href="{{ route('threads.show', $parentThread) }}" class="thread-navigation-link-white">
+                        ← {{ \App\Services\LanguageService::trans('continuation_thread_previous', $lang) }}
+                    </a>
                     @endif
-                    <button type="button" class="room-search-toggle" id="roomSearchToggle" data-action="toggle-room-search" aria-expanded="false" aria-controls="roomSearchContainer" data-label-open="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}" data-label-close="{{ \App\Services\LanguageService::trans('close_room_search', $lang) }}" title="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}" aria-label="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}">🔍</button>
+                    @if(isset($continuationThread) && $continuationThread)
+                    <a href="{{ route('threads.show', $continuationThread) }}" class="thread-navigation-link-white">
+                        {{ \App\Services\LanguageService::trans('continuation_thread_next', $lang) }} →
+                    </a>
+                    @endif
                 </div>
+                @endif
             </div>
             
             <div class="thread-title-header-flex">
@@ -158,6 +155,7 @@
                     </form>
                 </div>
                 @endauth
+                <button type="button" class="room-search-toggle" id="roomSearchToggle" data-action="toggle-room-search" aria-expanded="false" aria-controls="roomSearchContainer" data-label-open="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}" data-label-close="{{ \App\Services\LanguageService::trans('close_room_search', $lang) }}" title="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}" aria-label="{{ \App\Services\LanguageService::trans('toggle_room_search', $lang) }}">🔍</button>
             </div>
             @include('components.r18-compliance-links', [
                 'variant' => 'room',

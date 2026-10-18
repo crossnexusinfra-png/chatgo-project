@@ -131,6 +131,7 @@ body {
 .thread-meta {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 15px;
     font-size: 14px;
     opacity: 0.9;
@@ -170,16 +171,13 @@ body {
     font-size: 16px;
 }
 
-.chat-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.thread-meta .room-search-toggle {
     margin-left: auto;
 }
 
 .room-search-toggle {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: none;
     border-radius: 50%;
