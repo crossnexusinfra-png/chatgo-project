@@ -24,6 +24,12 @@
                 </div>
             @endif
 
+            @include('components.r18-compliance-links', [
+                'variant' => 'search',
+                'showUsc2257' => !empty($includeR18) || !empty($searchIncludesR18),
+                'showDmca' => true,
+            ])
+
             <!-- 検索結果ヘッダー -->
             <div class="tag-results">
                 <p class="tag-info">
@@ -306,11 +312,6 @@
                     </div>
                 </div>
             </section>
-            @include('components.r18-compliance-links', [
-                'variant' => 'search',
-                'showUsc2257' => !empty($includeR18) || !empty($searchIncludesR18),
-                'showDmca' => true,
-            ])
         </main>
     </div>
     
