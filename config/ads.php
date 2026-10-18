@@ -11,6 +11,15 @@ return [
     |
     */
 
+    // 公式 GAM Rewarded API を入れるまで false。true でも GAM とは表示しない。
+    'enabled' => (bool) env('ADS_ENABLED', false),
+
+    // ads.txt の ExoClick 行（承認後に発行される publisher / site ID）
+    'exoclick_ads_txt_id' => env('EXOCLICK_ADS_TXT_ID', ''),
+
+    // ads.txt に追記する追加行（GAM 管理画面の追加 seller 行など。改行区切り）
+    'ads_txt_extra' => env('ADS_TXT_EXTRA', ''),
+
     // 広告動画のテスト用URL（開発・テスト環境用）
     // 5秒程度の短いテスト用動画を使用（本番では環境変数で上書きしてください）
     // 注意: デフォルトURLはテスト用です。本番環境では適切な広告動画URLを設定してください

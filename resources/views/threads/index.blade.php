@@ -34,10 +34,7 @@
                                         {{ $error }}
                                         @auth
                                         @if(config('ads.enabled'))
-                                        {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時） --}}
-                                        <!-- ad-placement: rewarded-video / location: insufficient-coins error -->
-                                        <div class="error-message-margin-top" data-ad-placement="rewarded-video" aria-label="Advertisement">
-                                            @include('components.ad-network-badge', ['network' => 'gam'])
+                                        <div class="error-message-margin-top" data-ad-placement="rewarded-video">
                                             <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" data-action="watch-ad-index">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
@@ -191,15 +188,14 @@
                 </div>
                 @endif
 
-                <section class="post-list post-list-margin ad-slot ad-slot--rewarded ad-slot--gam" data-ad-placement="rewarded-video" data-ad-network="gam" aria-label="Google Ad Manager">
+                @if(config('ads.enabled'))
+                <section class="post-list post-list-margin" data-ad-placement="rewarded-video">
                     <div class="thread-category">
                         <h3 class="category-title">
                             <span class="category-icon">🎬</span>
                             {{ \App\Services\LanguageService::trans('coins_ad_video', $lang) }}
                         </h3>
                         <div class="thread-scroll-container thread-scroll-container-padding">
-                            @include('components.ad-network-badge', ['network' => 'gam'])
-                            @if(config('ads.enabled'))
                             <p class="ad-section-description">
                                 {{ \App\Services\LanguageService::trans('ad_video_description', $lang) }}
                             </p>
@@ -207,10 +203,10 @@
                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                             </button>
                             <div id="adWatchStatusMain" class="ad-status"></div>
-                            @endif
                         </div>
                     </div>
                 </section>
+                @endif
                 @endauth
 
                 <!-- カテゴリ別スレッド一覧 -->
@@ -919,6 +915,7 @@
         ],
         'translations' => [
             'closeButton' => \App\Services\LanguageService::trans('close_button', $lang),
+            'coinsAdVideo' => \App\Services\LanguageService::trans('coins_ad_video', $lang),
             'adVideoLoading' => \App\Services\LanguageService::trans('ad_video_loading', $lang),
             'adVideoPlaying' => \App\Services\LanguageService::trans('ad_video_playing', $lang),
             'videoPlayerInitFailed' => \App\Services\LanguageService::trans('video_player_init_failed', $lang),

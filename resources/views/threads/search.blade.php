@@ -24,6 +24,10 @@
                 </div>
             @endif
 
+            @if(!empty($includeR18) || !empty($searchIncludesR18))
+                @include('components.r18-compliance-links')
+            @endif
+
             <!-- 検索結果ヘッダー -->
             <div class="tag-results">
                 <p class="tag-info">

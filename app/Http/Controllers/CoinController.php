@@ -21,6 +21,14 @@ class CoinController extends Controller
      */
     public function watchAd(Request $request)
     {
+        $lang = LanguageService::getCurrentLanguage();
+        if (! config('ads.enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => LanguageService::trans('ad_watch_unavailable', $lang),
+            ], 403);
+        }
+
         $user = Auth::user();
         $lock = \App\Services\DuplicateSubmissionLockService::acquire('coins.watch-ad', $user->user_id);
         if (!$lock) {

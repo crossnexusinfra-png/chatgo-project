@@ -31,6 +31,24 @@ class SeoTagsTest extends TestCase
         $response->assertDontSee('Disallow: /admin', false);
     }
 
+    public function test_ads_txt_lists_google_and_optional_exoclick(): void
+    {
+        config(['ads.exoclick_ads_txt_id' => '', 'ads.ads_txt_extra' => '']);
+
+        $response = $this->get('/ads.txt');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
+        $response->assertSee('google.com, pub-1438145064622040, DIRECT, f08c47fec0942fa0', false);
+        $response->assertSee('Google Ad Manager', false);
+        $response->assertSee('ExoClick', false);
+        $response->assertDontSee('exoclick.com, ', false);
+
+        config(['ads.exoclick_ads_txt_id' => '123456']);
+        $withExo = $this->get('/ads.txt');
+        $withExo->assertSee('exoclick.com, 123456, DIRECT', false);
+    }
+
     public function test_sitemap_xml_includes_current_public_pages(): void
     {
         $response = $this->get('/sitemap.xml');
@@ -44,6 +62,8 @@ class SeoTagsTest extends TestCase
             $response->assertSee($this->canonicalPath(route('legal.privacy', ['locale' => $locale], false)), false);
             $response->assertSee($this->canonicalPath(route('legal.company', ['locale' => $locale], false)), false);
             $response->assertSee($this->canonicalPath(route('legal.contact', ['locale' => $locale], false)), false);
+            $response->assertSee($this->canonicalPath(route('legal.usc2257', ['locale' => $locale], false)), false);
+            $response->assertSee($this->canonicalPath(route('legal.dmca', ['locale' => $locale], false)), false);
             $response->assertSee($this->canonicalPath(route('legal.guide', ['locale' => $locale], false)), false);
             $response->assertSee($this->canonicalPath(route('legal.faq', ['locale' => $locale], false)), false);
             $response->assertSee($this->canonicalPath(route('legal.articles', ['locale' => $locale], false)), false);
@@ -77,7 +97,7 @@ class SeoTagsTest extends TestCase
     {
         $homeHref = route('threads.index', ['locale' => \App\Services\LanguageService::preferredUrlLocale()]);
 
-        foreach (['/en/terms', '/en/privacy', '/en/company', '/en/contact'] as $path) {
+        foreach (['/en/terms', '/en/privacy', '/en/company', '/en/contact', '/en/2257', '/en/dmca'] as $path) {
             $response = $this->get($path);
 
             $response->assertOk();

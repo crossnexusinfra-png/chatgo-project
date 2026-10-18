@@ -76,6 +76,8 @@ Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
 Route::view('/terms', 'legal.terms')->name('legal.terms');
 Route::view('/contact', 'legal.contact')->name('legal.contact');
 Route::view('/company', 'legal.company')->name('legal.company');
+Route::view('/2257', 'legal.usc2257')->name('legal.usc2257');
+Route::view('/dmca', 'legal.dmca')->name('legal.dmca');
 Route::view('/guide', 'legal.guide')->name('legal.guide');
 Route::view('/faq', 'legal.faq')->name('legal.faq');
 Route::get('/articles', [ArticleController::class, 'index'])->name('legal.articles');

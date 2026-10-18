@@ -2297,6 +2297,25 @@ form.form-submitting input[readonly] {
     user-select: none;
 }
 
+.legal-compliance-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+.legal-compliance-links a {
+    color: #1967d2;
+    text-decoration: underline;
+}
+
+.legal-compliance-sep {
+    color: #6b7388;
+    user-select: none;
+}
+
 .site-footer-article .site-footer-sep {
     padding: 0 8px;
     color: #5f667a;

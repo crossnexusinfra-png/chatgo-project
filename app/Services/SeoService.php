@@ -175,6 +175,42 @@ class SeoService
     }
 
     /**
+     * ads.txt 本文。Google 行は AdSense / Ad Manager 共通。ExoClick は承認後の ID を入れる。
+     */
+    public function adsTxt(): string
+    {
+        $lines = [
+            '# Google AdSense and Google Ad Manager (same publisher ID)',
+            'google.com, pub-1438145064622040, DIRECT, f08c47fec0942fa0',
+        ];
+
+        $exoclickId = trim((string) config('ads.exoclick_ads_txt_id'));
+        if ($exoclickId !== '') {
+            $lines[] = '';
+            $lines[] = '# ExoClick';
+            $lines[] = 'exoclick.com, '.$exoclickId.', DIRECT';
+        } else {
+            $lines[] = '';
+            $lines[] = '# ExoClick: set EXOCLICK_ADS_TXT_ID after publisher approval';
+        }
+
+        $extra = trim((string) config('ads.ads_txt_extra'));
+        if ($extra !== '') {
+            $lines[] = '';
+            foreach (preg_split('/\r\n|\r|\n/', $extra) as $extraLine) {
+                $extraLine = trim($extraLine);
+                if ($extraLine !== '') {
+                    $lines[] = $extraLine;
+                }
+            }
+        }
+
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * sitemap.xml 本文。
      */
     public function sitemapXml(): string
@@ -236,6 +272,8 @@ class SeoService
             $this->localizedUrlEntries('legal.privacy', [], 'monthly', '0.7'),
             $this->localizedUrlEntries('legal.company', [], 'monthly', '0.6'),
             $this->localizedUrlEntries('legal.contact', [], 'monthly', '0.6'),
+            $this->localizedUrlEntries('legal.usc2257', [], 'monthly', '0.5'),
+            $this->localizedUrlEntries('legal.dmca', [], 'monthly', '0.5'),
         );
     }
 

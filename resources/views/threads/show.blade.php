@@ -156,6 +156,9 @@
                 </div>
                 @endauth
             </div>
+            @if(!empty($isR18Thread))
+                @include('components.r18-compliance-links', ['variant' => 'room'])
+            @endif
 
         </header>
 
@@ -396,11 +399,10 @@
                                         $isInsufficientCoins = $message === $insufficientCoinsMsg;
                                     @endphp
                                     @if ($isInsufficientCoins)
-                                        <div class="alert alert-danger alert-danger-inline" @if(empty($isR18Thread)) data-ad-placement="rewarded-video" aria-label="Google Ad Manager" @endif>
+                                        <div class="alert alert-danger alert-danger-inline">
                                             {{ $message }}<br>
                                             @auth
                                             @if(empty($isR18Thread) && config('ads.enabled'))
-                                            @include('components.ad-network-badge', ['network' => 'gam'])
                                             <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
@@ -460,9 +462,8 @@
 
     @auth
     @if(empty($isR18Thread) && config('ads.enabled'))
-    <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="Google Ad Manager">
+    <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="{{ \App\Services\LanguageService::trans('coins_ad_video', $lang) }}">
         <div class="ad-video-container">
-            @include('components.ad-network-badge', ['network' => 'gam'])
             <button type="button" class="ad-video-close-button" data-action="close-ad-video-thread">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
             <video id="adVideoThread" controls class="ad-video-player" preload="auto">
                 <source src="{{ config('ads.test_ad_url') }}" type="video/mp4">

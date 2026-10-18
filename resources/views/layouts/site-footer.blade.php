@@ -16,4 +16,6 @@
     <a href="{{ route('legal.company') }}">{{ \App\Services\LanguageService::trans('footer_company', $lang) }}</a>
     <span class="site-footer-sep" aria-hidden="true">|</span>
     <a href="{{ route('legal.contact') }}">{{ \App\Services\LanguageService::trans('footer_contact', $lang) }}</a>
+    <span class="site-footer-sep" aria-hidden="true">|</span>
+    <a href="{{ route('legal.dmca') }}">{{ \App\Services\LanguageService::trans('footer_dmca', $lang) }}</a>
 </footer>

@@ -33,6 +33,7 @@ class LocaleRoutingTest extends TestCase
         $this->assertSame('/threads/1/responses', parse_url(route('api.threads.responses', ['thread' => 1], false), PHP_URL_PATH));
         $this->assertSame('/auth/google/callback', parse_url(route('auth.provider.callback', ['provider' => 'google'], false), PHP_URL_PATH));
         $this->assertSame('/robots.txt', parse_url(route('seo.robots', absolute: false), PHP_URL_PATH));
+        $this->assertSame('/ads.txt', parse_url(route('seo.ads-txt', absolute: false), PHP_URL_PATH));
         $this->assertSame('/sitemap.xml', parse_url(route('seo.sitemap', absolute: false), PHP_URL_PATH));
     }
 

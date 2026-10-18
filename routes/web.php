@@ -39,6 +39,7 @@ Route::get('/favicon.ico', function () {
 });
 
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/ads.txt', [SeoController::class, 'adsTxt'])->name('seo.ads-txt');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
 Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {

@@ -136,6 +136,18 @@ body {
     opacity: 0.9;
 }
 
+.legal-compliance-links--room {
+    margin: 8px 0 4px;
+}
+
+.legal-compliance-links--room a {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.legal-compliance-links--room .legal-compliance-sep {
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .meta-item {
     display: flex;
     align-items: center;
