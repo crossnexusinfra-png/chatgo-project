@@ -37,7 +37,7 @@
                                         {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時） --}}
                                         <!-- ad-placement: rewarded-video / location: insufficient-coins error -->
                                         <div class="error-message-margin-top" data-ad-placement="rewarded-video" aria-label="Advertisement">
-                                            <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
+                                            @include('components.ad-network-badge', ['network' => 'gam'])
                                             <button id="watchAdBtnMainError" class="btn btn-primary watch-ad-button-error" data-action="watch-ad-index">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
@@ -191,16 +191,15 @@
                 </div>
                 @endif
 
-                {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所 --}}
-                <!-- ad-placement: rewarded-video / location: index page (top of popular rooms) -->
-                <section class="post-list post-list-margin" data-ad-placement="rewarded-video" aria-label="Advertisement">
+                <section class="post-list post-list-margin ad-slot ad-slot--rewarded ad-slot--gam" data-ad-placement="rewarded-video" data-ad-network="gam" aria-label="Google Ad Manager">
                     <div class="thread-category">
                         <h3 class="category-title">
                             <span class="category-icon">🎬</span>
                             {{ \App\Services\LanguageService::trans('coins_ad_video', $lang) }}
                         </h3>
                         <div class="thread-scroll-container thread-scroll-container-padding">
-                            <span class="ad-review-label" aria-label="ad-placeholder">Ad / 広告</span>
+                            @include('components.ad-network-badge', ['network' => 'gam'])
+                            <p class="ad-slot-note ad-slot-note--inline">{{ \App\Services\LanguageService::trans('ad_slot_note_gam', $lang) }}</p>
                             @if(config('ads.enabled'))
                             <p class="ad-section-description">
                                 {{ \App\Services\LanguageService::trans('ad_video_description', $lang) }}

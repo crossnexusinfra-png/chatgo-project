@@ -15,10 +15,11 @@
 @endpush
 
 @section('content')
+    @php $roomAdNetwork = !empty($isR18Thread) ? 'exoclick' : 'gam'; @endphp
     <div class="thread-show-outer">
-        <aside class="thread-show-rail thread-show-rail--left" aria-label="Advertisement">
+        <aside class="thread-show-rail thread-show-rail--left" aria-label="{{ $roomAdNetwork === 'exoclick' ? 'ExoClick' : 'Google Ad Manager' }}">
             @for($i = 1; $i <= 3; $i++)
-                @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left-'.$i])
+                @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left-'.$i, 'network' => $roomAdNetwork])
             @endfor
         </aside>
     <div class="chat-container">
@@ -248,7 +249,10 @@
                 ])
                 @if($loop->iteration >= 10 && $loop->iteration % 10 === 0)
                 <div class="adsense-thread-reply-inline">
-                    @include('components.adsense-inline-banner', ['instanceId' => 'thread-reply-'.$loop->iteration])
+                    @include('components.adsense-inline-banner', [
+                        'instanceId' => 'thread-reply-'.$loop->iteration,
+                        'network' => !empty($isR18Thread) ? 'exoclick' : 'adsense',
+                    ])
                 </div>
                 @endif
             @empty
@@ -392,13 +396,11 @@
                                         $isInsufficientCoins = $message === $insufficientCoinsMsg;
                                     @endphp
                                     @if ($isInsufficientCoins)
-                                        {{-- AdSense審査用: 広告動画（リワード動画広告）の掲載箇所（コイン不足エラー時 / ルーム詳細） --}}
-                                        <!-- ad-placement: rewarded-video / location: thread-show insufficient-coins error -->
-                                        <div class="alert alert-danger alert-danger-inline" data-ad-placement="rewarded-video" aria-label="Advertisement">
+                                        <div class="alert alert-danger alert-danger-inline" @if(empty($isR18Thread)) data-ad-placement="rewarded-video" aria-label="Google Ad Manager" @endif>
                                             {{ $message }}<br>
                                             @auth
-                                            @if(config('ads.enabled'))
-                                            <span class="ad-review-label ad-review-label--inline" aria-label="ad-placeholder">Ad / 広告</span>
+                                            @if(empty($isR18Thread) && config('ads.enabled'))
+                                            @include('components.ad-network-badge', ['network' => 'gam'])
                                             <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
@@ -449,20 +451,18 @@
             @endif
         </section>
     </div>
-        <aside class="thread-show-rail thread-show-rail--right" aria-label="Advertisement">
+        <aside class="thread-show-rail thread-show-rail--right" aria-label="{{ $roomAdNetwork === 'exoclick' ? 'ExoClick' : 'Google Ad Manager' }}">
             @for($i = 1; $i <= 3; $i++)
-                @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right-'.$i])
+                @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right-'.$i, 'network' => $roomAdNetwork])
             @endfor
         </aside>
     </div>
 
     @auth
-    @if(config('ads.enabled'))
-    {{-- AdSense審査用: 広告動画（リワード動画広告）モーダル / ルーム詳細ページ --}}
-    <!-- ad-placement: rewarded-video-modal / location: thread-show -->
-    <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="Advertisement">
+    @if(empty($isR18Thread) && config('ads.enabled'))
+    <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="Google Ad Manager">
         <div class="ad-video-container">
-            <span class="ad-review-label ad-review-label--modal" aria-label="ad-placeholder">Ad / 広告</span>
+            @include('components.ad-network-badge', ['network' => 'gam'])
             <button type="button" class="ad-video-close-button" data-action="close-ad-video-thread">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
             <video id="adVideoThread" controls class="ad-video-player" preload="auto">
                 <source src="{{ config('ads.test_ad_url') }}" type="video/mp4">
@@ -497,7 +497,7 @@
         'isCurrentUserThreadOwner' => isset($isCurrentUserThreadOwner) && $isCurrentUserThreadOwner,
         'canReplyToThread' => !empty($canReplyToThread),
         'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
-        'adsEnabled' => (bool) config('ads.enabled'),
+        'adsEnabled' => (bool) config('ads.enabled') && empty($isR18Thread),
         'continuationRequestThreshold' => $continuationRequestThreshold ?? 3,
         'csrfToken' => csrf_token(),
         'routes' => [
@@ -512,9 +512,20 @@
             'translateThreadTitleUrl' => route('threads.translate-title', $thread),
         ],
         'adsense' => [
-            'enabled' => (bool) config('adsense.enabled'),
+            'enabled' => (bool) config('adsense.enabled') && empty($isR18Thread),
             'client' => (string) config('adsense.client'),
             'displaySlot' => (string) config('adsense.slots.display_banner'),
+        ],
+        'adSlot' => [
+            'replyInlineNetwork' => !empty($isR18Thread) ? 'exoclick' : 'adsense',
+            'labels' => [
+                'adsense' => \App\Services\LanguageService::trans('ad_network_adsense', $lang),
+                'gam' => \App\Services\LanguageService::trans('ad_network_gam', $lang),
+                'exoclick' => \App\Services\LanguageService::trans('ad_network_exoclick', $lang),
+                'noteAdsense' => \App\Services\LanguageService::trans('ad_slot_note_adsense', $lang),
+                'noteGam' => \App\Services\LanguageService::trans('ad_slot_note_gam', $lang),
+                'noteExoclick' => \App\Services\LanguageService::trans('ad_slot_note_exoclick', $lang),
+            ],
         ],
         'translations' => [
             'loading' => \App\Services\LanguageService::trans('loading', $lang),
@@ -573,7 +584,4 @@
         ]
     ]) }}">
     <script src="{{ asset('js/thread-show.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-    @if(config('adsense.enabled'))
-    <script src="{{ asset('js/adsense-rail-refresh.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-    @endif
 @endsection 

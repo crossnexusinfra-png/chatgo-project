@@ -69,6 +69,19 @@
                             <label><input type="radio" name="completion" value="completed" {{ ($completionStatus ?? 'all') === 'completed' ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_completed', $lang) }}</label>
                         </div>
                     </div>
+
+                    <div class="filter-group">
+                        <label>{{ \App\Services\LanguageService::trans('filter_r18', $lang) }}</label>
+                        @if(!empty($canIncludeR18))
+                        <div class="radio-group">
+                            <label><input type="radio" name="include_r18" value="0" {{ empty($includeR18) ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_r18_exclude', $lang) }}</label>
+                            <label><input type="radio" name="include_r18" value="1" {{ !empty($includeR18) ? 'checked' : '' }} data-auto-submit-form="1">{{ \App\Services\LanguageService::trans('filter_r18_include', $lang) }}</label>
+                        </div>
+                        @else
+                        <p class="filter-r18-unavailable">{{ \App\Services\LanguageService::trans('filter_r18_unavailable', $lang) }}</p>
+                        <input type="hidden" name="include_r18" value="0">
+                        @endif
+                    </div>
                     <div class="filter-group filter-actions">
                         <button type="submit" class="filter-apply-btn">{{ \App\Services\LanguageService::trans('apply_filters', $lang) }}</button>
                     </div>
@@ -265,7 +278,10 @@
                             @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
                             @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
                             <article class="posts-grid-ad-row post-item">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'search-'.$rowIdx])
+                                @include('components.adsense-inline-banner', [
+                                    'instanceId' => 'search-'.$rowIdx,
+                                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'adsense',
+                                ])
                             </article>
                             @endif
                         @endforeach
@@ -299,6 +315,7 @@
         data-sort-by="{{ $sortBy ?? 'latest' }}"
         data-period="{{ $period ?? '' }}"
         data-completion="{{ $completionStatus ?? 'all' }}"
+        data-include-r18="{{ !empty($includeR18) ? '1' : '0' }}"
         data-has-more-threads="{{ isset($totalCount) && $totalCount > $threads->count() ? '1' : '0' }}"
         data-current-offset="20"
         hidden

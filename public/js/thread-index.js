@@ -34,7 +34,7 @@
         modal.className = 'ad-video-modal';
         modal.setAttribute('data-ad-placement', 'rewarded-video-modal');
         modal.setAttribute('role', 'dialog');
-        modal.setAttribute('aria-label', 'Advertisement');
+        modal.setAttribute('aria-label', 'Google Ad Manager');
 
         let sourcesHtml = '';
         if (adUrls.mainUrl) {
@@ -48,7 +48,7 @@
 
         modal.innerHTML = `
             <div class="ad-video-container">
-                <span class="ad-review-label ad-review-label--modal" aria-label="ad-placeholder">Ad / 広告</span>
+                <span class="ad-slot-badge ad-slot-badge--gam" data-ad-network="gam">Google Ad Manager</span>
                 <button onclick="closeAdVideoFromIndex()" class="ad-video-close-button">${translations.closeButton}</button>
                 <video id="adVideoMain" controls class="ad-video-player" preload="auto">
                     ${sourcesHtml}

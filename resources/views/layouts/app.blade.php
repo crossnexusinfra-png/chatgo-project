@@ -16,6 +16,13 @@
             $thread ?? null,
             isset($isR18Thread) ? (bool) $isR18Thread : null,
         );
+        $isR18RoomPage = !empty($isR18Thread)
+            || (isset($thread) && $thread instanceof \App\Models\Thread && $thread->isR18Content());
+        $adsensePageEnabled = !request()->routeIs('admin.*')
+            && (bool) config('adsense.enabled')
+            && filled(config('adsense.client'))
+            && !$isR18RoomPage
+            && empty($searchIncludesR18);
     @endphp
     @hasSection('robots')
     <meta name="robots" content="@yield('robots')">
@@ -30,8 +37,8 @@
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
     @stack('styles')
-    @if(!request()->routeIs('admin.*') && config('adsense.enabled') && config('adsense.client'))
-    {{-- Google AdSense。ADSENSE_ENABLED=false のときはスクリプト自体を読み込まない --}}
+    @if($adsensePageEnabled)
+    {{-- Google AdSense。無効時・管理画面・R18ルームではスクリプト自体を読み込まない --}}
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ e(config('adsense.client')) }}"
          crossorigin="anonymous"></script>
     @endif

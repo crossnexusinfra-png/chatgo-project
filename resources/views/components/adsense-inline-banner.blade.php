@@ -1,11 +1,14 @@
 @php
+    $network = $network ?? 'adsense';
     $enabled = config('adsense.enabled');
     $client = config('adsense.client');
     $slot = config('adsense.slots.display_banner');
     $instanceId = $instanceId ?? 'banner-'.uniqid();
+    $serveAdsense = $network === 'adsense' && $enabled && $client && $slot;
 @endphp
-<div class="adsense-inline-banner" data-adsense-inline="1">
-    @if($enabled && $client && $slot)
+<div class="adsense-inline-banner ad-slot ad-slot--inline ad-slot--{{ $network }}" data-ad-network="{{ $network }}" data-adsense-inline="{{ $serveAdsense ? '1' : '0' }}">
+    @if($serveAdsense)
+    @include('components.ad-network-badge', ['network' => $network])
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="{{ $client }}"
@@ -14,6 +17,6 @@
          data-full-width-responsive="true"
          id="adsense-{{ e($instanceId) }}"></ins>
     @else
-    <div class="adsense-inline-banner-placeholder" aria-label="ad-placeholder">広告</div>
+        @include('components.ad-placeholder', ['network' => $network, 'format' => 'inline'])
     @endif
 </div>

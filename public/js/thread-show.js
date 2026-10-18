@@ -536,15 +536,58 @@
         return div.innerHTML;
     }
 
+    function getReplyAdNetwork() {
+        const adSlot = (config && config.adSlot) ? config.adSlot : {};
+        return adSlot.replyInlineNetwork || 'adsense';
+    }
+
+    function createAdNetworkBadge(network, label) {
+        const badge = document.createElement('span');
+        badge.className = 'ad-slot-badge ad-slot-badge--' + network;
+        badge.setAttribute('data-ad-network', network);
+        badge.setAttribute('aria-label', label);
+        badge.textContent = label;
+        return badge;
+    }
+
+    function createAdPlaceholder(network) {
+        const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
+        const nameMap = {
+            adsense: labels.adsense || 'Google AdSense',
+            gam: labels.gam || 'Google Ad Manager',
+            exoclick: labels.exoclick || 'ExoClick'
+        };
+        const noteMap = {
+            adsense: labels.noteAdsense || '',
+            gam: labels.noteGam || '',
+            exoclick: labels.noteExoclick || ''
+        };
+        const name = nameMap[network] || nameMap.adsense;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'ad-slot-placeholder ad-slot-placeholder--inline ad-slot--' + network;
+        placeholder.setAttribute('data-ad-network', network);
+        placeholder.setAttribute('aria-label', name);
+        placeholder.appendChild(createAdNetworkBadge(network, name));
+        const note = document.createElement('span');
+        note.className = 'ad-slot-note';
+        note.textContent = noteMap[network] || '';
+        placeholder.appendChild(note);
+        return placeholder;
+    }
+
     function createReplyInlineAdNode(adIndex, anchorResponseId) {
         const wrapper = document.createElement('div');
         wrapper.className = 'adsense-thread-reply-inline';
         wrapper.setAttribute('data-reply-ad-anchor', String(anchorResponseId));
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
-        if (adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
-            const banner = document.createElement('div');
-            banner.className = 'adsense-inline-banner';
+        const network = getReplyAdNetwork();
+        const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
+        const banner = document.createElement('div');
+        banner.className = 'adsense-inline-banner ad-slot ad-slot--inline ad-slot--' + network;
+        banner.setAttribute('data-ad-network', network);
+        if (network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
             banner.setAttribute('data-adsense-inline', '1');
+            banner.appendChild(createAdNetworkBadge('adsense', labels.adsense || 'Google AdSense'));
             const ins = document.createElement('ins');
             ins.className = 'adsbygoogle';
             ins.style.display = 'block';
@@ -555,17 +598,19 @@
             dynamicReplyAdSerial += 1;
             ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
             banner.appendChild(ins);
-            wrapper.appendChild(banner);
         } else {
-            const placeholder = document.createElement('div');
-            placeholder.className = 'adsense-inline-banner-placeholder';
-            placeholder.textContent = '広告';
-            wrapper.appendChild(placeholder);
+            banner.setAttribute('data-adsense-inline', '0');
+            banner.appendChild(createAdPlaceholder(network));
         }
+        wrapper.appendChild(banner);
         return wrapper;
     }
 
     function normalizeReplyInlineAds() {
+        const network = getReplyAdNetwork();
+        if (network !== 'adsense' && network !== 'exoclick') {
+            return;
+        }
         const container = document.getElementById('responsesContainer');
         if (!container) return;
         const responseItems = Array.from(container.querySelectorAll('.response-item'));

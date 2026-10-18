@@ -65,6 +65,17 @@ class Thread extends Model
     ];
 
     /**
+     * R18タグ（3種類）
+     *
+     * @var list<string>
+     */
+    public const R18_TAGS = [
+        '成人向けメディア・コンテンツ・創作',
+        '性体験談・性的嗜好・フェティシズム',
+        'アダルト業界・風俗・ナイトワーク',
+    ];
+
+    /**
      * 指定ユーザーがこのルームにリプライ（メディア含む）できるか
      */
     public function allowsRepliesFromUser(?User $user): bool
@@ -556,16 +567,10 @@ class Thread extends Model
     {
         if (!$isAdult) {
             // R18タグ（3種類）を定義
-            $r18Tags = [
-                '成人向けメディア・コンテンツ・創作',
-                '性体験談・性的嗜好・フェティシズム',
-                'アダルト業界・風俗・ナイトワーク'
-            ];
-            
             // 18歳未満の場合はR18スレッド（is_r18=true）またはR18タグのスレッドを除外
             // つまり、is_r18=false かつ R18タグではないスレッドのみ表示
             return $query->where('is_r18', false)
-                         ->whereNotIn('tag', $r18Tags);
+                         ->whereNotIn('tag', self::R18_TAGS);
         }
         
         // 18歳以上の場合はすべて表示
@@ -573,13 +578,19 @@ class Thread extends Model
     }
 
     /**
-     * R18スレッドかどうかを判定
-     * 
-     * @return bool
+     * R18フラグが付いているスレッドかどうか
      */
     public function isR18(): bool
     {
         return $this->is_r18 === true;
+    }
+
+    /**
+     * R18フラグまたはR18タグにより成人向けルームかどうか
+     */
+    public function isR18Content(): bool
+    {
+        return $this->is_r18 === true || in_array((string) $this->tag, self::R18_TAGS, true);
     }
 
     /**

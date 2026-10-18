@@ -33,6 +33,9 @@
                                value="{{ $searchQuery ?? '' }}"
                                id="searchInput"
                                required>
+                        @if(!empty($includeR18))
+                        <input type="hidden" name="include_r18" value="1">
+                        @endif
                         <button type="submit" class="search-button">{{ \App\Services\LanguageService::trans('search', $lang) }}</button>
                     </div>
                 </form>

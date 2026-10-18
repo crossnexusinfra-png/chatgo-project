@@ -28,7 +28,7 @@
         'processing' => \App\Services\LanguageService::trans('processing', $lang)
     ]
 ]) }}">
-@if(!request()->routeIs('admin.*') && config('adsense.enabled'))
+@if(!empty($adsensePageEnabled))
 <meta name="adsense-interstitial-config" content="{{ e(json_encode([
     'enabled' => true,
     'client' => (string) config('adsense.client'),
@@ -45,11 +45,11 @@
 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}">
 @endif
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@if(!request()->routeIs('admin.*') && config('adsense.enabled'))
+@if(!empty($adsensePageEnabled))
 <script src="{{ asset('js/adsense-push.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 <script src="{{ asset('js/adsense-page-level-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@if(!request()->routeIs('admin.*') && config('adsense.enabled') && config('adsense.interstitial_mode', 'official') !== 'official')
+@if(!empty($adsensePageEnabled) && config('adsense.interstitial_mode', 'official') !== 'official')
 <script src="{{ asset('js/adsense-nav-interstitial.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif

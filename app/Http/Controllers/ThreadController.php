@@ -269,26 +269,27 @@ class ThreadController extends Controller
         $sortBy = $request->get('sort_by', 'latest');
         $period = $request->get('period');
         $completionStatus = $request->get('completion', 'all');
-        
-        // ユーザーが18歳以上かどうかを判定
-        $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
+        $includeR18 = $this->searchIncludesR18($request);
+        $canIncludeR18 = $this->viewerCanIncludeR18Search();
+        $searchIncludesR18 = $includeR18;
+        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
         // 検索クエリが空、または有効な「含める」キーワード（2文字以上）がない場合は検索を実行しない
         if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
             $threads = collect(); // 空のコレクションを返す
             $searchQuery = $query; // ヘッダーの検索欄に表示するため
-            return view('threads.search', compact('threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery'));
+            return view('threads.search', compact(
+                'threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery',
+                'includeR18', 'canIncludeR18', 'searchIncludesR18', 'lang'
+            ));
         }
-
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
         
         // 検索クエリでスレッドを取得（使用言語の翻訳も検索対象）
         $threadsQuery = Thread::search($query, $lang);
         
-        // R18タグのフィルタリング（未成年ログイン時のみ）
-        $isLoggedIn = auth()->check();
-        if ($isLoggedIn && !$isAdult) {
-            $threadsQuery = $threadsQuery->filterR18Threads($isAdult);
+        // 未選択時はR18を除外。含める場合のみ成人向けルームを出す
+        if (!$includeR18) {
+            $threadsQuery = $threadsQuery->filterR18Threads(false);
         }
         
         // 完結状態でフィルタリング
@@ -335,7 +336,11 @@ class ThreadController extends Controller
             ];
         }
 
-        return view('threads.search', compact('threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery', 'threadRestrictionData', 'threadImageReportScoreData', 'lang', 'totalCount'));
+        return view('threads.search', compact(
+            'threads', 'query', 'sortBy', 'period', 'completionStatus', 'searchQuery',
+            'threadRestrictionData', 'threadImageReportScoreData', 'lang', 'totalCount',
+            'includeR18', 'canIncludeR18', 'searchIncludesR18'
+        ));
     }
 
     /**
@@ -2200,6 +2205,30 @@ class ThreadController extends Controller
     }
 
     /**
+     * 検索でR18ルームを含める選択ができるか（ログイン中の未成年は不可）
+     */
+    private function viewerCanIncludeR18Search(): bool
+    {
+        if (!auth()->check()) {
+            return true;
+        }
+
+        return (bool) auth()->user()?->isAdult();
+    }
+
+    /**
+     * 検索結果にR18ルームを含めるか
+     */
+    private function searchIncludesR18(Request $request): bool
+    {
+        if (!$this->viewerCanIncludeR18Search()) {
+            return false;
+        }
+
+        return $request->boolean('include_r18');
+    }
+
+    /**
      * 指定されたスレッドの編集フォームを表示する
      *
      * @param  int  $id
@@ -3358,7 +3387,10 @@ class ThreadController extends Controller
         if (!$request->ajax() && !$request->wantsJson()) {
             $query = $request->get('q');
             if ($query) {
-                return redirect()->route('threads.search', ['q' => $query]);
+                return redirect()->route('threads.search', array_filter([
+                    'q' => $query,
+                    'include_r18' => $this->searchIncludesR18($request) ? '1' : null,
+                ]));
             }
             return redirect()->route('threads.index');
         }
@@ -3370,9 +3402,7 @@ class ThreadController extends Controller
         $sortBy = $request->get('sort_by', 'latest');
         $period = $request->get('period');
         $completionStatus = $request->get('completion', 'all');
-        
-        // ユーザーが18歳以上かどうかを判定
-        $isAdult = auth()->check() && auth()->user() ? auth()->user()->isAdult() : false;
+        $includeR18 = $this->searchIncludesR18($request);
         
         // 検索クエリが空、または有効な「含める」キーワード（2文字以上）がない場合は空の結果を返す
         if (! $query || trim((string) $query) === '' || ! $this->threadSearchHasValidIncludeKeyword((string) $query)) {
@@ -3389,10 +3419,8 @@ class ThreadController extends Controller
         // 検索クエリでスレッドを取得（使用言語の翻訳も検索対象）
         $threadsQuery = Thread::search($query, $lang);
         
-        // R18タグのフィルタリング
-        $isLoggedIn = auth()->check();
-        if ($isLoggedIn && !$isAdult) {
-            $threadsQuery = $threadsQuery->filterR18Threads($isAdult);
+        if (!$includeR18) {
+            $threadsQuery = $threadsQuery->filterR18Threads(false);
         }
         
         // 完結状態でフィルタリング
@@ -3433,8 +3461,6 @@ class ThreadController extends Controller
             ];
         }
         
-        $lang = \App\Services\LanguageService::getCurrentLanguage();
-        
         // HTMLを生成
         $html = view('threads.partials.thread-item-list', [
             'threads' => $threads,
@@ -3442,6 +3468,7 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
+            'adNetwork' => $includeR18 ? 'exoclick' : 'adsense',
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;

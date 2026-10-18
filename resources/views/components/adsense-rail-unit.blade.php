@@ -1,14 +1,17 @@
 @php
+    $network = $network ?? 'gam';
     $enabled = config('adsense.enabled');
     $client = config('adsense.client');
     $side = $side ?? 'left';
     $slotKey = $side === 'right' ? 'rail_right' : 'rail_left';
     $slot = config('adsense.slots.'.$slotKey) ?: config('adsense.slots.display_banner');
     $instanceId = $instanceId ?? 'rail-'.$side.'-'.uniqid();
+    $serveAdsense = $network === 'adsense' && $enabled && $client && $slot;
 @endphp
-<div class="adsense-rail-unit" data-adsense-rail="{{ $side }}">
-    @if($enabled && $client && $slot)
-    <div class="adsense-rail-refresh-wrap" data-adsense-rail-refresh="1" data-client="{{ $client }}" data-slot="{{ $slot }}">
+<div class="adsense-rail-unit ad-slot ad-slot--rail ad-slot--{{ $network }}" data-adsense-rail="{{ $side }}" data-ad-network="{{ $network }}">
+    @if($serveAdsense)
+    <div class="adsense-rail-refresh-wrap" data-client="{{ $client }}" data-slot="{{ $slot }}">
+        @include('components.ad-network-badge', ['network' => $network])
         <ins class="adsbygoogle"
              style="display:block;"
              data-ad-client="{{ $client }}"
@@ -19,7 +22,7 @@
     </div>
     @else
     <div class="adsense-rail-refresh-wrap">
-        <div class="adsense-rail-placeholder" aria-label="ad-placeholder">広告</div>
+        @include('components.ad-placeholder', ['network' => $network, 'format' => 'rail'])
     </div>
     @endif
 </div>

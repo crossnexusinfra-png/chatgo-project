@@ -85,6 +85,7 @@
 @php
     $listRowOffset = $listRowOffset ?? 0;
     $adSlotEvery = 7;
+    $adNetwork = $adNetwork ?? (!empty($hideInlineAds) ? 'exoclick' : 'adsense');
 @endphp
 @foreach ($threads as $thread)
     @php
@@ -181,7 +182,7 @@
     @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
     @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
     <article class="posts-grid-ad-row post-item">
-        @include('components.adsense-inline-banner', ['instanceId' => 'more-'.$rowIdx])
+        @include('components.adsense-inline-banner', ['instanceId' => 'more-'.$rowIdx, 'network' => $adNetwork])
     </article>
     @endif
 @endforeach

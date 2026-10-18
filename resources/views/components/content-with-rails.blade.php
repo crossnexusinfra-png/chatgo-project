@@ -1,7 +1,7 @@
 @props(['instancePrefix' => 'content'])
 
 <div class="thread-show-outer legal-content-outer">
-    <aside class="thread-show-rail thread-show-rail--left" aria-label="Advertisement">
+    <aside class="thread-show-rail thread-show-rail--left" aria-label="Google Ad Manager">
         @for ($i = 1; $i <= 3; $i++)
             @include('components.adsense-rail-unit', [
                 'side' => 'left',
@@ -14,7 +14,7 @@
         {{ $slot }}
     </div>
 
-    <aside class="thread-show-rail thread-show-rail--right" aria-label="Advertisement">
+    <aside class="thread-show-rail thread-show-rail--right" aria-label="Google Ad Manager">
         @for ($i = 1; $i <= 3; $i++)
             @include('components.adsense-rail-unit', [
                 'side' => 'right',
