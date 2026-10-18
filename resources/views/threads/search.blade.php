@@ -24,9 +24,10 @@
                 </div>
             @endif
 
-            @if(!empty($includeR18) || !empty($searchIncludesR18))
-                @include('components.r18-compliance-links')
-            @endif
+            @include('components.r18-compliance-links', [
+                'showUsc2257' => !empty($includeR18) || !empty($searchIncludesR18),
+                'showDmca' => true,
+            ])
 
             <!-- 検索結果ヘッダー -->
             <div class="tag-results">

@@ -29,7 +29,10 @@
             <p class="r18-warning-paragraph r18-warning-paragraph-bold">
                 {{ \App\Services\LanguageService::trans('r18_thread_warning_confirm', $lang) }}
             </p>
-            @include('components.r18-compliance-links')
+            @include('components.r18-compliance-links', [
+                'showUsc2257' => true,
+                'showDmca' => true,
+            ])
         </div>
         
         <div class="r18-warning-actions">

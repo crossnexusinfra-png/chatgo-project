@@ -837,7 +837,7 @@ return [
     'footer_faq' => 'FAQ',
     'footer_articles' => 'Articles',
     'footer_dmca' => 'Copyright / DMCA',
-    'footer_usc2257' => '18 U.S.C. 2257',
+    'footer_usc2257' => '18 U.S.C. § 2257',
     'r18_compliance_nav_label' => 'Adult content disclosures',
     'ad_watch_unavailable' => 'Coin rewards from watching ads are not available right now.',
     'usc2257_page_h1' => '18 U.S.C. § 2257 Record-Keeping Disclosure',

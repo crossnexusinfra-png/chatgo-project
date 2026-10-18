@@ -831,7 +831,7 @@ return [
     'footer_faq' => 'FAQ',
     'footer_articles' => '記事',
     'footer_dmca' => '著作権・DMCA',
-    'footer_usc2257' => '18 U.S.C. 2257',
+    'footer_usc2257' => '18 U.S.C. § 2257',
     'r18_compliance_nav_label' => '成人向けコンテンツに関する表示',
     'ad_watch_unavailable' => '現在、広告視聴によるコイン獲得は利用できません。',
     'usc2257_page_h1' => '18 U.S.C. § 2257 記録保持に関する表示',

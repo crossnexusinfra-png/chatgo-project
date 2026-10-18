@@ -156,9 +156,11 @@
                 </div>
                 @endauth
             </div>
-            @if(!empty($isR18Thread))
-                @include('components.r18-compliance-links', ['variant' => 'room'])
-            @endif
+            @include('components.r18-compliance-links', [
+                'variant' => 'room',
+                'showUsc2257' => !empty($isR18Thread),
+                'showDmca' => true,
+            ])
 
         </header>
 
