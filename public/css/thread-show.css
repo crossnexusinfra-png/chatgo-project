@@ -14,6 +14,11 @@
     }
 }
 
+:root {
+    /* ヘッダー実測（padding 15+15 + logo 58 + border 1 + サブピクセル） */
+    --thread-header-height: 96px;
+}
+
 html, body {
     height: 100%;
     margin: 0;
@@ -37,8 +42,10 @@ body {
     display: flex;
     position: relative;
     flex-direction: column;
-    height: calc(100vh - 78.667px);
-    max-height: calc(100vh - 78.667px);
+    height: calc(100vh - var(--thread-header-height));
+    height: calc(100dvh - var(--thread-header-height));
+    max-height: calc(100vh - var(--thread-header-height));
+    max-height: calc(100dvh - var(--thread-header-height));
     max-width: 800px;
     margin: 0 auto;
     background-color: white;
@@ -1390,21 +1397,27 @@ body {
 }
 
 .thread-show-rail {
+    --thread-rail-header: var(--thread-header-height);
     --thread-rail-top-gap: 12px;
     --thread-rail-bottom-gap: 12px;
+    --thread-rail-offset: calc(var(--thread-rail-header) + var(--thread-rail-top-gap) + var(--thread-rail-bottom-gap));
     width: 100%;
     min-width: 0;
     position: sticky;
-    top: calc(72px + var(--thread-rail-top-gap));
-    height: calc(100vh - 72px - var(--thread-rail-top-gap) - var(--thread-rail-bottom-gap));
-    align-self: flex-start;
+    top: calc(var(--thread-rail-header) + var(--thread-rail-top-gap));
+    height: calc(100vh - var(--thread-rail-offset));
+    height: calc(100dvh - var(--thread-rail-offset));
+    max-height: calc(100vh - var(--thread-rail-offset));
+    max-height: calc(100dvh - var(--thread-rail-offset));
+    align-self: start;
     display: grid;
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
     justify-items: center;
     align-items: stretch;
     gap: 12px;
     padding: 0;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .thread-show-outer--no-rails {
@@ -1425,7 +1438,7 @@ body {
 
 .thread-show-rail .adsense-rail-unit.ad-slot {
     height: 100%;
-    min-height: 250px;
+    min-height: 0;
 }
 
 .thread-show-rail .adsense-rail-refresh-wrap,
