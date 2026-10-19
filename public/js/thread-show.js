@@ -443,9 +443,7 @@
                     enqueueDeferredTranslations();
                 }
                 normalizeReplyInlineAds();
-                if (typeof window.chatgoAdsensePushIn === 'function') {
-                    window.chatgoAdsensePushIn(responsesContainer);
-                }
+                pushReplyAds(responsesContainer);
             } else {
                 console.log(translations.responseLoadEmpty || 'Response HTML is empty. Stopping load.');
                 hasMoreResponses = false;
@@ -541,6 +539,15 @@
         return adSlot.replyInlineNetwork || 'adsense';
     }
 
+    function pushReplyAds(container) {
+        if (typeof window.chatgoAdsensePushIn === 'function') {
+            window.chatgoAdsensePushIn(container);
+        }
+        if (typeof window.chatgoExoclickServe === 'function') {
+            window.chatgoExoclickServe(container);
+        }
+    }
+
     function createAdNetworkBadge(network, label) {
         const badge = document.createElement('span');
         badge.className = 'ad-slot-badge ad-slot-badge--' + network;
@@ -555,6 +562,7 @@
         wrapper.className = 'adsense-thread-reply-inline';
         wrapper.setAttribute('data-reply-ad-anchor', String(anchorResponseId));
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
+        const exoCfg = (config && config.exoclick) ? config.exoclick : {};
         const network = getReplyAdNetwork();
         const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
         const nameMap = {
@@ -563,12 +571,17 @@
             exoclick: labels.exoclick || 'ExoClick'
         };
         const name = nameMap[network] || nameMap.adsense;
+        const serveAdsense = network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot;
+        const serveExoclick = network === 'exoclick' && exoCfg.enabled && exoCfg.inlineZone;
+        const serveLive = !!(serveAdsense || serveExoclick);
         const banner = document.createElement('div');
-        banner.className = 'ad-slot ad-slot--inline ad-slot--' + network;
+        banner.className = 'ad-slot ad-slot--inline ad-slot--' + network + (serveLive ? ' ad-slot--live' : '');
         banner.setAttribute('data-ad-network', network);
         banner.setAttribute('aria-label', name);
-        banner.appendChild(createAdNetworkBadge(network, name));
-        if (network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot) {
+        if (!serveLive) {
+            banner.appendChild(createAdNetworkBadge(network, name));
+        }
+        if (serveAdsense) {
             banner.setAttribute('data-adsense-inline', '1');
             const ins = document.createElement('ins');
             ins.className = 'adsbygoogle';
@@ -579,6 +592,13 @@
             ins.setAttribute('data-full-width-responsive', 'true');
             dynamicReplyAdSerial += 1;
             ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
+            banner.appendChild(ins);
+        } else if (serveExoclick) {
+            banner.setAttribute('data-adsense-inline', '0');
+            const ins = document.createElement('ins');
+            ins.className = 'ad-slot-fill';
+            ins.setAttribute('data-zoneid', String(exoCfg.inlineZone));
+            ins.setAttribute('data-exoclick-zone', '1');
             banner.appendChild(ins);
         } else {
             banner.setAttribute('data-adsense-inline', '0');
@@ -1639,9 +1659,7 @@
                     enqueueDeferredTranslations();
                 }
                 normalizeReplyInlineAds();
-                if (typeof window.chatgoAdsensePushIn === 'function') {
-                    window.chatgoAdsensePushIn(responsesContainer);
-                }
+                pushReplyAds(responsesContainer);
 
                 // 動画サムネイルの生成
                 const newVideoThumbnails = responsesContainer.querySelectorAll('.media-video-thumbnail');
@@ -1881,6 +1899,7 @@
             initReplyButtons();
         }
         normalizeReplyInlineAds();
+        pushReplyAds(document.getElementById('responsesContainer'));
 
         // ルーム名の原文/訳文トグル（非同期翻訳後にボタンが挿入されるため委譲）
         document.addEventListener('click', function(e) {

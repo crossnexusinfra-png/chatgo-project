@@ -18,11 +18,19 @@
         );
         $isR18RoomPage = !empty($isR18Thread)
             || (isset($thread) && $thread instanceof \App\Models\Thread && $thread->isR18Content());
+        $searchIncludesR18 = !empty($searchIncludesR18);
+        $adNetwork = app(\App\Services\AdNetworkService::class);
         $adsensePageEnabled = !request()->routeIs('admin.*')
             && (bool) config('adsense.enabled')
             && filled(config('adsense.client'))
             && !$isR18RoomPage
-            && empty($searchIncludesR18);
+            && !$searchIncludesR18;
+        $gamPageEnabled = $adNetwork->shouldLoadGpt(
+            request()->route()?->getName(),
+            $isR18RoomPage,
+            $searchIncludesR18
+        );
+        $exoclickPageEnabled = $adNetwork->shouldLoadExoclick($isR18RoomPage, $searchIncludesR18);
     @endphp
     @hasSection('robots')
     <meta name="robots" content="@yield('robots')">
@@ -41,6 +49,12 @@
     {{-- Google AdSense。無効時・管理画面・R18ルームではスクリプト自体を読み込まない --}}
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ e(config('adsense.client')) }}"
          crossorigin="anonymous"></script>
+    @endif
+    @if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
+    <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+    @endif
+    @if(!empty($exoclickPageEnabled) && empty($gamPageEnabled) && empty($adsensePageEnabled))
+    <script async src="https://a.realsrv.com/ad-provider.js"></script>
     @endif
 </head>
 <body data-csp-nonce="{{ $csp_nonce ?? '' }}">

@@ -49,6 +49,12 @@
 <script src="{{ asset('js/adsense-push.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 <script src="{{ asset('js/adsense-page-level-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
+@if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
+<script src="{{ asset('js/gpt-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+@endif
+@if(!empty($exoclickPageEnabled) && empty($gamPageEnabled) && empty($adsensePageEnabled))
+<script src="{{ asset('js/exoclick-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+@endif
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @if(!empty($adsensePageEnabled) && config('adsense.interstitial_mode', 'official') !== 'official')
 <script src="{{ asset('js/adsense-nav-interstitial.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AdNetworkService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -41,7 +42,7 @@ class CspMiddleware
 
         // CSPが有効な場合のみヘッダーを追加
         if (config('csp.enabled', true)) {
-            $policies = config('csp.policies', []);
+            $policies = $this->mergeAdNetworkSources(config('csp.policies', []));
             $cspHeader = $this->buildCspHeader($policies, $nonce);
             
             $headerName = config('csp.report_only', false) 
@@ -78,6 +79,29 @@ class CspMiddleware
         }
         
         return implode('; ', $directives);
+    }
+
+    /**
+     * GAM / ExoClick の ID が入っているときだけ CSP に配信オリジンを足す。
+     *
+     * @param  array<string, mixed>  $policies
+     * @return array<string, mixed>
+     */
+    private function mergeAdNetworkSources(array $policies): array
+    {
+        $extra = app(AdNetworkService::class)->extraCspSources();
+
+        foreach ($extra as $directive => $sources) {
+            if ($sources === []) {
+                continue;
+            }
+
+            $existing = $policies[$directive] ?? [];
+            $existingList = is_array($existing) ? $existing : [$existing];
+            $policies[$directive] = array_values(array_unique(array_merge($existingList, $sources)));
+        }
+
+        return $policies;
     }
 }
 

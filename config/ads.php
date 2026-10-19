@@ -24,7 +24,7 @@ return [
     // 5秒程度の短いテスト用動画を使用（本番では環境変数で上書きしてください）
     // 注意: デフォルトURLはテスト用です。本番環境では適切な広告動画URLを設定してください
     'test_ad_url' => env('AD_TEST_URL', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'),
-    
+
     // フォールバック用の動画URL（複数指定可能、5秒程度の短い動画）
     // 最初のURLが読み込めない場合、順番に次のURLを試します
     'test_ad_fallback_urls' => [
@@ -32,9 +32,37 @@ return [
         'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     ],
 
-    // 本番環境のGoogle AdManager設定
+    // 本番環境のGoogle AdManager設定（アプリ向け。Web GPT は ads.gam を使う）
     'ad_manager_publisher_id' => env('AD_MANAGER_PUBLISHER_ID', ''),
     'ad_manager_app_id' => env('AD_MANAGER_APP_ID', ''),
     'ad_manager_ad_unit_id' => env('AD_MANAGER_AD_UNIT_ID', ''),
-];
 
+    /*
+    | Google Ad Manager (GPT / ウェブ)。
+    | enabled=false またはスロットパスが空のときは枠のみ（審査中の既定）。
+    | レール refresh・公式 Rewarded は未配線。承認後に別途入れる。
+    */
+    'gam' => [
+        'enabled' => (bool) env('GAM_ENABLED', false),
+        'network_code' => env('GAM_NETWORK_CODE', ''),
+        'slots' => [
+            'rail_left' => env('GAM_SLOT_RAIL_LEFT', ''),
+            'rail_right' => env('GAM_SLOT_RAIL_RIGHT', ''),
+        ],
+        // 予約。30 未満では使わない。現在の JS は refresh しない。
+        'refresh_seconds' => (int) env('GAM_RAIL_REFRESH_SECONDS', 0),
+        'rewarded_unit' => env('GAM_REWARDED_UNIT', ''),
+    ],
+
+    /*
+    | ExoClick。enabled=false またはゾーン ID が空のときは枠のみ。
+    */
+    'exoclick' => [
+        'enabled' => (bool) env('EXOCLICK_ENABLED', false),
+        'zones' => [
+            'rail_left' => env('EXOCLICK_ZONE_RAIL_LEFT', ''),
+            'rail_right' => env('EXOCLICK_ZONE_RAIL_RIGHT', ''),
+            'inline' => env('EXOCLICK_ZONE_INLINE', ''),
+        ],
+    ],
+];

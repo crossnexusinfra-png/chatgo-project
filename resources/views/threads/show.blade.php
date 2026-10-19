@@ -491,6 +491,10 @@
     @endif
     @endauth
 
+    @php
+        $adNetwork = $adNetwork ?? app(\App\Services\AdNetworkService::class);
+        $isR18ForAds = !empty($isR18Thread);
+    @endphp
     <meta name="thread-show-config" content="{{ json_encode([
         'threadId' => $thread->thread_id,
         'initialResponseCount' => count($thread->responses),
@@ -519,6 +523,10 @@
             'enabled' => (bool) config('adsense.enabled') && empty($isR18Thread),
             'client' => (string) config('adsense.client'),
             'displaySlot' => (string) config('adsense.slots.display_banner'),
+        ],
+        'exoclick' => [
+            'enabled' => $isR18ForAds && $adNetwork->shouldServeExoclickInline($isR18ForAds, false),
+            'inlineZone' => (string) ($adNetwork->exoclickZone('inline') ?? ''),
         ],
         'adSlot' => [
             'replyInlineNetwork' => !empty($isR18Thread) ? 'exoclick' : 'adsense',

@@ -6,6 +6,7 @@
             @include('components.adsense-rail-unit', [
                 'side' => 'left',
                 'instanceId' => $instancePrefix.'-rail-left-'.$i,
+                'network' => 'gam',
             ])
         @endfor
     </aside>
@@ -19,6 +20,7 @@
             @include('components.adsense-rail-unit', [
                 'side' => 'right',
                 'instanceId' => $instancePrefix.'-rail-right-'.$i,
+                'network' => 'gam',
             ])
         @endfor
     </aside>

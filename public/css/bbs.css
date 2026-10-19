@@ -3928,3 +3928,19 @@ a.mandatory-notice-open-btn:focus-visible {
 .ad-slot .adsbygoogle {
     width: 100%;
 }
+
+.ad-slot--live {
+    border-style: solid;
+    border-color: transparent;
+    background: transparent;
+    padding: 0;
+}
+
+.ad-slot-fill,
+.ad-slot [data-gpt-slot],
+.ad-slot [data-exoclick-zone] {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+}
