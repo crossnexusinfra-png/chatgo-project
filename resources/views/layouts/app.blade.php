@@ -18,7 +18,13 @@
         );
         $isR18RoomPage = !empty($isR18Thread)
             || (isset($thread) && $thread instanceof \App\Models\Thread && $thread->isR18Content());
-        $searchIncludesR18 = !empty($searchIncludesR18);
+        $routeTag = (string) (request()->route('tag') ?? '');
+        $isR18TagPage = !empty($isR18Tag)
+            || (
+                request()->routeIs('threads.tag')
+                && in_array($routeTag, \App\Models\Thread::R18_TAGS, true)
+            );
+        $searchIncludesR18 = !empty($searchIncludesR18) || $isR18TagPage;
         $adNetwork = app(\App\Services\AdNetworkService::class);
         $adsensePageEnabled = !request()->routeIs('admin.*')
             && (bool) config('adsense.enabled')

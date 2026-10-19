@@ -403,7 +403,8 @@ class ThreadController extends Controller
             // 18歳未満のユーザーがR18タグで検索しようとした場合、空の結果を返す
             $threads = collect();
                 $threadRestrictionData = [];
-                return view('threads.tag', compact('threads', 'tag', 'searchQuery', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'lang'))->with('selectedTag', $tag);
+                $searchIncludesR18 = true;
+                return view('threads.tag', compact('threads', 'tag', 'searchQuery', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'lang', 'isR18Tag', 'searchIncludesR18'))->with('selectedTag', $tag);
         }
         
         // スレッドを取得（使用言語の翻訳も検索対象）
@@ -510,7 +511,8 @@ class ThreadController extends Controller
             ];
         }
 
-        return view('threads.tag', compact('threads', 'tag', 'searchQuery', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'threadImageReportScoreData', 'lang', 'totalCount'))->with('selectedTag', $tag);
+        $searchIncludesR18 = $isR18Tag;
+        return view('threads.tag', compact('threads', 'tag', 'searchQuery', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'threadImageReportScoreData', 'lang', 'totalCount', 'isR18Tag', 'searchIncludesR18'))->with('selectedTag', $tag);
             
         } catch (\Exception $e) {
             // エラーをログに記録（直接ファイルに書き込む方法で確実に記録）
@@ -3364,6 +3366,8 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
+            'adNetwork' => $isR18Tag ? 'exoclick' : 'adsense',
+            'searchIncludesR18' => $isR18Tag,
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;
@@ -3470,6 +3474,7 @@ class ThreadController extends Controller
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
             'adNetwork' => $includeR18 ? 'exoclick' : 'adsense',
+            'searchIncludesR18' => $includeR18,
         ])->render();
         
         $hasMore = ($offset + $limit) < $totalCount;

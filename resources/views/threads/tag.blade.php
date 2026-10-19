@@ -27,6 +27,12 @@
                 </div>
             @endif
 
+            @include('components.r18-compliance-links', [
+                'variant' => 'search',
+                'showUsc2257' => !empty($isR18Tag) || !empty($searchIncludesR18),
+                'showDmca' => true,
+            ])
+
             <!-- タグ結果ヘッダー -->
             <div class="tag-results">
                 <p class="tag-info">
@@ -281,7 +287,10 @@
                             @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
                             @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
                             <article class="posts-grid-ad-row post-item">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'taglist-'.$rowIdx])
+                                @include('components.adsense-inline-banner', [
+                                    'instanceId' => 'taglist-'.$rowIdx,
+                                    'network' => (!empty($isR18Tag) || !empty($searchIncludesR18)) ? 'exoclick' : 'adsense',
+                                ])
                             </article>
                             @endif
                         @endforeach
