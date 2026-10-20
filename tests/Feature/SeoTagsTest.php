@@ -31,6 +31,14 @@ class SeoTagsTest extends TestCase
         $response->assertDontSee('Disallow: /admin', false);
     }
 
+    public function test_exoclick_site_verification_file_is_served_at_root(): void
+    {
+        $response = $this->get('/d0ea5f55b8d3e877c6e03a2fd42efc09.html');
+
+        $response->assertOk();
+        $response->assertSee('d0ea5f55b8d3e877c6e03a2fd42efc09', false);
+    }
+
     public function test_ads_txt_lists_google_and_optional_exoclick(): void
     {
         config(['ads.exoclick_ads_txt_id' => '', 'ads.ads_txt_extra' => '']);

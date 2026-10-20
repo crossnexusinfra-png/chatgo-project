@@ -41,6 +41,7 @@ Route::get('/favicon.ico', function () {
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 Route::get('/ads.txt', [SeoController::class, 'adsTxt'])->name('seo.ads-txt');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/d0ea5f55b8d3e877c6e03a2fd42efc09.html', [SeoController::class, 'exoclickSiteVerification'])->name('seo.exoclick-verify');
 
 Route::prefix('api')->middleware(['web', 'throttle:api'])->group(function () {
     if (config('app.debug')) {

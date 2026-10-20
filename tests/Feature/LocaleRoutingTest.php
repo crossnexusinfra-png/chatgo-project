@@ -35,6 +35,7 @@ class LocaleRoutingTest extends TestCase
         $this->assertSame('/robots.txt', parse_url(route('seo.robots', absolute: false), PHP_URL_PATH));
         $this->assertSame('/ads.txt', parse_url(route('seo.ads-txt', absolute: false), PHP_URL_PATH));
         $this->assertSame('/sitemap.xml', parse_url(route('seo.sitemap', absolute: false), PHP_URL_PATH));
+        $this->assertSame('/d0ea5f55b8d3e877c6e03a2fd42efc09.html', parse_url(route('seo.exoclick-verify', absolute: false), PHP_URL_PATH));
     }
 
     public function test_url_locale_selects_language_without_controller_branch(): void
