@@ -21,12 +21,12 @@
     const routes = config.routes || {};
     const adUrls = config.adUrls || {};
     const adsEnabled = !!config.adsEnabled;
+    const useGamRewarded = !!config.useGamRewarded;
 
     // 広告動画モーダルを動的に生成
-    // AdSense審査用: 広告動画（リワード動画広告）モーダル / メインページ
     // ad-placement: rewarded-video-modal / location: index page
     (function setupAdVideoModal() {
-        if (!adsEnabled) return;
+        if (!adsEnabled || useGamRewarded) return;
         if (document.getElementById('adVideoModal')) return;
 
         const modal = document.createElement('div');
@@ -59,10 +59,19 @@
         document.body.appendChild(modal);
     })();
 
+    if (adsEnabled && useGamRewarded) {
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.chatgoSyncRewardedButtons === 'function') {
+                window.chatgoSyncRewardedButtons('[data-action="watch-ad-index"]');
+            }
+        });
+    }
+
     window.watchAdFromIndex = function() {
         if (!adsEnabled) return;
         window.watchAdVideo({
             adsEnabled: true,
+            useGamRewarded: useGamRewarded,
             modalId: 'adVideoModal',
             videoId: 'adVideoMain',
             statusId: 'adWatchStatusMain',

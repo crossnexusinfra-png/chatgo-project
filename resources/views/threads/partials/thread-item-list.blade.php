@@ -85,7 +85,7 @@
 @php
     $listRowOffset = $listRowOffset ?? 0;
     $adSlotEvery = 7;
-    $adNetwork = $adNetwork ?? (!empty($hideInlineAds) ? 'exoclick' : 'adsense');
+    $adNetwork = $adNetwork ?? (!empty($hideInlineAds) ? 'exoclick' : 'gam');
 @endphp
 @foreach ($threads as $thread)
     @php

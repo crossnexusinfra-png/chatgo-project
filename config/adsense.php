@@ -3,13 +3,12 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Google AdSense（表示ユニット）
+    | Google AdSense（直接タグは使わない）
     |--------------------------------------------------------------------------
-    | AdSense 管理画面で作成した広告ユニットの data-ad-slot を .env に設定してください。
-    | 未設定のスロットは HTML を出力しません（レイアウトのみの場合は enabled=false）。
-    | enabled=false のときはプレースホルダ枠のみ残し、adsbygoogle.js と
-    | AdSense 初期化・push・インタースティシャル用スクリプトは読み込みません。
-    | 広告動画（config/ads.php）も同じ ADSENSE_ENABLED で停止します。
+    | 一般向けの表示広告は Google Ad Manager 経由で配信する。
+    | このファイルのクライアント ID とスロットはページへ出さない。
+    | AdSense は GAM 管理画面でアカウントをリンクし、各広告ユニットの
+    | バックフィル（AdSense）として設定する。
     */
     'enabled' => env('ADSENSE_ENABLED', false),
 

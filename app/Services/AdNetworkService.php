@@ -5,16 +5,39 @@ namespace App\Services;
 class AdNetworkService
 {
     /**
-     * SFW の GAM レールを出すルート（Google + ExoClick を同一ページに載せない）。
+     * 一般向けページで左右レール（GAM）を出すルート。
      *
      * @var list<string>
      */
-    private const GAM_INVENTORY_ROUTES = [
+    private const GAM_RAIL_ROUTES = [
         'threads.show',
         'legal.guide',
         'legal.faq',
         'legal.articles',
         'legal.articles.show',
+    ];
+
+    /**
+     * 一般向けページでインライン枠（GAM）を出すルート。
+     *
+     * @var list<string>
+     */
+    private const GAM_INLINE_ROUTES = [
+        'threads.index',
+        'threads.category',
+        'threads.tag',
+        'threads.search',
+        'threads.show',
+    ];
+
+    /**
+     * コイン獲得のリワード広告を出すルート。R18 文脈では出さない。
+     *
+     * @var list<string>
+     */
+    private const GAM_REWARDED_ROUTES = [
+        'threads.index',
+        'threads.show',
     ];
 
     public function isAdultContext(bool $isR18Room, bool $searchIncludesR18): bool
@@ -32,8 +55,10 @@ class AdNetworkService
             return false;
         }
 
-        return $this->gamSlotPath('rail_left') !== null
-            || $this->gamSlotPath('rail_right') !== null;
+        return $this->gamSlotPath('rail') !== null
+            || $this->gamSlotPath('inline') !== null
+            || $this->gamSlotPath('interstitial') !== null
+            || $this->gamSlotPath('rewarded') !== null;
     }
 
     public function gamSlotPath(string $slotKey): ?string
@@ -61,7 +86,51 @@ class AdNetworkService
             return false;
         }
 
-        return in_array($routeName, self::GAM_INVENTORY_ROUTES, true);
+        if ($routeName !== null && str_starts_with($routeName, 'admin.')) {
+            return false;
+        }
+
+        if ($this->gamSlotPath('interstitial') !== null) {
+            return true;
+        }
+
+        if ($this->gamSlotPath('rail') !== null && in_array($routeName, self::GAM_RAIL_ROUTES, true)) {
+            return true;
+        }
+
+        if ($this->shouldServeGamRewarded($isR18Room, $searchIncludesR18)
+            && in_array($routeName, self::GAM_REWARDED_ROUTES, true)) {
+            return true;
+        }
+
+        return $this->gamSlotPath('inline') !== null
+            && in_array($routeName, self::GAM_INLINE_ROUTES, true);
+    }
+
+    public function shouldServeGamRewarded(bool $isR18Room, bool $searchIncludesR18): bool
+    {
+        if ($this->isAdultContext($isR18Room, $searchIncludesR18)) {
+            return false;
+        }
+
+        if (! (bool) config('ads.enabled') || ! (bool) config('ads.gam.enabled')) {
+            return false;
+        }
+
+        return $this->gamSlotPath('rewarded') !== null;
+    }
+
+    public function shouldServeGamInline(bool $isR18Room, bool $searchIncludesR18): bool
+    {
+        if ($this->isAdultContext($isR18Room, $searchIncludesR18)) {
+            return false;
+        }
+
+        if (! (bool) config('ads.gam.enabled')) {
+            return false;
+        }
+
+        return $this->gamSlotPath('inline') !== null;
     }
 
     public function shouldServeGamRail(string $side, bool $isR18Room, bool $searchIncludesR18): bool
@@ -74,9 +143,7 @@ class AdNetworkService
             return false;
         }
 
-        $key = $side === 'right' ? 'rail_right' : 'rail_left';
-
-        return $this->gamSlotPath($key) !== null;
+        return $this->gamSlotPath('rail') !== null;
     }
 
     public function exoclickConfigured(): bool
@@ -85,8 +152,7 @@ class AdNetworkService
             return false;
         }
 
-        return $this->exoclickZone('rail_left') !== null
-            || $this->exoclickZone('rail_right') !== null
+        return $this->exoclickZone('rail') !== null
             || $this->exoclickZone('inline') !== null;
     }
 
@@ -108,9 +174,7 @@ class AdNetworkService
             return false;
         }
 
-        $key = $side === 'right' ? 'rail_right' : 'rail_left';
-
-        return $this->exoclickZone($key) !== null;
+        return $this->exoclickZone('rail') !== null;
     }
 
     public function shouldServeExoclickInline(bool $isR18Room, bool $searchIncludesR18): bool

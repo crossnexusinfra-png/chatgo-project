@@ -26,17 +26,18 @@
             );
         $searchIncludesR18 = !empty($searchIncludesR18) || $isR18TagPage;
         $adNetwork = app(\App\Services\AdNetworkService::class);
-        $adsensePageEnabled = !request()->routeIs('admin.*')
-            && (bool) config('adsense.enabled')
-            && filled(config('adsense.client'))
-            && !$isR18RoomPage
-            && !$searchIncludesR18;
         $gamPageEnabled = $adNetwork->shouldLoadGpt(
             request()->route()?->getName(),
             $isR18RoomPage,
             $searchIncludesR18
         );
         $exoclickPageEnabled = $adNetwork->shouldLoadExoclick($isR18RoomPage, $searchIncludesR18);
+        $gamRewardedPath = null;
+        if (request()->routeIs('threads.index', 'threads.show')) {
+            $gamRewardedPath = $adNetwork->shouldServeGamRewarded($isR18RoomPage, $searchIncludesR18)
+                ? $adNetwork->gamSlotPath('rewarded')
+                : null;
+        }
     @endphp
     @hasSection('robots')
     <meta name="robots" content="@yield('robots')">
@@ -51,15 +52,10 @@
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
     @stack('styles')
-    @if($adsensePageEnabled)
-    {{-- Google AdSense。無効時・管理画面・R18ルームではスクリプト自体を読み込まない --}}
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ e(config('adsense.client')) }}"
-         crossorigin="anonymous"></script>
-    @endif
     @if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
     @endif
-    @if(!empty($exoclickPageEnabled) && empty($gamPageEnabled) && empty($adsensePageEnabled))
+    @if(!empty($exoclickPageEnabled) && empty($gamPageEnabled))
     <script async src="https://a.realsrv.com/ad-provider.js"></script>
     @endif
 </head>

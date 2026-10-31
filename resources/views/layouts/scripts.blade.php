@@ -28,34 +28,31 @@
         'processing' => \App\Services\LanguageService::trans('processing', $lang)
     ]
 ]) }}">
-@if(!empty($adsensePageEnabled))
-<meta name="adsense-interstitial-config" content="{{ e(json_encode([
-    'enabled' => true,
-    'client' => (string) config('adsense.client'),
-    'slot' => (string) config('adsense.slots.interstitial'),
-    'closeLabel' => \App\Services\LanguageService::trans('adsense_interstitial_close', $lang),
-], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}">
-<meta name="adsense-page-level-config" content="{{ e(json_encode([
-    'enabled' => true,
-    'client' => (string) config('adsense.client'),
-    'interstitialMode' => (string) config('adsense.interstitial_mode', 'official'),
-], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}">
-<meta name="adsense-eea-test-config" content="{{ e(json_encode([
-    'forceEeaUk' => (bool) config('adsense.eea_uk_test_force', false),
-], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}">
-@endif
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@if(!empty($adsensePageEnabled))
-<script src="{{ asset('js/adsense-push.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-<script src="{{ asset('js/adsense-page-level-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+@php
+    $gamInterstitialPath = null;
+    if (!empty($gamPageEnabled) && empty($exoclickPageEnabled)) {
+        $gamInterstitialPath = app(\App\Services\AdNetworkService::class)->gamSlotPath('interstitial');
+    }
+@endphp
+@if($gamInterstitialPath)
+<div id="gpt-interstitial"
+     data-gpt-slot
+     data-gpt-path="{{ e($gamInterstitialPath) }}"
+     data-gpt-size="interstitial"
+     hidden></div>
+@endif
+@if(!empty($gamRewardedPath))
+<div id="gpt-rewarded"
+     data-gpt-slot
+     data-gpt-path="{{ e($gamRewardedPath) }}"
+     data-gpt-size="rewarded"
+     hidden></div>
 @endif
 @if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
 <script src="{{ asset('js/gpt-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
-@if(!empty($exoclickPageEnabled) && empty($gamPageEnabled) && empty($adsensePageEnabled))
+@if(!empty($exoclickPageEnabled) && empty($gamPageEnabled))
 <script src="{{ asset('js/exoclick-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@if(!empty($adsensePageEnabled) && config('adsense.interstitial_mode', 'official') !== 'official')
-<script src="{{ asset('js/adsense-nav-interstitial.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
-@endif

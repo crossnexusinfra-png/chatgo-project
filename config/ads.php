@@ -11,7 +11,7 @@ return [
     |
     */
 
-    // 公式 GAM Rewarded API を入れるまで false。true でも GAM とは表示しない。
+    // コイン獲得を出す。GAM_REWARDED_UNIT があるときは Ad Manager のリワード、無いときはテスト動画。
     'enabled' => (bool) env('ADS_ENABLED', false),
 
     // ads.txt の ExoClick 行（承認後に発行される publisher / site ID）
@@ -39,29 +39,38 @@ return [
 
     /*
     | Google Ad Manager (GPT / ウェブ)。
+    | 一般向けページは GPT だけを読む。AdSense と一般向け在庫の ExoClick は
+    | GAM の広告申込情報（AdSense バックフィル、第三者クリエイティブ）で配信する。
+    | ページに adsbygoogle.js や ExoClick の直タグは出さない。
+    | R18 は Google のポリシー上 GAM に載せられないため、下の ExoClick 直配信を使う。
     | enabled=false またはスロットパスが空のときは枠のみ（審査中の既定）。
-    | レール refresh・公式 Rewarded は未配線。承認後に別途入れる。
+    | 左右レールは同じ広告ユニットを複数枠で使う。
+    | レールの定期 refresh は未配線。リワードは視聴完了後の再取得だけ行う。
     */
     'gam' => [
         'enabled' => (bool) env('GAM_ENABLED', false),
         'network_code' => env('GAM_NETWORK_CODE', ''),
         'slots' => [
-            'rail_left' => env('GAM_SLOT_RAIL_LEFT', ''),
-            'rail_right' => env('GAM_SLOT_RAIL_RIGHT', ''),
+            'rail' => env('GAM_SLOT_RAIL', env('GAM_SLOT_RAIL_LEFT', '')),
+            'inline' => env('GAM_SLOT_INLINE', ''),
+            'interstitial' => env('GAM_SLOT_INTERSTITIAL', ''),
+            'rewarded' => env('GAM_REWARDED_UNIT', ''),
         ],
-        // 予約。30 未満では使わない。現在の JS は refresh しない。
+        // 予約。30 未満では使わない。現在の JS は定期 refresh しない。
         'refresh_seconds' => (int) env('GAM_RAIL_REFRESH_SECONDS', 0),
         'rewarded_unit' => env('GAM_REWARDED_UNIT', ''),
     ],
 
     /*
-    | ExoClick。enabled=false またはゾーン ID が空のときは枠のみ。
+    | ExoClick の直タグ。R18 ルームと R18 を含む検索だけに出す。
+    | 一般向け在庫の ExoClick はここを使わず、GAM の第三者クリエイティブで配信する。
+    | enabled=false またはゾーン ID が空のときは枠のみ。
+    | 左右レールは同じゾーンを複数枠で使う。
     */
     'exoclick' => [
         'enabled' => (bool) env('EXOCLICK_ENABLED', false),
         'zones' => [
-            'rail_left' => env('EXOCLICK_ZONE_RAIL_LEFT', ''),
-            'rail_right' => env('EXOCLICK_ZONE_RAIL_RIGHT', ''),
+            'rail' => env('EXOCLICK_ZONE_RAIL', env('EXOCLICK_ZONE_RAIL_LEFT', '')),
             'inline' => env('EXOCLICK_ZONE_INLINE', ''),
         ],
     ],

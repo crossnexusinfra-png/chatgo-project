@@ -30,6 +30,15 @@
     const continuationRequestThreshold = config.continuationRequestThreshold || 3;
     const csrfToken = config.csrfToken || '';
     const adsEnabled = !!config.adsEnabled;
+    const useGamRewarded = !!config.useGamRewarded;
+
+    if (adsEnabled && useGamRewarded) {
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.chatgoSyncRewardedButtons === 'function') {
+                window.chatgoSyncRewardedButtons('[data-action="watch-ad-thread"]');
+            }
+        });
+    }
 
     const jsonApiHeaders = {
         'Accept': 'application/json',
@@ -536,12 +545,12 @@
 
     function getReplyAdNetwork() {
         const adSlot = (config && config.adSlot) ? config.adSlot : {};
-        return adSlot.replyInlineNetwork || 'adsense';
+        return adSlot.replyInlineNetwork || 'gam';
     }
 
     function pushReplyAds(container) {
-        if (typeof window.chatgoAdsensePushIn === 'function') {
-            window.chatgoAdsensePushIn(container);
+        if (typeof window.chatgoGptServe === 'function') {
+            window.chatgoGptServe(container);
         }
         if (typeof window.chatgoExoclickServe === 'function') {
             window.chatgoExoclickServe(container);
@@ -562,6 +571,7 @@
         wrapper.className = 'adsense-thread-reply-inline';
         wrapper.setAttribute('data-reply-ad-anchor', String(anchorResponseId));
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
+        const gamCfg = (config && config.gam) ? config.gam : {};
         const exoCfg = (config && config.exoclick) ? config.exoclick : {};
         const network = getReplyAdNetwork();
         const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
@@ -570,10 +580,11 @@
             gam: labels.gam || 'Google Ad Manager',
             exoclick: labels.exoclick || 'ExoClick'
         };
-        const name = nameMap[network] || nameMap.adsense;
+        const name = nameMap[network] || nameMap.gam;
         const serveAdsense = network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot;
+        const serveGam = network === 'gam' && gamCfg.enabled && gamCfg.inlinePath;
         const serveExoclick = network === 'exoclick' && exoCfg.enabled && exoCfg.inlineZone;
-        const serveLive = !!(serveAdsense || serveExoclick);
+        const serveLive = !!(serveAdsense || serveGam || serveExoclick);
         const banner = document.createElement('div');
         banner.className = 'ad-slot ad-slot--inline ad-slot--' + network + (serveLive ? ' ad-slot--live' : '');
         banner.setAttribute('data-ad-network', network);
@@ -593,6 +604,16 @@
             dynamicReplyAdSerial += 1;
             ins.id = 'adsense-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
             banner.appendChild(ins);
+        } else if (serveGam) {
+            banner.setAttribute('data-adsense-inline', '0');
+            const slot = document.createElement('div');
+            dynamicReplyAdSerial += 1;
+            slot.id = 'gpt-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
+            slot.className = 'ad-slot-fill';
+            slot.setAttribute('data-gpt-slot', '');
+            slot.setAttribute('data-gpt-path', String(gamCfg.inlinePath));
+            slot.setAttribute('data-gpt-size', 'inline');
+            banner.appendChild(slot);
         } else if (serveExoclick) {
             banner.setAttribute('data-adsense-inline', '0');
             const ins = document.createElement('ins');
@@ -609,7 +630,7 @@
 
     function normalizeReplyInlineAds() {
         const network = getReplyAdNetwork();
-        if (network !== 'adsense' && network !== 'exoclick') {
+        if (network !== 'gam' && network !== 'adsense' && network !== 'exoclick') {
             return;
         }
         const container = document.getElementById('responsesContainer');
@@ -1440,6 +1461,7 @@
         if (!adsEnabled) return;
         window.watchAdVideo({
             adsEnabled: true,
+            useGamRewarded: useGamRewarded,
             modalId: 'adVideoModalThread',
             videoId: 'adVideoThread',
             statusId: 'adWatchStatusThread',

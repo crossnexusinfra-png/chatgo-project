@@ -289,7 +289,7 @@
                             <article class="posts-grid-ad-row post-item">
                                 @include('components.adsense-inline-banner', [
                                     'instanceId' => 'taglist-'.$rowIdx,
-                                    'network' => (!empty($isR18Tag) || !empty($searchIncludesR18)) ? 'exoclick' : 'adsense',
+                                    'network' => (!empty($isR18Tag) || !empty($searchIncludesR18)) ? 'exoclick' : 'gam',
                                 ])
                             </article>
                             @endif

@@ -903,6 +903,7 @@
     <meta name="thread-index-config" content="{{ json_encode([
         'csrfToken' => csrf_token(),
         'adsEnabled' => (bool) config('ads.enabled'),
+        'useGamRewarded' => app(\App\Services\AdNetworkService::class)->shouldServeGamRewarded(false, false),
         'routes' => [
             'watchAdRoute' => route('coins.watch-ad')
         ],
@@ -918,6 +919,8 @@
             'coinsAdVideo' => \App\Services\LanguageService::trans('coins_ad_video', $lang),
             'adVideoLoading' => \App\Services\LanguageService::trans('ad_video_loading', $lang),
             'adVideoPlaying' => \App\Services\LanguageService::trans('ad_video_playing', $lang),
+            'adVideoNotReady' => \App\Services\LanguageService::trans('ad_video_not_ready', $lang),
+            'adVideoClosedEarly' => \App\Services\LanguageService::trans('ad_video_closed_early', $lang),
             'videoPlayerInitFailed' => \App\Services\LanguageService::trans('video_player_init_failed', $lang),
             'videoPlayFailed' => \App\Services\LanguageService::trans('video_play_failed', $lang),
             'errorOccurred' => \App\Services\LanguageService::trans('error_occurred', $lang),

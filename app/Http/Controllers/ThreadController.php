@@ -3366,7 +3366,7 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
-            'adNetwork' => $isR18Tag ? 'exoclick' : 'adsense',
+            'adNetwork' => $isR18Tag ? 'exoclick' : 'gam',
             'searchIncludesR18' => $isR18Tag,
         ])->render();
         
@@ -3473,7 +3473,7 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
-            'adNetwork' => $includeR18 ? 'exoclick' : 'adsense',
+            'adNetwork' => $includeR18 ? 'exoclick' : 'gam',
             'searchIncludesR18' => $includeR18,
         ])->render();
         

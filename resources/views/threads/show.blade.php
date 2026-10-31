@@ -257,7 +257,7 @@
                 <div class="adsense-thread-reply-inline">
                     @include('components.adsense-inline-banner', [
                         'instanceId' => 'thread-reply-'.$loop->iteration,
-                        'network' => !empty($isR18Thread) ? 'exoclick' : 'adsense',
+                        'network' => !empty($isR18Thread) ? 'exoclick' : 'gam',
                     ])
                 </div>
                 @endif
@@ -406,7 +406,7 @@
                                             {{ $message }}<br>
                                             @auth
                                             @if(empty($isR18Thread) && config('ads.enabled'))
-                                            <button type="button" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
+                                            <button type="button" id="watchAdBtnThread" class="btn btn-primary watch-ad-button-small" data-action="watch-ad-thread">
                                                 {{ \App\Services\LanguageService::trans('watch_ad_to_earn_coins', $lang) }}
                                             </button>
                                             <span id="adWatchStatusThread" class="ad-status-thread"></span>
@@ -464,7 +464,8 @@
     </div>
 
     @auth
-    @if(empty($isR18Thread) && config('ads.enabled'))
+    @php $useGamRewarded = app(\App\Services\AdNetworkService::class)->shouldServeGamRewarded(!empty($isR18Thread), false); @endphp
+    @if(empty($isR18Thread) && config('ads.enabled') && !$useGamRewarded)
     <div id="adVideoModalThread" class="ad-video-modal" data-ad-placement="rewarded-video-modal" role="dialog" aria-label="{{ \App\Services\LanguageService::trans('coins_ad_video', $lang) }}">
         <div class="ad-video-container">
             <button type="button" class="ad-video-close-button" data-action="close-ad-video-thread">{{ \App\Services\LanguageService::trans('close_button', $lang) }}</button>
@@ -477,7 +478,8 @@
             </video>
         </div>
     </div>
-
+    @endif
+    @if(empty($isR18Thread) && config('ads.enabled'))
     <!-- このスレッドページ専用のルーレット＆メッセージ -->
     <div id="coinRouletteOverlayThread" class="coin-roulette-overlay">
         <div class="coin-roulette-container">
@@ -506,6 +508,7 @@
         'canReplyToThread' => !empty($canReplyToThread),
         'canUseMediaPosts' => auth()->check() && auth()->user() ? !auth()->user()->requiresPhoneVerificationRestrictions() : true,
         'adsEnabled' => (bool) config('ads.enabled') && empty($isR18Thread),
+        'useGamRewarded' => app(\App\Services\AdNetworkService::class)->shouldServeGamRewarded(!empty($isR18Thread), false),
         'continuationRequestThreshold' => $continuationRequestThreshold ?? 3,
         'csrfToken' => csrf_token(),
         'routes' => [
@@ -519,17 +522,16 @@
             'translateResponseUrlSuffix' => '/translate',
             'translateThreadTitleUrl' => route('threads.translate-title', $thread),
         ],
-        'adsense' => [
-            'enabled' => (bool) config('adsense.enabled') && empty($isR18Thread),
-            'client' => (string) config('adsense.client'),
-            'displaySlot' => (string) config('adsense.slots.display_banner'),
+        'gam' => [
+            'enabled' => !$isR18ForAds && $adNetwork->shouldServeGamInline($isR18ForAds, false),
+            'inlinePath' => (string) ($adNetwork->gamSlotPath('inline') ?? ''),
         ],
         'exoclick' => [
             'enabled' => $isR18ForAds && $adNetwork->shouldServeExoclickInline($isR18ForAds, false),
             'inlineZone' => (string) ($adNetwork->exoclickZone('inline') ?? ''),
         ],
         'adSlot' => [
-            'replyInlineNetwork' => !empty($isR18Thread) ? 'exoclick' : 'adsense',
+            'replyInlineNetwork' => !empty($isR18Thread) ? 'exoclick' : 'gam',
             'labels' => [
                 'adsense' => \App\Services\LanguageService::trans('ad_network_adsense', $lang),
                 'gam' => \App\Services\LanguageService::trans('ad_network_gam', $lang),
@@ -562,6 +564,8 @@
             'submitting' => \App\Services\LanguageService::trans('submitting', $lang),
             'adVideoLoading' => \App\Services\LanguageService::trans('ad_video_loading', $lang),
             'adVideoPlaying' => \App\Services\LanguageService::trans('ad_video_playing', $lang),
+            'adVideoNotReady' => \App\Services\LanguageService::trans('ad_video_not_ready', $lang),
+            'adVideoClosedEarly' => \App\Services\LanguageService::trans('ad_video_closed_early', $lang),
             'videoLoadFailed' => \App\Services\LanguageService::trans('video_load_failed', $lang),
             'videoLoadAborted' => \App\Services\LanguageService::trans('video_load_aborted', $lang),
             'videoNetworkError' => \App\Services\LanguageService::trans('video_network_error', $lang),

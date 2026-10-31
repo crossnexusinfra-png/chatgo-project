@@ -193,6 +193,69 @@
         const status = document.getElementById(statusId);
         if (!btn || !status) return;
 
+        function claimReward() {
+            fetch(watchAdRoute, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (onSuccess) {
+                        onSuccess(data.coins);
+                    }
+                } else {
+                    status.innerHTML = '<div class="error-message">' + data.message + '</div>';
+                    btn.disabled = false;
+                    btn.removeAttribute('data-chatgo-reward-busy');
+                }
+            })
+            .catch(error => {
+                console.error('API error:', error);
+                status.innerHTML = '<div class="error-message">' + (translations.errorOccurred || 'エラーが発生しました') + '</div>';
+                btn.disabled = false;
+                btn.removeAttribute('data-chatgo-reward-busy');
+            });
+        }
+
+        if (options.useGamRewarded) {
+            if (typeof window.chatgoShowRewardedAd !== 'function') {
+                status.innerHTML = translations.adVideoNotReady || '広告を準備しています。しばらくしてからもう一度お試しください。';
+                return;
+            }
+            let granted = false;
+            function onGranted() {
+                granted = true;
+                document.removeEventListener('chatgo-rewarded-granted', onGranted);
+                claimReward();
+            }
+            function onClosed() {
+                document.removeEventListener('chatgo-rewarded-granted', onGranted);
+                document.removeEventListener('chatgo-rewarded-closed', onClosed);
+                btn.removeAttribute('data-chatgo-reward-busy');
+                if (!granted) {
+                    status.innerHTML = translations.adVideoClosedEarly || '最後まで視聴するとコインを獲得できます。';
+                    btn.disabled = !(window.chatgoRewardedReady && window.chatgoRewardedReady());
+                }
+            }
+            document.addEventListener('chatgo-rewarded-granted', onGranted);
+            document.addEventListener('chatgo-rewarded-closed', onClosed);
+            btn.setAttribute('data-chatgo-reward-busy', '1');
+            btn.disabled = true;
+            status.innerHTML = translations.adVideoPlaying || '広告動画を再生中...';
+            if (!window.chatgoShowRewardedAd()) {
+                document.removeEventListener('chatgo-rewarded-granted', onGranted);
+                document.removeEventListener('chatgo-rewarded-closed', onClosed);
+                btn.removeAttribute('data-chatgo-reward-busy');
+                btn.disabled = false;
+                status.innerHTML = translations.adVideoNotReady || '広告を準備しています。しばらくしてからもう一度お試しください。';
+            }
+            return;
+        }
+
         btn.disabled = true;
         status.innerHTML = translations.adVideoLoading || '読み込み中...';
 
@@ -274,29 +337,7 @@
                 onClose();
             }
 
-            fetch(watchAdRoute, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (onSuccess) {
-                        onSuccess(data.coins);
-                    }
-                } else {
-                    status.innerHTML = '<div class="error-message">' + data.message + '</div>';
-                    btn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('API error:', error);
-                status.innerHTML = '<div class="error-message">' + (translations.errorOccurred || 'エラーが発生しました') + '</div>';
-                btn.disabled = false;
-            });
+            claimReward();
         }
 
         video.addEventListener('error', handleError);
@@ -305,6 +346,26 @@
 
         modal.style.display = 'flex';
         video.load();
+    };
+
+    window.chatgoSyncRewardedButtons = function (selector) {
+        function sync() {
+            const ready = typeof window.chatgoRewardedReady === 'function' && window.chatgoRewardedReady();
+            document.querySelectorAll(selector).forEach(function (button) {
+                if (button.getAttribute('data-chatgo-reward-busy') === '1') {
+                    button.disabled = true;
+                    return;
+                }
+                button.disabled = !ready;
+            });
+        }
+        document.addEventListener('chatgo-rewarded-ready', sync);
+        document.addEventListener('chatgo-rewarded-closed', sync);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', sync);
+        } else {
+            sync();
+        }
     };
 
     /**

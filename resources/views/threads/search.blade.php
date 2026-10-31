@@ -286,7 +286,7 @@
                             <article class="posts-grid-ad-row post-item">
                                 @include('components.adsense-inline-banner', [
                                     'instanceId' => 'search-'.$rowIdx,
-                                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'adsense',
+                                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'gam',
                                 ])
                             </article>
                             @endif
