@@ -1471,7 +1471,7 @@ TXT,
     
     // URL Safety Check
     'url_check_unsafe' => 'The URL in your post is not safe and cannot be posted.',
-    'url_check_rate_limit' => 'The URL safety check service has reached its rate limit. Posts containing URLs cannot be submitted at this time. Please try again later.',
+    'url_check_rate_limit' => 'Posts that include a URL are currently unavailable. Please wait a while and try again.',
     
     // Media File
     'media_file_required' => 'Please enter a message or select a file.',
