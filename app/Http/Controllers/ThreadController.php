@@ -182,8 +182,7 @@ class ThreadController extends Controller
         $myThreads = null;
         $myThreadsTotalCount = 0;
 
-        // スレッドの制限情報を一括取得（N+1問題を回避）
-        // ただし、getThreadRestrictionData()は一時的に無効化されているため、空の配列を返す
+        // スレッドの制限フラグを一覧用に読む
         $allThreads = collect()
             ->merge($popularThreads)
             ->merge($trendingThreads)
@@ -660,7 +659,7 @@ class ThreadController extends Controller
             // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
             $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
             $filename = $hashedFilename . '.' . $extension;
-            $path = $file->storeAs('thread_images', $filename, 'public');
+            $path = $file->storeAs('thread_images', $filename, \App\Services\PublicMediaService::writeOptions());
             $imagePath = $path;
             
             // ファイルが実際に保存されているか確認（Storageファサードを使用してS3対応）
@@ -1038,152 +1037,11 @@ class ThreadController extends Controller
             $userReportedResponses = collect($reportedResponseIds);
         }
 
-        // スレッドの制限判定（キャッシュを使用して最適化、簡略化）
-        $threadCacheKey = 'thread_restriction_' . $thread->thread_id;
-        $cachedRestriction = Cache::get($threadCacheKey);
-        
-        if ($cachedRestriction !== null) {
-            $isThreadRestricted = $cachedRestriction['isRestricted'] ?? false;
-            $threadRestrictionReasons = $cachedRestriction['restrictionReasons'] ?? [];
-            // キャッシュに制限理由が含まれていない場合は取得（R18変更のお知らせ送信に必要）
-            if (empty($threadRestrictionReasons) && $isThreadRestricted) {
-                $threadRestrictionReasons = $thread->getRestrictionReasons();
-            }
-        } else {
-            // キャッシュがない場合のみ計算
-            $isThreadRestricted = $thread->isRestricted();
-            $threadRestrictionReasons = $thread->getRestrictionReasons(); // 制限理由を取得（R18変更のお知らせ送信に必要）
-            
-            // キャッシュに保存
-            Cache::put($threadCacheKey, [
-                'isRestricted' => $isThreadRestricted,
-                'restrictionReasons' => $threadRestrictionReasons,
-            ], 300);
-        }
+        $isThreadRestricted = $thread->isRestricted();
+        $threadRestrictionReasons = $thread->getRestrictionReasons();
+        $isThreadDeletedByReport = $thread->isDeletedByReport();
 
-        $isThreadDeletedByReport = \App\Models\Report::where('thread_id', $thread->thread_id)->where('is_approved', true)->exists();
-
-        // レスポンスの制限情報を一括取得（N+1問題を回避）
-        // レスポンス数が多い場合は制限情報の計算を簡略化してパフォーマンスを向上
-        $responseIds = $initialResponses->pluck('response_id')->toArray();
-        $responseRestrictionData = [];
-        $responseCount = count($responseIds);
-        $maxResponsesForFullCheck = 100; // 100件以上は簡略化（パフォーマンス向上）
-        
-        // レスポンスが存在する場合のみ処理
-        if (!empty($responseIds)) {
-            // レスポンス数が多い場合は制限情報の計算を完全にスキップ
-            if ($responseCount > $maxResponsesForFullCheck) {
-                // 簡略化: すべてfalseを返す（制限情報を表示しない）
-                foreach ($responseIds as $responseId) {
-                    $responseRestrictionData[$responseId] = [
-                        'shouldBeHidden' => false,
-                        'isDeletedByReport' => false,
-                        'restrictionReasons' => [],
-                    ];
-                }
-            } else {
-                // 削除されたレスポンスIDを一括取得
-                $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
-                    ->where('is_approved', true)
-                    ->pluck('response_id')
-                    ->toArray();
-                // 通常処理: 制限情報を計算
-                $sixMonthsAgo = now()->subMonths(6);
-                
-                // 通報データを一括取得
-                $restrictedReasonList = [
-                    'スパム・迷惑行為',
-                    '攻撃的・不適切な内容',
-                    '不適切なリンク・外部誘導',
-                    '成人向け以外のコンテンツ規制違反',
-                    'その他'
-                ];
-                
-                $reports = \App\Models\Report::whereIn('response_id', $responseIds)
-                    ->where('created_at', '>=', $sixMonthsAgo)
-                    ->get()
-                    ->groupBy('response_id');
-                
-                // 通報者のスコアを一括取得してキャッシュ（重複を避ける）
-                $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
-                $userReportScores = [];
-                foreach ($uniqueUserIds as $userId) {
-                    $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
-                }
-                
-                foreach ($responseIds as $responseId) {
-                    $responseReports = $reports->get($responseId, collect());
-                    
-                    // 削除判定
-                    $isDeleted = in_array($responseId, $deletedResponseIds);
-                    
-                    // 制限判定
-                    $restrictedScore = 0.0;
-                    $ideologyScore = 0.0;
-                    $adultContentScore = 0.0;
-                    $restrictionReasons = [];
-                    
-                    if ($responseReports->isNotEmpty()) {
-                        // 特定理由によるスコア計算
-                        $restrictedReports = $responseReports->whereIn('reason', $restrictedReasonList)
-                            ->filter(function($report) {
-                                return $report->is_approved === true || $report->approved_at === null;
-                            });
-                        
-                        foreach ($restrictedReports as $report) {
-                            $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
-                        }
-                        
-                        // 異なる思想によるスコア計算
-                        $ideologyReports = $responseReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
-                            ->filter(function($report) {
-                                return $report->is_approved === true || $report->approved_at === null;
-                            });
-                        
-                        foreach ($ideologyReports as $report) {
-                            $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
-                        }
-                        
-                        // 成人向けコンテンツによるスコア計算
-                        $adultContentReports = $responseReports->where('reason', '成人向けコンテンツが含まれる')
-                            ->filter(function($report) {
-                                return $report->is_approved === true || $report->approved_at === null;
-                            });
-                        
-                        foreach ($adultContentReports as $report) {
-                            $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
-                        }
-                        
-                        // 制限理由を取得
-                        $restrictedReportsForReasons = $responseReports->whereIn('reason', $restrictedReasonList);
-                        foreach ($restrictedReportsForReasons as $report) {
-                            if (!in_array($report->reason, $restrictionReasons)) {
-                                $restrictionReasons[] = $report->reason;
-                            }
-                        }
-                        
-                        // 「異なる思想」のスコアが3以上の場合も制限理由に追加
-                        if ($ideologyScore >= 3.0) {
-                            $restrictionReasons[] = '異なる思想に関しての意見の押し付け、妨害';
-                        }
-                        
-                        // 「成人向けコンテンツが含まれる」のスコアが2以上の場合も制限理由に追加
-                        if ($adultContentScore >= 2.0) {
-                            $restrictionReasons[] = '成人向けコンテンツが含まれる';
-                        }
-                    }
-                    
-                    $shouldBeHidden = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
-                    
-                    $responseRestrictionData[$responseId] = [
-                        'shouldBeHidden' => $shouldBeHidden,
-                        'isDeletedByReport' => $isDeleted,
-                        'restrictionReasons' => $restrictionReasons,
-                    ];
-                }
-            }
-        }
+        $responseRestrictionData = $this->restrictionDataForResponses($initialResponses);
 
         // 言語を一度だけ取得してビューに渡す（パフォーマンス向上）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -1199,7 +1057,7 @@ class ThreadController extends Controller
         // スレッド画像のURLを取得
         $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
         if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-            $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+            $threadImageUrl = media_url($thread->image_path);
         } else {
             $threadImageUrl = $threadImage;
         }
@@ -1323,99 +1181,8 @@ class ThreadController extends Controller
             $userReportedResponses = collect($reportedResponseIds);
         }
         
-        // レスポンスの制限情報を取得
-        $responseIds = $responses->pluck('response_id')->toArray();
-        $responseRestrictionData = [];
-        
-        if (!empty($responseIds)) {
-            $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
-                ->where('is_approved', true)
-                ->pluck('response_id')
-                ->toArray();
-            
-            $sixMonthsAgo = now()->subMonths(6);
-            $restrictedReasonList = [
-                'スパム・迷惑行為',
-                '攻撃的・不適切な内容',
-                '不適切なリンク・外部誘導',
-                '成人向け以外のコンテンツ規制違反',
-                'その他'
-            ];
-            
-            $reports = \App\Models\Report::whereIn('response_id', $responseIds)
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->get()
-                ->groupBy('response_id');
-            
-            $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
-            $userReportScores = [];
-            foreach ($uniqueUserIds as $userId) {
-                $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
-            }
-            
-            foreach ($responseIds as $responseId) {
-                $responseReports = $reports->get($responseId, collect());
-                $isDeleted = in_array($responseId, $deletedResponseIds);
-                
-                $restrictedScore = 0.0;
-                $ideologyScore = 0.0;
-                $adultContentScore = 0.0;
-                $restrictionReasons = [];
-                
-                if ($responseReports->isNotEmpty()) {
-                    $restrictedReports = $responseReports->whereIn('reason', $restrictedReasonList)
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($restrictedReports as $report) {
-                        $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $ideologyReports = $responseReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($ideologyReports as $report) {
-                        $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $adultContentReports = $responseReports->where('reason', '成人向けコンテンツが含まれる')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($adultContentReports as $report) {
-                        $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $restrictedReportsForReasons = $responseReports->whereIn('reason', $restrictedReasonList);
-                    foreach ($restrictedReportsForReasons as $report) {
-                        if (!in_array($report->reason, $restrictionReasons)) {
-                            $restrictionReasons[] = $report->reason;
-                        }
-                    }
-                    
-                    if ($ideologyScore >= 3.0) {
-                        $restrictionReasons[] = '異なる思想に関しての意見の押し付け、妨害';
-                    }
-                    
-                    if ($adultContentScore >= 2.0) {
-                        $restrictionReasons[] = '成人向けコンテンツが含まれる';
-                    }
-                }
-                
-                $shouldBeHidden = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
-                
-                $responseRestrictionData[$responseId] = [
-                    'shouldBeHidden' => $shouldBeHidden,
-                    'isDeletedByReport' => $isDeleted,
-                    'restrictionReasons' => $restrictionReasons,
-                ];
-            }
-        }
-        
+        $responseRestrictionData = $this->restrictionDataForResponses($responses);
+
         // HTMLを生成
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $this->applyTranslationsForResponses($responses, $lang, $users, true);
@@ -1526,99 +1293,8 @@ class ThreadController extends Controller
             $userReportedResponses = collect($reportedResponseIds);
         }
         
-        // レスポンスの制限情報を取得
-        $responseIds = $responses->pluck('response_id')->toArray();
-        $responseRestrictionData = [];
-        
-        if (!empty($responseIds)) {
-            $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
-                ->where('is_approved', true)
-                ->pluck('response_id')
-                ->toArray();
-            
-            $sixMonthsAgo = now()->subMonths(6);
-            $restrictedReasonList = [
-                'スパム・迷惑行為',
-                '攻撃的・不適切な内容',
-                '不適切なリンク・外部誘導',
-                '成人向け以外のコンテンツ規制違反',
-                'その他'
-            ];
-            
-            $reports = \App\Models\Report::whereIn('response_id', $responseIds)
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->get()
-                ->groupBy('response_id');
-            
-            $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
-            $userReportScores = [];
-            foreach ($uniqueUserIds as $userId) {
-                $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
-            }
-            
-            foreach ($responseIds as $responseId) {
-                $responseReports = $reports->get($responseId, collect());
-                $isDeleted = in_array($responseId, $deletedResponseIds);
-                
-                $restrictedScore = 0.0;
-                $ideologyScore = 0.0;
-                $adultContentScore = 0.0;
-                $restrictionReasons = [];
-                
-                if ($responseReports->isNotEmpty()) {
-                    $restrictedReports = $responseReports->whereIn('reason', $restrictedReasonList)
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($restrictedReports as $report) {
-                        $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $ideologyReports = $responseReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($ideologyReports as $report) {
-                        $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $adultContentReports = $responseReports->where('reason', '成人向けコンテンツが含まれる')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($adultContentReports as $report) {
-                        $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    $restrictedReportsForReasons = $responseReports->whereIn('reason', $restrictedReasonList);
-                    foreach ($restrictedReportsForReasons as $report) {
-                        if (!in_array($report->reason, $restrictionReasons)) {
-                            $restrictionReasons[] = $report->reason;
-                        }
-                    }
-                    
-                    if ($ideologyScore >= 3.0) {
-                        $restrictionReasons[] = '異なる思想に関しての意見の押し付け、妨害';
-                    }
-                    
-                    if ($adultContentScore >= 2.0) {
-                        $restrictionReasons[] = '成人向けコンテンツが含まれる';
-                    }
-                }
-                
-                $shouldBeHidden = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
-                
-                $responseRestrictionData[$responseId] = [
-                    'shouldBeHidden' => $shouldBeHidden,
-                    'isDeletedByReport' => $isDeleted,
-                    'restrictionReasons' => $restrictionReasons,
-                ];
-            }
-        }
-        
+        $responseRestrictionData = $this->restrictionDataForResponses($responses);
+
         // HTMLを生成（未キャッシュは translation_pending。フロントが最新リプライから順に翻訳 POST）
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $this->applyTranslationsForResponses($responses, $lang, $users, true);
@@ -2012,11 +1688,10 @@ class ThreadController extends Controller
             ->get()
             ->keyBy('response_id');
 
-        // 削除されたレスポンスのIDを取得
-        $deletedResponseIds = \App\Models\Report::whereIn('response_id', $responseIds)
-            ->where('is_approved', true)
+        $deletedResponseIds = $responses
+            ->filter(fn ($response) => (bool) $response->deleted_by_report)
             ->pluck('response_id')
-            ->toArray();
+            ->all();
 
         // ユーザー情報を取得（親リプライ投稿者も含める）
         $userIds = $this->userIdsForResponsesWithParents($responses);
@@ -2462,10 +2137,31 @@ class ThreadController extends Controller
         return view('threads.category', compact('threads', 'title', 'icon', 'category', 'sortBy', 'period', 'completionStatus', 'threadRestrictionData', 'threadImageReportScoreData', 'lang', 'totalCount'));
     }
 
+
     /**
-     * スレッドの制限情報を一括取得（N+1問題を回避）
-     * パフォーマンス向上のため、スレッド数が多い場合は簡略化
-     * 
+     * 表示中リプライの制限・削除フラグを読む。
+     *
+     * @param \Illuminate\Support\Collection $responses
+     * @return array<int, array{shouldBeHidden: bool, isDeletedByReport: bool, restrictionReasons: array}>
+     */
+    private function restrictionDataForResponses($responses): array
+    {
+        $data = [];
+        foreach ($responses as $response) {
+            $reasons = $response->report_restriction_reasons;
+            $data[$response->response_id] = [
+                'shouldBeHidden' => (bool) $response->report_restricted,
+                'isDeletedByReport' => (bool) $response->deleted_by_report,
+                'restrictionReasons' => is_array($reasons) ? array_values($reasons) : [],
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * スレッドの制限フラグを一覧用に読む。
+     *
      * @param \Illuminate\Support\Collection $threads
      * @return array
      */
@@ -2475,242 +2171,17 @@ class ThreadController extends Controller
             return [];
         }
 
-        $threadIds = $threads->pluck('thread_id')->toArray();
-        $threadCount = count($threadIds);
         $restrictionData = [];
-
-        // 通報により削除されたスレッドIDを一括取得
-        $deletedThreadIds = \App\Models\Report::whereIn('thread_id', $threadIds)
-            ->where('is_approved', true)
-            ->pluck('thread_id')
-            ->unique()
-            ->toArray();
-
-        // スレッド数が多い場合は制限情報の計算をスキップ（パフォーマンス向上）
-        $maxThreadsForCheck = 100;
-        if ($threadCount > $maxThreadsForCheck) {
-            // すべてfalseを返す（制限情報を表示しない）
-            foreach ($threadIds as $threadId) {
-                $restrictionData[$threadId] = [
-                    'isRestricted' => false,
-                    'isDeletedByReport' => in_array($threadId, $deletedThreadIds)
-                ];
-            }
-            return $restrictionData;
-        }
-
-        // キャッシュから取得を試みる（存在しない場合は計算）
-        foreach ($threadIds as $threadId) {
-            $cacheKey = 'thread_restriction_' . $threadId;
-            $cached = Cache::get($cacheKey);
-            
-            if ($cached !== null) {
-                $restrictionData[$threadId] = [
-                    'isRestricted' => $cached['isRestricted'] ?? false,
-                    'isDeletedByReport' => in_array($threadId, $deletedThreadIds)
-                ];
-            } else {
-                // キャッシュがない場合は計算（後で一括処理）
-                $restrictionData[$threadId] = null; // 後で計算する
-            }
-        }
-
-        // キャッシュされていないスレッドの制限情報を一括計算
-        $uncachedThreadIds = array_filter($threadIds, function($threadId) use ($restrictionData) {
-            return $restrictionData[$threadId] === null;
-        });
-
-        if (!empty($uncachedThreadIds)) {
-            $sixMonthsAgo = now()->subMonths(6);
-            $restrictedReasonList = [
-                'スパム・迷惑行為',
-                '攻撃的・不適切な内容',
-                '不適切なリンク・外部誘導',
-                '成人向け以外のコンテンツ規制違反',
-                'その他'
+        foreach ($threads as $thread) {
+            $restrictionData[$thread->thread_id] = [
+                'isRestricted' => (bool) $thread->report_restricted,
+                'isDeletedByReport' => (bool) $thread->deleted_by_report,
             ];
-
-            // 通報データを一括取得
-            $reports = \App\Models\Report::whereIn('thread_id', $uncachedThreadIds)
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->get()
-                ->groupBy('thread_id');
-
-            // 通報者のスコアを一括取得（キャッシュを活用）
-            $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
-            $userReportScores = [];
-            foreach ($uniqueUserIds as $userId) {
-                // calculateUserReportScoreは内部でキャッシュを使用している
-                $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
-            }
-
-            foreach ($uncachedThreadIds as $threadId) {
-                $threadReports = $reports->get($threadId, collect());
-                
-                $restrictedScore = 0.0;
-                $ideologyScore = 0.0;
-                $adultContentScore = 0.0;
-
-                if ($threadReports->isNotEmpty()) {
-                    // 特定理由によるスコア計算
-                    $restrictedReports = $threadReports->whereIn('reason', $restrictedReasonList)
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($restrictedReports as $report) {
-                        $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-
-                    // 異なる思想によるスコア計算
-                    $ideologyReports = $threadReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($ideologyReports as $report) {
-                        $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    // 成人向けコンテンツによるスコア計算
-                    $adultContentReports = $threadReports->where('reason', '成人向けコンテンツが含まれる')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($adultContentReports as $report) {
-                        $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                }
-
-                $isRestricted = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
-                
-                // 通報により削除されたかどうかを判定
-                $isDeletedByReport = in_array($threadId, $deletedThreadIds);
-                
-                $restrictionData[$threadId] = [
-                    'isRestricted' => $isRestricted,
-                    'isDeletedByReport' => $isDeletedByReport
-                ];
-
-                // キャッシュに保存（5分間）
-                Cache::put('thread_restriction_' . $threadId, ['isRestricted' => $isRestricted], 300);
-            }
         }
 
         return $restrictionData;
-        
-        /*
-        if ($threads->isEmpty()) {
-            return [];
-        }
-
-        $threadIds = $threads->pluck('thread_id')->toArray();
-        $threadCount = count($threadIds);
-        $restrictionData = [];
-
-        // スレッド数が多い場合は制限情報の計算をスキップ（パフォーマンス向上）
-        $maxThreadsForCheck = 100;
-        if ($threadCount > $maxThreadsForCheck) {
-            // すべてfalseを返す（制限情報を表示しない）
-            foreach ($threadIds as $threadId) {
-                $restrictionData[$threadId] = false;
-            }
-            return $restrictionData;
-        }
-
-        // キャッシュから取得を試みる（存在しない場合は計算）
-        foreach ($threadIds as $threadId) {
-            $cacheKey = 'thread_restriction_' . $threadId;
-            $cached = Cache::get($cacheKey);
-            
-            if ($cached !== null) {
-                $restrictionData[$threadId] = $cached['isRestricted'] ?? false;
-            } else {
-                // キャッシュがない場合は計算（後で一括処理）
-                $restrictionData[$threadId] = null; // 後で計算する
-            }
-        }
-
-        // キャッシュされていないスレッドの制限情報を一括計算
-        $uncachedThreadIds = array_filter($threadIds, function($threadId) use ($restrictionData) {
-            return $restrictionData[$threadId] === null;
-        });
-
-        if (!empty($uncachedThreadIds)) {
-            $sixMonthsAgo = now()->subMonths(6);
-            $restrictedReasonList = [
-                'スパム・迷惑行為',
-                '攻撃的・不適切な内容',
-                '不適切なリンク・外部誘導',
-                '成人向け以外のコンテンツ規制違反',
-                'その他'
-            ];
-
-            // 通報データを一括取得
-            $reports = \App\Models\Report::whereIn('thread_id', $uncachedThreadIds)
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->get()
-                ->groupBy('thread_id');
-
-            // 通報者のスコアを一括取得（キャッシュを活用）
-            $uniqueUserIds = $reports->flatten()->pluck('user_id')->unique()->toArray();
-            $userReportScores = [];
-            foreach ($uniqueUserIds as $userId) {
-                // calculateUserReportScoreは内部でキャッシュを使用している
-                $userReportScores[$userId] = \App\Models\Report::calculateUserReportScore($userId);
-            }
-
-            foreach ($uncachedThreadIds as $threadId) {
-                $threadReports = $reports->get($threadId, collect());
-                
-                $restrictedScore = 0.0;
-                $ideologyScore = 0.0;
-                $adultContentScore = 0.0;
-
-                if ($threadReports->isNotEmpty()) {
-                    // 特定理由によるスコア計算
-                    $restrictedReports = $threadReports->whereIn('reason', $restrictedReasonList)
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($restrictedReports as $report) {
-                        $restrictedScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-
-                    // 異なる思想によるスコア計算
-                    $ideologyReports = $threadReports->where('reason', '異なる思想に関しての意見の押し付け、妨害')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($ideologyReports as $report) {
-                        $ideologyScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                    
-                    // 成人向けコンテンツによるスコア計算
-                    $adultContentReports = $threadReports->where('reason', '成人向けコンテンツが含まれる')
-                        ->filter(function($report) {
-                            return $report->is_approved === true || $report->approved_at === null;
-                        });
-                    
-                    foreach ($adultContentReports as $report) {
-                        $adultContentScore += $userReportScores[$report->user_id] ?? 0.3;
-                    }
-                }
-
-                $isRestricted = $restrictedScore >= 1.0 || $ideologyScore >= 3.0 || $adultContentScore >= 2.0;
-                $restrictionData[$threadId] = $isRestricted;
-
-                // キャッシュに保存（5分間）
-                Cache::put('thread_restriction_' . $threadId, ['isRestricted' => $isRestricted], 300);
-            }
-        }
-
-        return $restrictionData;
-        */
     }
+
 
     /**
      * ログを直接ファイルに書き込む（Laravelのログシステムに依存しない）

@@ -36,8 +36,7 @@ class UserOutCountReductionService
                     })
                         ->orWhereHas('response', function ($qq) use ($user) {
                             $qq->where('user_id', $user->user_id);
-                        })
-                        ->orWhere('reported_user_id', $user->user_id);
+                        });
                 })
                 ->where('out_count', '>', 0)
                 ->orderByDesc('approved_at')

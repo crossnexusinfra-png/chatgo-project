@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use App\Models\User;
@@ -20,6 +19,7 @@ use App\Services\LoginFailureService;
 use App\Mail\AbnormalLoginMail;
 use App\Mail\PasswordResetLinkMail;
 use App\Services\ProfilePendingContactService;
+use App\Services\VerificationCodeStore;
 use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
@@ -684,7 +684,7 @@ class AuthController extends Controller
         if (SmsVerificationService::isEnabled()) {
             // SMS認証コードを生成して送信（再有効化時に使用）
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("sms_verification_{$internationalPhone}", $smsCode, 300); // 5分間有効
+            VerificationCodeStore::put("sms_verification_{$internationalPhone}", $smsCode, 300);
             SmsService::sendVerificationCode($internationalPhone, $smsCode, 'register');
 
             return redirect()->route('register.sms-verification');
@@ -727,14 +727,12 @@ class AuthController extends Controller
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $registrationData = session('registration_data');
         $phone = $registrationData['phone'];
-        $cachedCode = Cache::get("sms_verification_{$phone}");
-
-        if (!$cachedCode || $cachedCode !== $request->sms_code) {
+        if (!VerificationCodeStore::matches("sms_verification_{$phone}", $request->sms_code)) {
             return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
         }
 
         // SMS認証成功
-        Cache::forget("sms_verification_{$phone}");
+        VerificationCodeStore::forget("sms_verification_{$phone}");
         session(['registration_data.sms_verified' => true]);
 
         // intended_urlを保持
@@ -745,7 +743,7 @@ class AuthController extends Controller
 
         // メール認証コードを生成して送信
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600); // 10分間有効
+        VerificationCodeStore::put("email_verification_{$registrationData['email']}", $emailCode, 600);
 
         EmailVerificationService::sendVerificationCode(
             $registrationData['email'],
@@ -783,7 +781,7 @@ class AuthController extends Controller
         }
 
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("sms_verification_{$registrationData['phone']}", $smsCode, 300);
+        VerificationCodeStore::put("sms_verification_{$registrationData['phone']}", $smsCode, 300);
 
         SmsService::sendVerificationCode($registrationData['phone'], $smsCode, 'register-resend');
 
@@ -817,14 +815,12 @@ class AuthController extends Controller
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $registrationData = session('registration_data');
         $email = $registrationData['email'];
-        $cachedCode = Cache::get("email_verification_{$email}");
-
-        if (!$cachedCode || $cachedCode !== $request->email_code) {
+        if (!VerificationCodeStore::matches("email_verification_{$email}", $request->email_code)) {
             return back()->withErrors(['email_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
         }
 
         // メール認証成功 - ユーザーを作成
-        Cache::forget("email_verification_{$email}");
+        VerificationCodeStore::forget("email_verification_{$email}");
         
         // intended_urlを取得（セッションクリア前に）
         $intendedUrl = session('intended_url', '/');
@@ -924,7 +920,7 @@ class AuthController extends Controller
         }
 
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600);
+        VerificationCodeStore::put("email_verification_{$registrationData['email']}", $emailCode, 600);
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         EmailVerificationService::sendVerificationCode(
@@ -1103,14 +1099,12 @@ class AuthController extends Controller
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $user = Auth::user()->fresh();
-        $cachedCode = Cache::get("sms_verification_user_{$user->user_id}");
-
-        if (!$cachedCode || $cachedCode !== $request->sms_code) {
+        if (!VerificationCodeStore::matches("sms_verification_user_{$user->user_id}", $request->sms_code)) {
             return back()->withErrors(['sms_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
         }
 
         // SMS認証成功
-        Cache::forget("sms_verification_user_{$user->user_id}");
+        VerificationCodeStore::forget("sms_verification_user_{$user->user_id}");
 
         $pending = ProfilePendingContactService::get($user->user_id);
         if ($pending && !empty($pending['phone_changed'])) {
@@ -1128,9 +1122,9 @@ class AuthController extends Controller
                     'email_changed' => true,
                     'phone_changed' => false,
                 ]);
-                if (!Cache::has("email_verification_user_{$user->user_id}")) {
+                if (!VerificationCodeStore::exists("email_verification_user_{$user->user_id}")) {
                     $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-                    Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+                    VerificationCodeStore::put("email_verification_user_{$user->user_id}", $emailCode, 600);
                     $lang = \App\Services\LanguageService::getCurrentLanguage();
                     EmailVerificationService::sendVerificationCode(
                         $pending['email'],
@@ -1167,9 +1161,9 @@ class AuthController extends Controller
 
         $user->save();
 
-        if (!Cache::has("email_verification_user_{$user->user_id}")) {
+        if (!VerificationCodeStore::exists("email_verification_user_{$user->user_id}")) {
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            VerificationCodeStore::put("email_verification_user_{$user->user_id}", $emailCode, 600);
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             EmailVerificationService::sendVerificationCode(
                 $user->email,
@@ -1210,7 +1204,7 @@ class AuthController extends Controller
         $user = Auth::user();
         
         $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
+        VerificationCodeStore::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
 
         $logPhone = ProfilePendingContactService::displayPhone($user);
         SmsService::sendVerificationCode($logPhone, $smsCode, 'profile-resend');
@@ -1282,14 +1276,12 @@ class AuthController extends Controller
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         $user = Auth::user()->fresh();
-        $cachedCode = Cache::get("email_verification_user_{$user->user_id}");
-
-        if (!$cachedCode || $cachedCode !== $request->email_code) {
+        if (!VerificationCodeStore::matches("email_verification_user_{$user->user_id}", $request->email_code)) {
             return back()->withErrors(['email_code' => \App\Services\LanguageService::trans('verification_code_incorrect', $lang)]);
         }
 
         // メール認証成功
-        Cache::forget("email_verification_user_{$user->user_id}");
+        VerificationCodeStore::forget("email_verification_user_{$user->user_id}");
 
         $pending = ProfilePendingContactService::get($user->user_id);
         if ($pending && !empty($pending['email_changed'])) {
@@ -1339,7 +1331,7 @@ class AuthController extends Controller
         $user = Auth::user();
 
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+        VerificationCodeStore::put("email_verification_user_{$user->user_id}", $emailCode, 600);
 
         $logEmail = ProfilePendingContactService::displayEmail($user);
         $lang = \App\Services\LanguageService::getCurrentLanguage();
@@ -1359,7 +1351,7 @@ class AuthController extends Controller
     private function redirectToRegisterEmailVerification(array $registrationData): \Illuminate\Http\RedirectResponse
     {
         $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-        Cache::put("email_verification_{$registrationData['email']}", $emailCode, 600); // 10分間有効
+        VerificationCodeStore::put("email_verification_{$registrationData['email']}", $emailCode, 600);
 
         $lang = \App\Services\LanguageService::getCurrentLanguage();
         EmailVerificationService::sendVerificationCode(

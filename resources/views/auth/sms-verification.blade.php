@@ -21,7 +21,7 @@
                     $registrationData = session('registration_data', []);
                     $phone = $registrationData['phone'] ?? '';
                     $showCode = config('app.show_verification_code_on_screen');
-                    $smsVerificationCode = $showCode ? Cache::get("sms_verification_{$phone}") : null;
+                    $smsVerificationCode = $showCode ? \App\Services\VerificationCodeStore::plainForDevScreen("sms_verification_{$phone}") : null;
                 @endphp
                 <p>{{ str_replace('{phone}', $phone, \App\Services\LanguageService::trans('sms_verification_description', $lang)) }}</p>
                 <p class="verification-note">{{ \App\Services\LanguageService::trans('sms_verification_note', $lang) }}</p>

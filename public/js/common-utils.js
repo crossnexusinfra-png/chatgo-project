@@ -502,11 +502,18 @@
             .then(response => response.json())
             .then(data => {
                 if (data.html && postsGrid) {
-                    postsGrid.insertAdjacentHTML('beforeend', data.html);
+                    if (loadingIndicator && loadingIndicator.parentNode === postsGrid) {
+                        loadingIndicator.insertAdjacentHTML('beforebegin', data.html);
+                    } else {
+                        postsGrid.insertAdjacentHTML('beforeend', data.html);
+                    }
                     if (typeof window.chatgoAdsensePushIn === 'function') {
                         try {
                             window.chatgoAdsensePushIn(postsGrid);
                         } catch (e) { /* ignore */ }
+                    }
+                    if (typeof window.chatgoPlaceListRowAds === 'function') {
+                        window.chatgoPlaceListRowAds(postsGrid);
                     }
                     currentOffset = data.offset !== undefined ? data.offset : currentOffset;
                     currentHasMoreThreads = data.hasMore !== undefined ? data.hasMore : false;

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -18,6 +17,7 @@ use App\Services\SmsService;
 use App\Services\SmsVerificationService;
 use App\Services\VeriphoneService;
 use App\Services\ProfilePendingContactService;
+use App\Services\VerificationCodeStore;
 
 class ProfileController extends Controller
 {
@@ -304,11 +304,11 @@ class ProfileController extends Controller
         if ($emailChanged && $needsPhoneReauth) {
             // SMS + メール認証（再有効化時）
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
+            VerificationCodeStore::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
             SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-both');
 
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            VerificationCodeStore::put("email_verification_user_{$user->user_id}", $emailCode, 600);
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             EmailVerificationService::sendVerificationCode(
                 $request->email,
@@ -322,7 +322,7 @@ class ProfileController extends Controller
                 ->with('success', \App\Services\LanguageService::trans('profile_updated_reauth_both', $lang));
         } elseif ($emailChanged) {
             $emailCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("email_verification_user_{$user->user_id}", $emailCode, 600);
+            VerificationCodeStore::put("email_verification_user_{$user->user_id}", $emailCode, 600);
             $lang = \App\Services\LanguageService::getCurrentLanguage();
             EmailVerificationService::sendVerificationCode(
                 $request->email,
@@ -336,7 +336,7 @@ class ProfileController extends Controller
                 ->with('success', \App\Services\LanguageService::trans('profile_updated_reauth_email', $lang));
         } elseif ($needsPhoneReauth) {
             $smsCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
+            VerificationCodeStore::put("sms_verification_user_{$user->user_id}", $smsCode, 300);
             SmsService::sendVerificationCode($newPhone, $smsCode, 'profile-phone');
 
             $lang = \App\Services\LanguageService::getCurrentLanguage();

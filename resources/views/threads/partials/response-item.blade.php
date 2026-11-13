@@ -309,42 +309,7 @@
         <div class="response-media-line-style">
             @if($response->media_type === 'image')
                 @php
-                    // データベースに保存されているパスを取得
-                    $mediaFileDb = $response->media_file;
-                    
-                    // パスの正規化（過去のデータ形式に対応）
-                    if (strpos($mediaFileDb, 'storage/') === 0) {
-                        // 過去のデータ形式: storage/response_media/...
-                        $storagePath = str_replace('storage/', '', $mediaFileDb);
-                    } else {
-                        // 新しいデータ形式: response_media/...
-                        $storagePath = $mediaFileDb;
-                    }
-                    
-                    // Storage::url()を使用（S3対応、APP_URL/storage/response_media/...を生成）
-                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
-                    
-                    // ファイルの存在確認（Storageファサードを使用してS3対応）
-                    $disk = \Illuminate\Support\Facades\Storage::disk('public');
-                    $fileExists = $disk->exists($storagePath);
-                    
-                    // デバッグ用ログ（常に出力）
-                    \Log::info('Response image debug', [
-                        'response_id' => $response->response_id,
-                        'media_file_db' => $mediaFileDb,
-                        'storage_path' => $storagePath,
-                        'file_exists' => $fileExists,
-                        'image_url' => $imageUrl,
-                    ]);
-                    
-                    // ファイルが存在しない場合の警告
-                    if (!$fileExists) {
-                        \Log::warning('Response image file not found', [
-                            'response_id' => $response->response_id,
-                            'media_file_db' => $mediaFileDb,
-                            'storage_path' => $storagePath,
-                        ]);
-                    }
+                    $imageUrl = media_url($response->media_file);
                 @endphp
                 <div class="media-preview-image" data-image-url="{{ $imageUrl }}" role="button" tabindex="0">
                     <img src="{{ $imageUrl }}" alt="{{ \App\Services\LanguageService::trans('attached_image_alt', $lang) }}" class="media-thumbnail js-hide-on-error">
@@ -357,20 +322,7 @@
                 </div>
             @elseif($response->media_type === 'video')
                 @php
-                    // データベースに保存されているパスを取得
-                    $mediaFileDb = $response->media_file;
-                    
-                    // パスの正規化（過去のデータ形式に対応）
-                    if (strpos($mediaFileDb, 'storage/') === 0) {
-                        // 過去のデータ形式: storage/response_media/...
-                        $storagePath = str_replace('storage/', '', $mediaFileDb);
-                    } else {
-                        // 新しいデータ形式: response_media/...
-                        $storagePath = $mediaFileDb;
-                    }
-                    
-                    // Storage::url()を使用（S3対応）
-                    $videoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
+                    $videoUrl = media_url($response->media_file);
                 @endphp
                 <div class="media-preview-video">
                     <video class="media-video-thumbnail" preload="metadata" data-action="toggle-video-play" data-video-src="{{ $videoUrl }}">
@@ -385,20 +337,7 @@
                 </div>
             @elseif($response->media_type === 'audio')
                 @php
-                    // データベースに保存されているパスを取得
-                    $mediaFileDb = $response->media_file;
-                    
-                    // パスの正規化（過去のデータ形式に対応）
-                    if (strpos($mediaFileDb, 'storage/') === 0) {
-                        // 過去のデータ形式: storage/response_media/...
-                        $storagePath = str_replace('storage/', '', $mediaFileDb);
-                    } else {
-                        // 新しいデータ形式: response_media/...
-                        $storagePath = $mediaFileDb;
-                    }
-                    
-                    // Storage::url()を使用（S3対応）
-                    $audioUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($storagePath);
+                    $audioUrl = media_url($response->media_file);
                 @endphp
                 <div class="media-preview-audio">
                     <audio controls class="audio-player" preload="metadata">

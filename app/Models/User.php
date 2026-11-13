@@ -251,33 +251,6 @@ class User extends Authenticatable
     }
 
     /**
-     * このユーザーのプロフィールが非表示にすべきかどうかを判定
-     * スレッド・レスポンスと同じ非表示条件を使用
-     * 
-     * @return bool
-     */
-    public function shouldBeHidden(): bool
-    {
-        // 特定理由によるスコア合計が1以上
-        $restrictedScore = \App\Models\Report::calculateUserProfileRestrictedReasonScore($this->user_id);
-        if ($restrictedScore >= 1.0) {
-            return true;
-        }
-        
-        return false;
-    }
-
-    /**
-     * 管理側で通報が了承され、公開側で削除扱いかどうか
-     */
-    public function isDeletedByReport(): bool
-    {
-        return \App\Models\Report::where('reported_user_id', $this->user_id)
-            ->where('is_approved', true)
-            ->exists();
-    }
-
-    /**
      * このユーザーに対する通報を取得
      */
     public function reports()
@@ -342,20 +315,7 @@ class User extends Authenticatable
             })
             ->sum('out_count');
         
-        // プロフィール通報のアウト数合計
-        $profileOutCount = Report::whereNotNull('reported_user_id')
-            ->where('reported_user_id', $this->user_id)
-            ->where('is_approved', true)
-            ->whereNotNull('approved_at')
-            ->where('approved_at', '>=', $oneYearAgo)
-            ->sum('out_count');
-        
-        $totalOutCount = (float)($threadOutCount ?? 0) + (float)($responseOutCount ?? 0) + (float)($profileOutCount ?? 0);
-        if ($this->requiresPhoneVerificationRestrictions()) {
-            $totalOutCount *= 2;
-        }
-        
-        return $totalOutCount;
+        return (float)($threadOutCount ?? 0) + (float)($responseOutCount ?? 0);
     }
 
     /**

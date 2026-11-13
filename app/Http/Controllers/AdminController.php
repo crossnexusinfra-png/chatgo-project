@@ -67,7 +67,9 @@ class AdminController extends Controller
             ->first();
         $reportsSince = $prevReportsVisit?->created_at ?? now()->subYears(10);
 
-        $base = Report::query();
+        $base = Report::query()->where(function ($q) {
+            $q->whereNotNull('thread_id')->orWhereNotNull('response_id');
+        });
         // 表示ポリシー:
         // - 既定: 未処理のみ（is_approved IS NULL）
         // - 承認表示ON: 承認済みも含める
@@ -1074,6 +1076,8 @@ class AdminController extends Controller
             $this->sendReportDeletionNoticeToAuthor($threadOwner->user_id, 'ルーム', $contentBlock, $reasonsText);
         }
         
+        \App\Services\ReportTargetStateService::syncThread($threadId);
+
         // スレッドをソフトデリート
         $thread->delete();
         
@@ -1099,6 +1103,8 @@ class AdminController extends Controller
                 'is_approved' => false,
                 'approved_at' => now(),
             ]);
+
+        \App\Services\ReportTargetStateService::syncThread($threadId);
         
         // 各通報者にメッセージを送信（返信可能）
         foreach ($reports as $report) {
@@ -1169,6 +1175,8 @@ class AdminController extends Controller
             $this->sendReportDeletionNoticeToAuthor($responseOwner->user_id, 'リプライ', $contentBlock, $reasonsText);
         }
 
+        \App\Services\ReportTargetStateService::syncResponse($responseId);
+
         return back();
     }
 
@@ -1193,6 +1201,8 @@ class AdminController extends Controller
                 'is_approved' => false,
                 'approved_at' => now(),
             ]);
+
+        \App\Services\ReportTargetStateService::syncResponse($responseId);
         
         // 各通報者にメッセージを送信（返信可能）
         foreach ($reports as $report) {
@@ -2184,81 +2194,6 @@ class AdminController extends Controller
     }
 
     /**
-     * プロフィール通報の承認処理
-     * 
-     * @param int $reportedUserId
-     * @return void
-     */
-    public function approveProfileReports(int $reportedUserId)
-    {
-        $reportedUser = User::find($reportedUserId);
-        if (!$reportedUser) {
-            return back()->withErrors(['error' => 'ユーザーが見つかりません']);
-        }
-        
-        // プロフィール通報は凍結等の重みを調整できるよう係数化
-        $profileOutMultiplier = (float) config('report_restrictions.profile_out_multiplier', 1.3);
-        
-        // 通報を承認（通報順位を取得するため、created_atでソート）
-        $reports = Report::where('reported_user_id', $reportedUserId)
-            ->whereNull('approved_at')
-            ->orderBy('created_at', 'asc')
-            ->get();
-        
-        // 同一対象で複数理由がある場合は合算せず、最大アウト値1件のみ加算する。
-        $this->approveReportsWithHighestOutCountOnly($reports, $profileOutMultiplier);
-        
-        // プロフィール所有者のアウト数と凍結処理
-        $this->userOutCountFreezeService->processOutCountAndFreeze($reportedUser);
-        
-        // 各通報者にメッセージを送信（通報順位を渡す）
-        $rank = 1;
-        foreach ($reports as $report) {
-            if ($report->user_id) {
-                $this->sendApprovalMessage($report->user_id, 'profile', $reportedUser->username, null, $rank);
-                $rank++;
-            }
-        }
-        
-        return back();
-    }
-
-    /**
-     * プロフィール通報の拒否処理
-     * 
-     * @param int $reportedUserId
-     * @return void
-     */
-    public function rejectProfileReports(int $reportedUserId)
-    {
-        $reportedUser = User::find($reportedUserId);
-        if (!$reportedUser) {
-            return back()->withErrors(['error' => 'ユーザーが見つかりません']);
-        }
-        
-        // 通報を拒否
-        $reports = Report::where('reported_user_id', $reportedUserId)
-            ->whereNull('approved_at')
-            ->get();
-        
-        Report::where('reported_user_id', $reportedUserId)
-            ->whereNull('approved_at')
-            ->update([
-                'is_approved' => false,
-                'approved_at' => now(),
-            ]);
-        
-        // 各通報者にメッセージを送信（返信可能）
-        foreach ($reports as $report) {
-            if ($report->user_id) {
-                $this->sendRejectionMessage($report->user_id, 'profile', $reportedUser->username, null);
-            }
-        }
-        
-        return back();
-    }
-
-    /**
      * 通報のアウト数を設定
      * 
      * @param Request $request
@@ -2289,8 +2224,6 @@ class AdminController extends Controller
             } elseif ($report->response_id) {
                 $response = Response::find($report->response_id);
                 $targetUser = $response?->user;
-            } elseif ($report->reported_user_id) {
-                $targetUser = User::find($report->reported_user_id);
             }
             
             if ($targetUser) {

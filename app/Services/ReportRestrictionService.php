@@ -608,6 +608,11 @@ class ReportRestrictionService
             }
         }
 
+        $first = $reports->first();
+        if ($first) {
+            ReportTargetStateService::syncReportTarget($first);
+        }
+
         return $approvedCount;
     }
 

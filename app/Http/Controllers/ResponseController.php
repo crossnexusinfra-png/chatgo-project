@@ -276,7 +276,7 @@ class ResponseController extends Controller
             // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
             $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
             $filename = $hashedFilename . '.' . $extension;
-            $path = $file->storeAs('response_media', $filename, 'public');
+            $path = $file->storeAs('response_media', $filename, \App\Services\PublicMediaService::writeOptions());
             $mediaFile = $path;
             $mediaType = $validationResult['media_type'];
             
@@ -716,7 +716,7 @@ class ResponseController extends Controller
             // MIMEタイプから拡張子を取得（ユーザー入力に依存しない）
             $extension = $this->getExtensionFromMimeType($file->getMimeType(), $validationResult['media_type']);
             $filename = $hashedFilename . '.' . $extension;
-            $path = $file->storeAs('response_media', $filename, 'public');
+            $path = $file->storeAs('response_media', $filename, \App\Services\PublicMediaService::writeOptions());
             $mediaFile = $path;
             $mediaType = $validationResult['media_type'];
             

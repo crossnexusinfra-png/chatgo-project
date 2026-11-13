@@ -342,15 +342,11 @@
             
             const reportThreadIdInput = document.getElementById('report_thread_id');
             const reportResponseIdInput = document.getElementById('report_response_id');
-            const reportReportedUserIdInput = document.getElementById('report_reported_user_id');
             if (reportThreadIdInput) {
                 reportThreadIdInput.value = threadId || '';
             }
             if (reportResponseIdInput) {
                 reportResponseIdInput.value = responseId || '';
-            }
-            if (reportReportedUserIdInput) {
-                reportReportedUserIdInput.value = reportedUserId || '';
             }
             
             const reportReasonSelect = document.getElementById('report_reason');

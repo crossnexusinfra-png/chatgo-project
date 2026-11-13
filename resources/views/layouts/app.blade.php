@@ -12,12 +12,16 @@
     @php
         $seoService = $seoService ?? app(\App\Services\SeoService::class);
         $canonicalHref = $seoCanonical ?? $seoService->canonicalUrl();
+        $roomThread = request()->routeIs('threads.show')
+            && isset($thread)
+            && $thread instanceof \App\Models\Thread
+            ? $thread
+            : null;
+        $isR18RoomPage = $roomThread !== null && $roomThread->isR18Content();
         $defaultRobots = $seoRobots ?? $seoService->robotsMeta(
-            $thread ?? null,
-            isset($isR18Thread) ? (bool) $isR18Thread : null,
+            $roomThread,
+            $isR18RoomPage,
         );
-        $isR18RoomPage = !empty($isR18Thread)
-            || (isset($thread) && $thread instanceof \App\Models\Thread && $thread->isR18Content());
         $routeTag = (string) (request()->route('tag') ?? '');
         $isR18TagPage = !empty($isR18Tag)
             || (
@@ -303,7 +307,6 @@
                     @csrf
                     <input type="hidden" id="report_thread_id" name="thread_id" value="">
                     <input type="hidden" id="report_response_id" name="response_id" value="">
-                    <input type="hidden" id="report_reported_user_id" name="reported_user_id" value="">
                     <div class="js-report-fields">
                     <div class="form-group">
                         <label for="report_reason">{{ \App\Services\LanguageService::trans('report_reason_label', $lang) }}:</label>

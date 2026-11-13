@@ -97,6 +97,9 @@
             <!-- 検索結果のルーム一覧 -->
             <section class="search-threads">
                 <h2>{{ str_replace('{query}', $query ?? '', \App\Services\LanguageService::trans('search_results_for', $lang)) }}</h2>
+                @include('threads.partials.list-row-ad-template', [
+                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'gam',
+                ])
                 <div class="posts-grid">
                     @php
                         // タグのカテゴリ情報を取得するヘルパー関数
@@ -183,10 +186,6 @@
                         }
                     @endphp
                     @if(isset($threads) && $threads && $threads->count() > 0)
-                        @php
-                            $listRowOffset = $listRowOffset ?? 0;
-                            $adSlotEvery = 7;
-                        @endphp
                         @foreach ($threads as $thread)
                             @php
                                 $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -201,7 +200,7 @@
                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                     // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                        $threadImageUrl = media_url($thread->image_path);
                                     } else {
                                         $threadImageUrl = $threadImage;
                                     }
@@ -281,15 +280,6 @@
                                     <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                                 </div>
                             </article>
-                            @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
-                            @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
-                            <article class="posts-grid-ad-row post-item">
-                                @include('components.adsense-inline-banner', [
-                                    'instanceId' => 'search-'.$rowIdx,
-                                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'gam',
-                                ])
-                            </article>
-                            @endif
                         @endforeach
                     @else
                         <div class="no-posts">
@@ -326,5 +316,6 @@
         data-current-offset="20"
         hidden
     ></div>
+    <script src="{{ asset('js/list-row-ads.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script src="{{ asset('js/thread-search.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

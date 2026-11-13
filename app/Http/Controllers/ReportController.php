@@ -262,14 +262,14 @@ class ReportController extends Controller
                 return back()->withErrors(['report' => \App\Services\LanguageService::trans('report_already_processed', $lang)]);
             }
             
-            // 未処理の通報の場合は更新可能
             $existingReport->update([
                 'reason' => $validated['reason'],
                 'description' => $description,
             ]);
+            $savedReport = $existingReport;
             $message = \App\Services\LanguageService::trans('report_updated', $lang);
         } else {
-            Report::create([
+            $savedReport = Report::create([
                 'user_id' => $userId,
                 'thread_id' => $validated['thread_id'] ?? null,
                 'response_id' => $validated['response_id'] ?? null,
@@ -278,6 +278,8 @@ class ReportController extends Controller
             ]);
             $message = \App\Services\LanguageService::trans('report_submitted', $lang);
         }
+
+        \App\Services\ReportTargetStateService::syncReportTarget($savedReport);
 
         // 通報により制限が発生した場合、対象ユーザーに了承ボタン付き通知を送る（初回のみ）
         try {

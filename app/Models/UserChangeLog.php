@@ -223,9 +223,7 @@ class UserChangeLog extends Model
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'reason' => $reason,
-            'metadata' => [
-                'restricted_score' => \App\Models\Report::calculateUserProfileRestrictedReasonScore($user->user_id),
-            ],
+            'metadata' => null,
             'changed_at' => now(),
         ]);
     }

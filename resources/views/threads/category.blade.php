@@ -68,6 +68,7 @@
                 </div>
 
                 <!-- ルーム一覧 -->
+                @include('threads.partials.list-row-ad-template')
                 <div class="posts-grid">
 @php
     // コントローラーから渡された$langを使用、なければ取得
@@ -156,10 +157,6 @@
         return $tagCategories[$tag] ?? \App\Services\LanguageService::trans('other', $lang);
     }
 @endphp
-                    @php
-                        $listRowOffset = $listRowOffset ?? 0;
-                        $adSlotEvery = 7;
-                    @endphp
                     @forelse ($threads as $thread)
                         @php
                             $restrictionInfo = $threadRestrictionData[$thread->thread_id] ?? ['isRestricted' => false, 'isDeletedByReport' => false];
@@ -176,7 +173,7 @@
                                 $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                 // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                 if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                    $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                    $threadImageUrl = media_url($thread->image_path);
                                 } else {
                                     $threadImageUrl = $threadImage;
                                 }
@@ -256,12 +253,6 @@
                                 <div class="meta-item">{{ \App\Services\LanguageService::trans('created_at_label', $lang) }}: @if($thread->created_at)<span data-utc-datetime="{{ $thread->created_at->format('Y-m-d H:i:s') }}" data-format="en">{{ $thread->created_at->format('Y-m-d H:i') }}</span>@else{{ \App\Services\LanguageService::trans('unknown', $lang) }}@endif</div>
                             </div>
                         </article>
-                        @php $rowIdx = $listRowOffset + $loop->iteration; @endphp
-                        @if($rowIdx >= $adSlotEvery && $rowIdx % $adSlotEvery === 0)
-                        <article class="posts-grid-ad-row post-item">
-                            @include('components.adsense-inline-banner', ['instanceId' => 'catlist-'.$rowIdx])
-                        </article>
-                        @endif
                     @empty
                         <div class="no-posts">
                             <p>{{ str_replace('{category}', $title, \App\Services\LanguageService::trans('no_threads_yet_category', $lang)) }}</p>
@@ -286,5 +277,6 @@
         data-current-offset="20"
         hidden
     ></div>
+    <script src="{{ asset('js/list-row-ads.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
     <script src="{{ asset('js/thread-category.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endsection

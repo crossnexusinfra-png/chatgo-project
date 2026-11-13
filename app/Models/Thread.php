@@ -62,6 +62,9 @@ class Thread extends Model
     protected $casts = [
         'allows_user_replies' => 'boolean',
         'is_r18' => 'boolean',
+        'report_restricted' => 'boolean',
+        'deleted_by_report' => 'boolean',
+        'report_restriction_reasons' => 'array',
     ];
 
     /**
@@ -147,25 +150,7 @@ class Thread extends Model
      */
     public function isRestricted(): bool
     {
-        // 特定理由によるスコア合計が1以上
-        $restrictedScore = \App\Models\Report::calculateThreadRestrictedReasonScore($this->thread_id);
-        if ($restrictedScore >= 1.0) {
-            return true;
-        }
-        
-        // 「異なる思想」のスコア合計が3以上
-        $ideologyScore = \App\Models\Report::calculateThreadIdeologyReportScore($this->thread_id);
-        if ($ideologyScore >= 3.0) {
-            return true;
-        }
-        
-        // 「成人向けコンテンツが含まれる」のスコア合計が2以上
-        $adultContentScore = \App\Models\Report::calculateThreadAdultContentReportScore($this->thread_id);
-        if ($adultContentScore >= 2.0) {
-            return true;
-        }
-        
-        return false;
+        return (bool) $this->report_restricted;
     }
 
     /**
@@ -173,9 +158,7 @@ class Thread extends Model
      */
     public function isDeletedByReport(): bool
     {
-        return \App\Models\Report::where('thread_id', $this->thread_id)
-            ->where('is_approved', true)
-            ->exists();
+        return (bool) $this->deleted_by_report;
     }
 
     /**
@@ -186,46 +169,9 @@ class Thread extends Model
      */
     public function getRestrictionReasons(): array
     {
-        $sixMonthsAgo = now()->subMonths(6);
-        $reasons = [];
-        
-        $restrictedReasons = [
-            'スパム・迷惑行為',
-            '攻撃的・不適切な内容',
-            '不適切なリンク・外部誘導',
-            '成人向け以外のコンテンツ規制違反',
-            'その他'
-        ];
-        
-        // 特定理由で半年以内の通報を取得（拒否された通報は除外、承認済みまたは未処理のみ）
-        $reports = $this->reports()
-            ->whereIn('reason', $restrictedReasons)
-            ->where('created_at', '>=', $sixMonthsAgo)
-            ->where(function($q) {
-                $q->where('is_approved', true)
-                  ->orWhereNull('approved_at');
-            })
-            ->get();
-        
-        foreach ($reports as $report) {
-            if (!in_array($report->reason, $reasons)) {
-                $reasons[] = $report->reason;
-            }
-        }
-        
-        // 「異なる思想」のスコア合計が3以上の場合も追加
-        $ideologyScore = \App\Models\Report::calculateThreadIdeologyReportScore($this->thread_id);
-        if ($ideologyScore >= 3.0) {
-            $reasons[] = '異なる思想に関しての意見の押し付け、妨害';
-        }
-        
-        // 「成人向けコンテンツが含まれる」のスコア合計が2以上の場合も追加
-        $adultContentScore = \App\Models\Report::calculateThreadAdultContentReportScore($this->thread_id);
-        if ($adultContentScore >= 2.0) {
-            $reasons[] = '成人向けコンテンツが含まれる';
-        }
-        
-        return array_unique($reasons);
+        $reasons = $this->report_restriction_reasons;
+
+        return is_array($reasons) ? array_values($reasons) : [];
     }
 
     /**

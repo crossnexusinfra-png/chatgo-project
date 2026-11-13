@@ -28,7 +28,7 @@
                 @if(config('app.show_verification_code_on_screen'))
                 <div class="dev-notice">
                     <h3>{{ \App\Services\LanguageService::trans('dev_environment_title', $lang) }}</h3>
-                    <p>{{ \App\Services\LanguageService::trans('verification_code_label', $lang) }}: <strong>{{ Cache::get("email_verification_user_{$user->user_id}") }}</strong></p>
+                    <p>{{ \App\Services\LanguageService::trans('verification_code_label', $lang) }}: <strong>{{ \App\Services\VerificationCodeStore::plainForDevScreen("email_verification_user_{$user->user_id}") ?? \App\Services\LanguageService::trans('verification_code_not_available', $lang) }}</strong></p>
                     <p><small>{{ \App\Services\LanguageService::trans('dev_environment_note', $lang) }}</small></p>
                 </div>
                 @endif

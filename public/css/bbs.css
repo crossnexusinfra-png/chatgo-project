@@ -438,17 +438,16 @@ body {
     width: 100%;
 }
 
-/* グリッド内広告はルーム1件分サイズで表示 */
+/* 一覧の広告は3行ごとに、トップと同じ横長バナーを全幅で置く */
 .posts-grid .posts-grid-ad-row {
-    width: auto;
+    grid-column: 1 / -1;
+    width: 100%;
     min-width: 0;
+    min-height: 0;
 }
 
-.posts-grid .posts-grid-ad-row.post-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 220px;
+.posts-grid > .loading-indicator {
+    grid-column: 1 / -1;
 }
 
 .adsense-inline-banner {
@@ -3854,6 +3853,15 @@ a.mandatory-notice-open-btn:focus-visible {
     text-decoration: none;
 }
 
+.ad-slot,
+.main-page-ad-slot,
+.posts-grid-ad-row,
+.adsense-thread-reply-inline {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .ad-slot {
     display: flex;
     flex-direction: column;
@@ -3941,6 +3949,13 @@ a.mandatory-notice-open-btn:focus-visible {
 .ad-slot [data-exoclick-zone] {
     display: block;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 0;
+    overflow: hidden;
     flex: 1 1 auto;
+}
+
+.ad-slot iframe {
+    max-width: 100%;
 }

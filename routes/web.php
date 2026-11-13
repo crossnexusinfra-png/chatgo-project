@@ -26,6 +26,23 @@ use App\Services\LanguageService;
 
 require __DIR__.'/admin.php';
 
+Route::get('/media/{path}', [\App\Http\Controllers\MediaController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.show')
+    ->withoutMiddleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \App\Http\Middleware\SetRequestLocale::class,
+        \App\Http\Middleware\CheckUserFrozen::class,
+        \App\Http\Middleware\CspMiddleware::class,
+        \App\Http\Middleware\PerformanceMonitor::class,
+        \App\Http\Middleware\AccessLogger::class,
+        \App\Http\Middleware\CloudflareLogMiddleware::class,
+    ]);
+
 Route::get('/favicon.ico', function () {
     $path = public_path('images/favicon-16.png');
     if (! is_file($path)) {

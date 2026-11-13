@@ -1010,6 +1010,15 @@ body {
     display: flex;
 }
 
+.ad-slot,
+.main-page-ad-slot,
+.posts-grid-ad-row,
+.adsense-thread-reply-inline {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .ad-slot {
     display: flex;
     flex-direction: column;
@@ -1093,6 +1102,13 @@ body {
 .ad-slot [data-exoclick-zone] {
     display: block;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 0;
+    overflow: hidden;
     flex: 1 1 auto;
+}
+
+.ad-slot iframe {
+    max-width: 100%;
 }

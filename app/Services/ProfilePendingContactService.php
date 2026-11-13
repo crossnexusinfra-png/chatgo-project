@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 
 class ProfilePendingContactService
@@ -32,8 +31,8 @@ class ProfilePendingContactService
 
     public static function forgetVerificationCaches(int $userId): void
     {
-        Cache::forget('sms_verification_user_' . $userId);
-        Cache::forget('email_verification_user_' . $userId);
+        VerificationCodeStore::forget('sms_verification_user_' . $userId);
+        VerificationCodeStore::forget('email_verification_user_' . $userId);
     }
 
     public static function clear(int $userId): void

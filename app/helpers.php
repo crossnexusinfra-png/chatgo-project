@@ -34,3 +34,14 @@ if (!function_exists('linkify_urls')) {
     }
 }
 
+if (!function_exists('media_url')) {
+    /**
+     * ルーム画像・リプライメディアの公開URL。
+     * ローカル保存中は 30 日キャッシュする /media。オブジェクトストレージ時はその公開URL。
+     */
+    function media_url(?string $path): string
+    {
+        return \App\Services\PublicMediaService::url($path) ?? '';
+    }
+}
+

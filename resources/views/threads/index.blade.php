@@ -351,7 +351,7 @@
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                                     // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                                        $threadImageUrl = media_url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -462,7 +462,7 @@
                             @php $mainSectionAdCount++; @endphp
                             @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
                             <div class="main-page-ad-slot post-list-margin">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-'.$mainSectionAdCount.'-'.$categoryKey])
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-'.$mainSectionAdCount.'-'.$categoryKey, 'isR18Thread' => false])
                             </div>
                             @endif
                         @endif
@@ -496,7 +496,7 @@
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                                     // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                                        $threadImageUrl = media_url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -583,7 +583,7 @@
                             @php $mainSectionAdCount++; @endphp
                             @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
                             <div class="main-page-ad-slot post-list-margin">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-fav-'.$mainSectionAdCount])
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-fav-'.$mainSectionAdCount, 'isR18Thread' => false])
                             </div>
                             @endif
                         @endif
@@ -615,7 +615,7 @@
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                                     // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                                        $threadImageUrl = media_url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -702,7 +702,7 @@
                             @php $mainSectionAdCount++; @endphp
                             @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
                             <div class="main-page-ad-slot post-list-margin">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-recent-'.$mainSectionAdCount])
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-recent-'.$mainSectionAdCount, 'isR18Thread' => false])
                             </div>
                             @endif
                         @endif
@@ -739,7 +739,7 @@
                                                     $threadImage = $thread->image_path ?: asset('images/default-16x9.svg');
                                                     // Storage::disk('public')->url()を使用してURLを取得（image_pathがstorageパスの場合、S3対応）
                                                     if ($thread->image_path && strpos($thread->image_path, 'thread_images/') === 0) {
-                                                        $threadImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thread->image_path);
+                                                        $threadImageUrl = media_url($thread->image_path);
                                                     } else {
                                                         $threadImageUrl = $threadImage;
                                                     }
@@ -846,7 +846,7 @@
                             @php $mainSectionAdCount++; @endphp
                             @if($mainSectionAdCount >= 2 && $mainSectionAdCount % 2 === 0)
                             <div class="main-page-ad-slot post-list-margin">
-                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-tag-'.$mainSectionAdCount.'-'.$loop->iteration])
+                                @include('components.adsense-inline-banner', ['instanceId' => 'main-section-tag-'.$mainSectionAdCount.'-'.$loop->iteration, 'isR18Thread' => false])
                             </div>
                             @endif
                         @endforeach

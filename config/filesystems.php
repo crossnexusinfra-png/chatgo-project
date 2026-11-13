@@ -58,6 +58,8 @@ return [
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
         ]),
 
+        // Cloudflare R2 は S3 互換。DBバックアップも公開メディアも、このディスクの
+        // endpoint / bucket / key を R2 に向けて使う。公開ファイルは public ディスク側。
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
