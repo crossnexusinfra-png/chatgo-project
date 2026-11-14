@@ -56,9 +56,33 @@ class AdNetworkService
         }
 
         return $this->gamSlotPath('rail') !== null
-            || $this->gamSlotPath('inline') !== null
+            || $this->hasGamInlineUnit()
             || $this->gamSlotPath('interstitial') !== null
             || $this->gamSlotPath('rewarded') !== null;
+    }
+
+    /**
+     * バナー S・M・L のパス。列幅に合う1つだけを GPT が要求する。
+     *
+     * @return array{l?: string, m?: string, s?: string}
+     */
+    public function gamBannerPaths(): array
+    {
+        $paths = [];
+        foreach (['l' => 'banner_l', 'm' => 'banner_m', 's' => 'banner_s'] as $size => $key) {
+            $path = $this->gamSlotPath($key);
+            if ($path !== null) {
+                $paths[$size] = $path;
+            }
+        }
+
+        return $paths;
+    }
+
+    public function hasGamInlineUnit(): bool
+    {
+        return $this->gamBannerPaths() !== []
+            || $this->gamSlotPath('inline') !== null;
     }
 
     public function gamSlotPath(string $slotKey): ?string
@@ -103,7 +127,7 @@ class AdNetworkService
             return true;
         }
 
-        return $this->gamSlotPath('inline') !== null
+        return $this->hasGamInlineUnit()
             && in_array($routeName, self::GAM_INLINE_ROUTES, true);
     }
 
@@ -130,7 +154,7 @@ class AdNetworkService
             return false;
         }
 
-        return $this->gamSlotPath('inline') !== null;
+        return $this->hasGamInlineUnit();
     }
 
     public function shouldServeGamRail(string $side, bool $isR18Room, bool $searchIncludesR18): bool
@@ -144,43 +168,6 @@ class AdNetworkService
         }
 
         return $this->gamSlotPath('rail') !== null;
-    }
-
-    public function exoclickConfigured(): bool
-    {
-        if (! (bool) config('ads.exoclick.enabled')) {
-            return false;
-        }
-
-        return $this->exoclickZone('rail') !== null
-            || $this->exoclickZone('inline') !== null;
-    }
-
-    public function exoclickZone(string $key): ?string
-    {
-        $id = $this->trimmed('ads.exoclick.zones.'.$key);
-
-        return $id === '' ? null : $id;
-    }
-
-    public function shouldLoadExoclick(bool $isR18Room, bool $searchIncludesR18): bool
-    {
-        return $this->exoclickConfigured() && $this->isAdultContext($isR18Room, $searchIncludesR18);
-    }
-
-    public function shouldServeExoclickRail(string $side, bool $isR18Room, bool $searchIncludesR18): bool
-    {
-        if (! $this->shouldLoadExoclick($isR18Room, $searchIncludesR18)) {
-            return false;
-        }
-
-        return $this->exoclickZone('rail') !== null;
-    }
-
-    public function shouldServeExoclickInline(bool $isR18Room, bool $searchIncludesR18): bool
-    {
-        return $this->shouldLoadExoclick($isR18Room, $searchIncludesR18)
-            && $this->exoclickZone('inline') !== null;
     }
 
     /**
@@ -204,20 +191,136 @@ class AdNetworkService
             $extra['frame-src'][] = 'https://securepubads.g.doubleclick.net';
         }
 
-        if ($this->exoclickConfigured()) {
-            $extra['script-src'][] = 'https://a.realsrv.com';
-            $extra['script-src'][] = 'https://ads.exoclick.com';
-            $extra['img-src'][] = 'https://a.realsrv.com';
-            $extra['img-src'][] = 'https://syndication.exoclick.com';
-            $extra['img-src'][] = 'https://ads.exoclick.com';
-            $extra['connect-src'][] = 'https://a.realsrv.com';
-            $extra['connect-src'][] = 'https://ads.exoclick.com';
-            $extra['frame-src'][] = 'https://a.realsrv.com';
-            $extra['frame-src'][] = 'https://syndication.exoclick.com';
-            $extra['frame-src'][] = 'https://ads.exoclick.com';
+        if ($this->arrowConfigured()) {
+            $extra['frame-src'][] = "'self'";
+            $extra['frame-src'][] = 'https://ad.ad-arrow.com';
+            $extra['img-src'][] = 'https://ad.ad-arrow.com';
+            $extra['img-src'][] = 'https://m6bf8zz8.user.webaccel.jp';
         }
 
         return $extra;
+    }
+
+    /**
+     * R18 で読む直配信。
+     */
+    public function adultDirectNetwork(): string
+    {
+        return 'arrow';
+    }
+
+    public function arrowConfigured(): bool
+    {
+        if (! (bool) config('ads.arrow.enabled')) {
+            return false;
+        }
+
+        foreach (['banner_l', 'banner_m', 'banner_s', 'rail'] as $key) {
+            if ($this->arrowSpot($key) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function arrowSpot(string $key): ?string
+    {
+        $id = $this->trimmed('ads.arrow.spots.'.$key);
+
+        return ctype_digit($id) ? $id : null;
+    }
+
+    /**
+     * @return array{id: int, width: int, height: int}|null
+     */
+    public function arrowSlotSpec(string $slot): ?array
+    {
+        $map = [
+            'l' => ['banner_l', 728, 90],
+            'm' => ['banner_m', 468, 60],
+            's' => ['banner_s', 320, 50],
+            'rail' => ['rail', 300, 250],
+        ];
+        if (! isset($map[$slot]) || ! $this->arrowConfigured()) {
+            return null;
+        }
+
+        [$key, $width, $height] = $map[$slot];
+        $id = $this->arrowSpot($key);
+        if ($id === null) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $id,
+            'width' => $width,
+            'height' => $height,
+        ];
+    }
+
+    /**
+     * 列幅に合わせて1つだけ読み込むバナー枠の URL。
+     *
+     * @return array{l?: string, m?: string, s?: string}
+     */
+    public function arrowInlineSources(): array
+    {
+        $sources = [];
+        foreach (['l', 'm', 's'] as $slot) {
+            if ($this->arrowSlotSpec($slot) === null) {
+                continue;
+            }
+            $sources[$slot] = route('ads.arrow', ['slot' => $slot]);
+        }
+
+        return $sources;
+    }
+
+    public function arrowRailSource(): ?string
+    {
+        if ($this->arrowSlotSpec('rail') === null) {
+            return null;
+        }
+
+        return route('ads.arrow', ['slot' => 'rail']);
+    }
+
+    public function shouldLoadArrow(bool $isR18Room, bool $searchIncludesR18): bool
+    {
+        return $this->arrowConfigured() && $this->isAdultContext($isR18Room, $searchIncludesR18);
+    }
+
+    public function shouldServeArrowInline(bool $isR18Room, bool $searchIncludesR18): bool
+    {
+        return $this->shouldLoadArrow($isR18Room, $searchIncludesR18)
+            && $this->arrowInlineSources() !== [];
+    }
+
+    public function shouldServeArrowRail(string $side, bool $isR18Room, bool $searchIncludesR18): bool
+    {
+        if (! $this->shouldLoadArrow($isR18Room, $searchIncludesR18)) {
+            return false;
+        }
+
+        return $this->arrowRailSource() !== null;
+    }
+
+    /**
+     * 公式タグを iframe 内だけで実行するための CSP。親ページの nonce 付き CSP とは分ける。
+     */
+    public function arrowDocumentCsp(): string
+    {
+        return implode('; ', [
+            "default-src 'none'",
+            "script-src 'unsafe-inline' https://ad.ad-arrow.com https://genieedmp.com",
+            "style-src 'unsafe-inline' https://ad.ad-arrow.com https://m6bf8zz8.user.webaccel.jp",
+            "img-src https://ad.ad-arrow.com https://m6bf8zz8.user.webaccel.jp data:",
+            "connect-src https://ad.ad-arrow.com",
+            "frame-src https://ad.ad-arrow.com",
+            "frame-ancestors 'self'",
+            "base-uri 'none'",
+        ]);
     }
 
     private function trimmed(string $key): string

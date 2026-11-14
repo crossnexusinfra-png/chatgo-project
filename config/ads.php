@@ -14,9 +14,6 @@ return [
     // コイン獲得を出す。GAM_REWARDED_UNIT があるときは Ad Manager のリワード、無いときはテスト動画。
     'enabled' => (bool) env('ADS_ENABLED', false),
 
-    // ads.txt の ExoClick 行（承認後に発行される publisher / site ID）
-    'exoclick_ads_txt_id' => env('EXOCLICK_ADS_TXT_ID', ''),
-
     // ads.txt に追記する追加行（GAM 管理画面の追加 seller 行など。改行区切り）
     'ads_txt_extra' => env('ADS_TXT_EXTRA', ''),
 
@@ -39,10 +36,9 @@ return [
 
     /*
     | Google Ad Manager (GPT / ウェブ)。
-    | 一般向けページは GPT だけを読む。AdSense と一般向け在庫の ExoClick は
-    | GAM の広告申込情報（AdSense バックフィル、第三者クリエイティブ）で配信する。
-    | ページに adsbygoogle.js や ExoClick の直タグは出さない。
-    | R18 は Google のポリシー上 GAM に載せられないため、下の ExoClick 直配信を使う。
+    | 一般向けページは GPT だけを読む。AdSense は GAM のバックフィルで配信する。
+    | ページに adsbygoogle.js は出さない。
+    | R18 は Google のポリシー上 GAM に載せられないため、ARROW の直タグを使う。
     | enabled=false またはスロットパスが空のときは枠のみ（審査中の既定）。
     | 左右レールは同じ広告ユニットを複数枠で使う。
     | レールの定期 refresh は未配線。リワードは視聴完了後の再取得だけ行う。
@@ -52,6 +48,9 @@ return [
         'network_code' => env('GAM_NETWORK_CODE', ''),
         'slots' => [
             'rail' => env('GAM_SLOT_RAIL', env('GAM_SLOT_RAIL_LEFT', '')),
+            'banner_l' => env('GAM_SLOT_BANNER_L', ''),
+            'banner_m' => env('GAM_SLOT_BANNER_M', ''),
+            'banner_s' => env('GAM_SLOT_BANNER_S', ''),
             'inline' => env('GAM_SLOT_INLINE', ''),
             'interstitial' => env('GAM_SLOT_INTERSTITIAL', ''),
             'rewarded' => env('GAM_REWARDED_UNIT', ''),
@@ -62,16 +61,18 @@ return [
     ],
 
     /*
-    | ExoClick の直タグ。R18 ルームと R18 を含む検索だけに出す。
-    | 一般向け在庫の ExoClick はここを使わず、GAM の第三者クリエイティブで配信する。
-    | enabled=false またはゾーン ID が空のときは枠のみ。
-    | 左右レールは同じゾーンを複数枠で使う。
+    | ARROW の直タグ。R18 ルーム、R18 タグ、R18 を含む検索だけに出す。
+    | バナーは列幅に合う1枠だけを読む。S=320×50、M=468×60、L=728×90。
+    | 左右レールは同じ 300×250 枠を複数箇所で使う。
+    | 公式タグは document.write を使うため、各枠は /ads/arrow/{slot} の中で読む。
     */
-    'exoclick' => [
-        'enabled' => (bool) env('EXOCLICK_ENABLED', false),
-        'zones' => [
-            'rail' => env('EXOCLICK_ZONE_RAIL', env('EXOCLICK_ZONE_RAIL_LEFT', '')),
-            'inline' => env('EXOCLICK_ZONE_INLINE', ''),
+    'arrow' => [
+        'enabled' => (bool) env('ARROW_ENABLED', false),
+        'spots' => [
+            'banner_l' => env('ARROW_SPOT_BANNER_L', ''),
+            'banner_m' => env('ARROW_SPOT_BANNER_M', ''),
+            'banner_s' => env('ARROW_SPOT_BANNER_S', ''),
+            'rail' => env('ARROW_SPOT_RAIL', ''),
         ],
     ],
 ];

@@ -31,17 +31,9 @@ class SeoTagsTest extends TestCase
         $response->assertDontSee('Disallow: /admin', false);
     }
 
-    public function test_exoclick_site_verification_file_is_served_at_root(): void
+    public function test_ads_txt_lists_google_without_exoclick(): void
     {
-        $response = $this->get('/d0ea5f55b8d3e877c6e03a2fd42efc09.html');
-
-        $response->assertOk();
-        $response->assertSee('d0ea5f55b8d3e877c6e03a2fd42efc09', false);
-    }
-
-    public function test_ads_txt_lists_google_and_optional_exoclick(): void
-    {
-        config(['ads.exoclick_ads_txt_id' => '', 'ads.ads_txt_extra' => '']);
+        config(['ads.ads_txt_extra' => '']);
 
         $response = $this->get('/ads.txt');
 
@@ -49,12 +41,7 @@ class SeoTagsTest extends TestCase
         $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
         $response->assertSee('google.com, pub-1438145064622040, DIRECT, f08c47fec0942fa0', false);
         $response->assertSee('Google Ad Manager', false);
-        $response->assertSee('ExoClick', false);
-        $response->assertDontSee('exoclick.com, ', false);
-
-        config(['ads.exoclick_ads_txt_id' => '123456']);
-        $withExo = $this->get('/ads.txt');
-        $withExo->assertSee('exoclick.com, 123456, DIRECT', false);
+        $response->assertDontSee('exoclick', false);
     }
 
     public function test_sitemap_xml_includes_current_public_pages(): void

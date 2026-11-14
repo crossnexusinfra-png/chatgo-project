@@ -35,7 +35,7 @@
             $isR18RoomPage,
             $searchIncludesR18
         );
-        $exoclickPageEnabled = $adNetwork->shouldLoadExoclick($isR18RoomPage, $searchIncludesR18);
+        $arrowPageEnabled = $adNetwork->shouldLoadArrow($isR18RoomPage, $searchIncludesR18);
         $gamRewardedPath = null;
         if (request()->routeIs('threads.index', 'threads.show')) {
             $gamRewardedPath = $adNetwork->shouldServeGamRewarded($isR18RoomPage, $searchIncludesR18)
@@ -56,11 +56,8 @@
     <link rel="stylesheet" href="{{ asset('css/bbs.css') }}">
     <link rel="stylesheet" href="{{ asset('css/inline-styles.css') }}">
     @stack('styles')
-    @if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
+    @if(!empty($gamPageEnabled) && empty($arrowPageEnabled))
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
-    @endif
-    @if(!empty($exoclickPageEnabled) && empty($gamPageEnabled))
-    <script async src="https://a.realsrv.com/ad-provider.js"></script>
     @endif
 </head>
 <body data-csp-nonce="{{ $csp_nonce ?? '' }}">

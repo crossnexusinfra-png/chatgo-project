@@ -3862,6 +3862,10 @@ a.mandatory-notice-open-btn:focus-visible {
     overflow: hidden;
 }
 
+.is-ad-unfit {
+    display: none !important;
+}
+
 .ad-slot {
     display: flex;
     flex-direction: column;
@@ -3900,7 +3904,7 @@ a.mandatory-notice-open-btn:focus-visible {
     background: #e6f4ea;
 }
 
-.ad-slot--exoclick {
+.ad-slot--arrow {
     border: 2px dashed #e37400;
     background: #fef7e0;
 }
@@ -3927,7 +3931,7 @@ a.mandatory-notice-open-btn:focus-visible {
     border: 1px solid #0d652d;
 }
 
-.ad-slot-badge--exoclick {
+.ad-slot-badge--arrow {
     background: #e37400;
     color: #fff;
     border: 1px solid #b06000;
@@ -3946,7 +3950,7 @@ a.mandatory-notice-open-btn:focus-visible {
 
 .ad-slot-fill,
 .ad-slot [data-gpt-slot],
-.ad-slot [data-exoclick-zone] {
+.ad-slot [data-arrow-inline] {
     display: block;
     width: 100%;
     max-width: 100%;

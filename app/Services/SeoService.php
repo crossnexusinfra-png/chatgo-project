@@ -175,7 +175,7 @@ class SeoService
     }
 
     /**
-     * ads.txt 本文。Google 行は AdSense / Ad Manager 共通。ExoClick は承認後の ID を入れる。
+     * ads.txt 本文。Google 行は AdSense / Ad Manager 共通。
      */
     public function adsTxt(): string
     {
@@ -183,16 +183,6 @@ class SeoService
             '# Google AdSense and Google Ad Manager (same publisher ID)',
             'google.com, pub-1438145064622040, DIRECT, f08c47fec0942fa0',
         ];
-
-        $exoclickId = trim((string) config('ads.exoclick_ads_txt_id'));
-        if ($exoclickId !== '') {
-            $lines[] = '';
-            $lines[] = '# ExoClick';
-            $lines[] = 'exoclick.com, '.$exoclickId.', DIRECT';
-        } else {
-            $lines[] = '';
-            $lines[] = '# ExoClick: set EXOCLICK_ADS_TXT_ID after publisher approval';
-        }
 
         $extra = trim((string) config('ads.ads_txt_extra'));
         if ($extra !== '') {

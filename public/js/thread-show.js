@@ -552,8 +552,8 @@
         if (typeof window.chatgoGptServe === 'function') {
             window.chatgoGptServe(container);
         }
-        if (typeof window.chatgoExoclickServe === 'function') {
-            window.chatgoExoclickServe(container);
+        if (typeof window.chatgoArrowServe === 'function') {
+            window.chatgoArrowServe(container);
         }
     }
 
@@ -572,19 +572,21 @@
         wrapper.setAttribute('data-reply-ad-anchor', String(anchorResponseId));
         const adsenseCfg = (config && config.adsense) ? config.adsense : {};
         const gamCfg = (config && config.gam) ? config.gam : {};
-        const exoCfg = (config && config.exoclick) ? config.exoclick : {};
+        const arrowCfg = (config && config.arrow) ? config.arrow : {};
         const network = getReplyAdNetwork();
         const labels = ((config && config.adSlot) ? config.adSlot.labels : {}) || {};
         const nameMap = {
             adsense: labels.adsense || 'Google AdSense',
             gam: labels.gam || 'Google Ad Manager',
-            exoclick: labels.exoclick || 'ExoClick'
+            arrow: labels.arrow || 'ARROW'
         };
         const name = nameMap[network] || nameMap.gam;
         const serveAdsense = network === 'adsense' && adsenseCfg.enabled && adsenseCfg.client && adsenseCfg.displaySlot;
-        const serveGam = network === 'gam' && gamCfg.enabled && gamCfg.inlinePath;
-        const serveExoclick = network === 'exoclick' && exoCfg.enabled && exoCfg.inlineZone;
-        const serveLive = !!(serveAdsense || serveGam || serveExoclick);
+        const bannerPaths = (gamCfg && gamCfg.bannerPaths) ? gamCfg.bannerPaths : {};
+        const serveGam = network === 'gam' && gamCfg.enabled && (bannerPaths.l || bannerPaths.m || bannerPaths.s || gamCfg.inlinePath);
+        const arrowSources = (arrowCfg && arrowCfg.sources) ? arrowCfg.sources : {};
+        const serveArrow = network === 'arrow' && arrowCfg.enabled && (arrowSources.l || arrowSources.m || arrowSources.s);
+        const serveLive = !!(serveAdsense || serveGam || serveArrow);
         const banner = document.createElement('div');
         banner.className = 'ad-slot ad-slot--inline ad-slot--' + network + (serveLive ? ' ad-slot--live' : '');
         banner.setAttribute('data-ad-network', network);
@@ -611,16 +613,23 @@
             slot.id = 'gpt-thread-dyn-' + dynamicReplyAdSerial + '-' + adIndex + '-' + anchorResponseId;
             slot.className = 'ad-slot-fill';
             slot.setAttribute('data-gpt-slot', '');
-            slot.setAttribute('data-gpt-path', String(gamCfg.inlinePath));
+            if (bannerPaths.l) slot.setAttribute('data-gpt-path-l', String(bannerPaths.l));
+            if (bannerPaths.m) slot.setAttribute('data-gpt-path-m', String(bannerPaths.m));
+            if (bannerPaths.s) slot.setAttribute('data-gpt-path-s', String(bannerPaths.s));
+            if (!bannerPaths.l && !bannerPaths.m && !bannerPaths.s && gamCfg.inlinePath) {
+                slot.setAttribute('data-gpt-path', String(gamCfg.inlinePath));
+            }
             slot.setAttribute('data-gpt-size', 'inline');
             banner.appendChild(slot);
-        } else if (serveExoclick) {
+        } else if (serveArrow) {
             banner.setAttribute('data-adsense-inline', '0');
-            const ins = document.createElement('ins');
-            ins.className = 'ad-slot-fill';
-            ins.setAttribute('data-zoneid', String(exoCfg.inlineZone));
-            ins.setAttribute('data-exoclick-zone', '1');
-            banner.appendChild(ins);
+            const slot = document.createElement('div');
+            slot.className = 'ad-slot-fill';
+            slot.setAttribute('data-arrow-inline', '');
+            if (arrowSources.l) slot.setAttribute('data-arrow-src-l', String(arrowSources.l));
+            if (arrowSources.m) slot.setAttribute('data-arrow-src-m', String(arrowSources.m));
+            if (arrowSources.s) slot.setAttribute('data-arrow-src-s', String(arrowSources.s));
+            banner.appendChild(slot);
         } else {
             banner.setAttribute('data-adsense-inline', '0');
         }
@@ -630,7 +639,7 @@
 
     function normalizeReplyInlineAds() {
         const network = getReplyAdNetwork();
-        if (network !== 'gam' && network !== 'adsense' && network !== 'exoclick') {
+        if (network !== 'gam' && network !== 'adsense' && network !== 'arrow') {
             return;
         }
         const container = document.getElementById('responsesContainer');

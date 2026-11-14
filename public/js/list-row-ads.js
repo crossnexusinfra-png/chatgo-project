@@ -39,8 +39,8 @@
         if (typeof window.chatgoGptServe === 'function') {
             window.chatgoGptServe(ad);
         }
-        if (typeof window.chatgoExoclickServe === 'function') {
-            window.chatgoExoclickServe(ad);
+        if (typeof window.chatgoArrowServe === 'function') {
+            window.chatgoArrowServe(ad);
         }
     }
 

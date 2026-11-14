@@ -10,10 +10,10 @@
     $isR18Context = !empty($isR18Thread) || !empty($searchIncludesR18);
     $adNetwork = app(\App\Services\AdNetworkService::class);
     $serveGam = $network === 'gam' && $adNetwork->shouldServeGamRail($side, $isR18Context, false);
-    $serveExoclick = $network === 'exoclick' && $adNetwork->shouldServeExoclickRail($side, $isR18Context, false);
+    $serveArrow = $network === 'arrow' && $adNetwork->shouldServeArrowRail($side, $isR18Context, false);
     $gamPath = $serveGam ? $adNetwork->gamSlotPath('rail') : null;
-    $exoZone = $serveExoclick ? $adNetwork->exoclickZone('rail') : null;
-    $serveLive = ($serveGam && $gamPath) || ($serveExoclick && $exoZone);
+    $arrowRailSrc = $serveArrow ? $adNetwork->arrowRailSource() : null;
+    $serveLive = ($serveGam && $gamPath) || ($serveArrow && $arrowRailSrc);
 @endphp
 <div class="adsense-rail-unit ad-slot ad-slot--rail ad-slot--{{ $network }}{{ $serveLive ? ' ad-slot--live' : '' }}"
      data-adsense-rail="{{ $side }}"
@@ -28,9 +28,12 @@
          data-gpt-slot
          data-gpt-path="{{ e($gamPath) }}"
          data-gpt-size="rail"></div>
-    @elseif($serveExoclick && $exoZone)
-    <ins class="ad-slot-fill"
-         data-zoneid="{{ e($exoZone) }}"
-         data-exoclick-zone="1"></ins>
+    @elseif($serveArrow && $arrowRailSrc)
+    <iframe class="ad-slot-fill arrow-slot"
+            src="{{ e($arrowRailSrc) }}"
+            title="ARROW"
+            scrolling="no"
+            referrerpolicy="strict-origin-when-cross-origin"
+            style="width:300px;height:250px;border:0;display:block"></iframe>
     @endif
 </div>

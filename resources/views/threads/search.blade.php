@@ -98,7 +98,7 @@
             <section class="search-threads">
                 <h2>{{ str_replace('{query}', $query ?? '', \App\Services\LanguageService::trans('search_results_for', $lang)) }}</h2>
                 @include('threads.partials.list-row-ad-template', [
-                    'network' => !empty($searchIncludesR18) ? 'exoclick' : 'gam',
+                    'network' => !empty($searchIncludesR18) ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork() : 'gam',
                 ])
                 <div class="posts-grid">
                     @php

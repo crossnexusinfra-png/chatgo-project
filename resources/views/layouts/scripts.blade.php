@@ -31,7 +31,7 @@
 <script src="{{ asset('js/common-utils.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @php
     $gamInterstitialPath = null;
-    if (!empty($gamPageEnabled) && empty($exoclickPageEnabled)) {
+    if (!empty($gamPageEnabled) && empty($arrowPageEnabled)) {
         $gamInterstitialPath = app(\App\Services\AdNetworkService::class)->gamSlotPath('interstitial');
     }
 @endphp
@@ -49,10 +49,11 @@
      data-gpt-size="rewarded"
      hidden></div>
 @endif
-@if(!empty($gamPageEnabled) && empty($exoclickPageEnabled))
+<script src="{{ asset('js/ad-column.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+@if(!empty($gamPageEnabled) && empty($arrowPageEnabled))
 <script src="{{ asset('js/gpt-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
-@if(!empty($exoclickPageEnabled) && empty($gamPageEnabled))
-<script src="{{ asset('js/exoclick-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
+@if(!empty($arrowPageEnabled) && empty($gamPageEnabled))
+<script src="{{ asset('js/arrow-init.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>
 @endif
 <script src="{{ asset('js/common.js') }}" nonce="{{ $csp_nonce ?? '' }}"></script>

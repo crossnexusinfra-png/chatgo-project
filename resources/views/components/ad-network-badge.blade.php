@@ -1,7 +1,7 @@
 @php
     $network = $network ?? 'adsense';
     $lang = $lang ?? \App\Services\LanguageService::getCurrentLanguage();
-    $allowed = ['adsense', 'gam', 'exoclick'];
+    $allowed = ['adsense', 'gam', 'arrow'];
     if (! in_array($network, $allowed, true)) {
         $network = 'adsense';
     }

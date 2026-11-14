@@ -15,9 +15,14 @@
 @endpush
 
 @section('content')
-    @php $roomAdNetwork = !empty($isR18Thread) ? 'exoclick' : 'gam'; @endphp
+    @php
+        $roomAdNetwork = !empty($isR18Thread)
+            ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork()
+            : 'gam';
+        $roomAdLabel = \App\Services\LanguageService::trans('ad_network_'.$roomAdNetwork, $lang);
+    @endphp
     <div class="thread-show-outer">
-        <aside class="thread-show-rail thread-show-rail--left" aria-label="{{ $roomAdNetwork === 'exoclick' ? 'ExoClick' : 'Google Ad Manager' }}">
+        <aside class="thread-show-rail thread-show-rail--left" aria-label="{{ $roomAdLabel }}">
             @for($i = 1; $i <= 3; $i++)
                 @include('components.adsense-rail-unit', ['side' => 'left', 'instanceId' => 'thread-rail-left-'.$i, 'network' => $roomAdNetwork])
             @endfor
@@ -257,7 +262,7 @@
                 <div class="adsense-thread-reply-inline">
                     @include('components.adsense-inline-banner', [
                         'instanceId' => 'thread-reply-'.$loop->iteration,
-                        'network' => !empty($isR18Thread) ? 'exoclick' : 'gam',
+                        'network' => !empty($isR18Thread) ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork() : 'gam',
                     ])
                 </div>
                 @endif
@@ -456,7 +461,7 @@
             @endif
         </section>
     </div>
-        <aside class="thread-show-rail thread-show-rail--right" aria-label="{{ $roomAdNetwork === 'exoclick' ? 'ExoClick' : 'Google Ad Manager' }}">
+        <aside class="thread-show-rail thread-show-rail--right" aria-label="{{ $roomAdLabel }}">
             @for($i = 1; $i <= 3; $i++)
                 @include('components.adsense-rail-unit', ['side' => 'right', 'instanceId' => 'thread-rail-right-'.$i, 'network' => $roomAdNetwork])
             @endfor
@@ -524,21 +529,23 @@
         ],
         'gam' => [
             'enabled' => !$isR18ForAds && $adNetwork->shouldServeGamInline($isR18ForAds, false),
-            'inlinePath' => (string) ($adNetwork->gamSlotPath('inline') ?? ''),
+            'inlinePath' => $adNetwork->gamBannerPaths() === []
+                ? (string) ($adNetwork->gamSlotPath('inline') ?? '')
+                : '',
+            'bannerPaths' => $adNetwork->gamBannerPaths(),
         ],
-        'exoclick' => [
-            'enabled' => $isR18ForAds && $adNetwork->shouldServeExoclickInline($isR18ForAds, false),
-            'inlineZone' => (string) ($adNetwork->exoclickZone('inline') ?? ''),
+        'arrow' => [
+            'enabled' => $isR18ForAds && $adNetwork->shouldServeArrowInline($isR18ForAds, false),
+            'sources' => $isR18ForAds ? $adNetwork->arrowInlineSources() : [],
         ],
         'adSlot' => [
-            'replyInlineNetwork' => !empty($isR18Thread) ? 'exoclick' : 'gam',
+            'replyInlineNetwork' => !empty($isR18Thread) ? $adNetwork->adultDirectNetwork() : 'gam',
             'labels' => [
                 'adsense' => \App\Services\LanguageService::trans('ad_network_adsense', $lang),
                 'gam' => \App\Services\LanguageService::trans('ad_network_gam', $lang),
-                'exoclick' => \App\Services\LanguageService::trans('ad_network_exoclick', $lang),
+                'arrow' => \App\Services\LanguageService::trans('ad_network_arrow', $lang),
                 'noteAdsense' => \App\Services\LanguageService::trans('ad_slot_note_adsense', $lang),
                 'noteGam' => \App\Services\LanguageService::trans('ad_slot_note_gam', $lang),
-                'noteExoclick' => \App\Services\LanguageService::trans('ad_slot_note_exoclick', $lang),
             ],
         ],
         'translations' => [

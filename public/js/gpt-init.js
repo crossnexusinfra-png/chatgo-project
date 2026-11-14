@@ -13,27 +13,35 @@
     var rewardedReadyEvent = null;
     var slotsByElementId = {};
 
-    var INLINE_SIZES = [[728, 90], [468, 60], [320, 50], [300, 250]];
-
-    function slotWidth(el) {
-        var node = el;
-        var width = 0;
-        while (node && width < 2) {
-            width = node.clientWidth;
-            node = node.parentElement;
+    function bannerPathFor(el) {
+        var choice = window.chatgoBannerChoice ? window.chatgoBannerChoice(el) : null;
+        if (!choice) {
+            return null;
         }
-        return width;
+        var sized = el.getAttribute('data-gpt-path-' + choice.key);
+        if (sized) {
+            el.setAttribute('data-gpt-path', sized);
+            return choice.size;
+        }
+        if (el.getAttribute('data-gpt-path')
+            && !el.getAttribute('data-gpt-path-l')
+            && !el.getAttribute('data-gpt-path-m')
+            && !el.getAttribute('data-gpt-path-s')) {
+            return choice.size;
+        }
+        return null;
     }
 
     function sizesFor(el) {
-        if (el.getAttribute('data-gpt-size') !== 'inline') {
-            return [[300, 250], [160, 600], [120, 600], [300, 600]];
+        var kind = el.getAttribute('data-gpt-size');
+        if (kind === 'inline') {
+            var size = bannerPathFor(el);
+            return size ? [size] : [];
         }
-        var width = slotWidth(el);
-        var fitting = INLINE_SIZES.filter(function (size) {
-            return size[0] <= width;
-        });
-        return fitting.length ? fitting : [[320, 50]];
+        if (kind === 'rail') {
+            return [[300, 250]];
+        }
+        return [];
     }
 
     function sizeSignature(sizes) {
@@ -94,7 +102,11 @@
         if (!el.id) {
             return null;
         }
-        return googletag.defineSlot(path, sizesFor(el), el.id);
+        var sizes = sizesFor(el);
+        if (!sizes.length) {
+            return null;
+        }
+        return googletag.defineSlot(path, sizes, el.id);
     }
 
     function serve(root) {
@@ -102,23 +114,38 @@
         var nodes = Array.prototype.filter.call(
             scope.querySelectorAll('[data-gpt-slot]:not([data-chatgo-gpt-defined])'),
             function (el) {
-                return !!el.getAttribute('data-gpt-path');
+                return !!el.getAttribute('data-gpt-path')
+                    || !!el.getAttribute('data-gpt-path-l')
+                    || !!el.getAttribute('data-gpt-path-m')
+                    || !!el.getAttribute('data-gpt-path-s');
             }
         );
         if (!nodes.length) {
             return;
         }
+        var pending = [];
         nodes.forEach(function (el) {
             el.setAttribute('data-chatgo-gpt-defined', '1');
             if (el.getAttribute('data-gpt-size') === 'inline') {
-                el.setAttribute('data-gpt-size-sig', sizeSignature(sizesFor(el)));
+                var sizes = sizesFor(el);
+                if (window.chatgoSyncBannerBox) {
+                    window.chatgoSyncBannerBox(el, sizes.length === 0);
+                }
+                el.setAttribute('data-gpt-size-sig', sizeSignature(sizes));
+                if (!sizes.length) {
+                    return;
+                }
             }
+            pending.push(el);
         });
+        if (!pending.length) {
+            return;
+        }
 
         googletag.cmd.push(function () {
             var late = servicesReady;
             var slots = [];
-            nodes.forEach(function (el) {
+            pending.forEach(function (el) {
                 var slot = defineSlot(el);
                 if (!slot) {
                     return;
@@ -205,7 +232,11 @@
 
     function relayoutInlineSlots() {
         document.querySelectorAll('[data-gpt-slot][data-gpt-size="inline"]').forEach(function (el) {
-            var next = sizeSignature(sizesFor(el));
+            var sizes = sizesFor(el);
+            if (window.chatgoSyncBannerBox) {
+                window.chatgoSyncBannerBox(el, sizes.length === 0);
+            }
+            var next = sizeSignature(sizes);
             if (!el.getAttribute('data-chatgo-gpt-defined') || el.getAttribute('data-gpt-size-sig') === next) {
                 return;
             }

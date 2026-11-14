@@ -36,6 +36,18 @@ class CspMiddleware
         
         $response = $next($request);
 
+        if ($request->routeIs('ads.arrow')) {
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+            if (config('csp.enabled', true)) {
+                $response->headers->set(
+                    'Content-Security-Policy',
+                    app(AdNetworkService::class)->arrowDocumentCsp()
+                );
+            }
+
+            return $response;
+        }
+
         // Clickjacking対策: X-Frame-Optionsヘッダーを設定
         // 古いブラウザとの互換性のため、CSPのframe-ancestorsと併用
         $response->headers->set('X-Frame-Options', 'DENY');
@@ -82,7 +94,7 @@ class CspMiddleware
     }
 
     /**
-     * GAM / ExoClick の ID が入っているときだけ CSP に配信オリジンを足す。
+     * GAM / ARROW の ID が入っているときだけ CSP に配信オリジンを足す。
      *
      * @param  array<string, mixed>  $policies
      * @return array<string, mixed>

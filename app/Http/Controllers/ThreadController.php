@@ -38,22 +38,17 @@ class ThreadController extends Controller
      */
     public function index()
     {
-        // ユーザーが18歳以上かどうかを判定
-        // 非ログイン時はフィルタリングしない（R18スレッドも表示）
-        $isLoggedIn = auth()->check();
-        $isAdult = $isLoggedIn && auth()->user() ? auth()->user()->isAdult() : false;
-        
         // キャッシュは使用せず、直接データを取得（パフォーマンス問題を回避）
         // メインページでは各カテゴリ5件まで表示
+        // トップの一覧は閲覧者にかかわらず、未成年ログインと同じ条件で R18 を出さない
         
         // popular: 実際の総数を取得してから、5件を取得
-        // 未成年ログイン時のみR18スレッドをフィルタリング
-        $popularBaseQuery = $isLoggedIn && !$isAdult ? Thread::filterR18Threads($isAdult) : Thread::query();
+        $popularBaseQuery = Thread::filterR18Threads(false);
         $popularTotalCount = (clone $popularBaseQuery)->count();
         $popularThreads = (clone $popularBaseQuery)->with('user')->orderBy('access_count', 'desc')->take(5)->get();
         
         // trending: 実際の総数を取得してから、5件を取得
-        $trendingBaseQuery = $isLoggedIn && !$isAdult ? Thread::filterR18Threads($isAdult) : Thread::query();
+        $trendingBaseQuery = Thread::filterR18Threads(false);
         $startDate = now()->subDays(30);
         $trendingCountQuery = (clone $trendingBaseQuery)->withCount([
             'accesses as recent_access_count' => function($q) use ($startDate) {
@@ -68,7 +63,7 @@ class ThreadController extends Controller
         ])->orderBy('recent_access_count', 'desc')->take(5)->get();
         
         // latest: 実際の総数を取得してから、5件を取得
-        $latestBaseQuery = $isLoggedIn && !$isAdult ? Thread::filterR18Threads($isAdult) : Thread::query();
+        $latestBaseQuery = Thread::filterR18Threads(false);
         $latestTotalCount = (clone $latestBaseQuery)->count();
         $latestThreads = (clone $latestBaseQuery)->with('user')->orderBy('created_at', 'desc')->take(5)->get();
         
@@ -90,10 +85,7 @@ class ThreadController extends Controller
             }
             
             // タグの総数を取得（take()を適用する前）
-            $tagBaseQuery = Thread::byTag($tagName);
-            if ($isLoggedIn && !$isAdult) {
-                $tagBaseQuery = $tagBaseQuery->filterR18Threads($isAdult);
-            }
+            $tagBaseQuery = Thread::byTag($tagName)->filterR18Threads(false);
             $tagTotalCount = (clone $tagBaseQuery)->count();
             
             // スレッドを取得（1カ月閲覧回数順、5件まで）
@@ -125,10 +117,7 @@ class ThreadController extends Controller
             $uid = auth()->user()->user_id;
 
             // お気に入り（最大5件に制限）- JOINを使用してパフォーマンス向上
-            $favoriteThreadsQuery = Thread::query();
-            if ($isLoggedIn && !$isAdult) {
-                $favoriteThreadsQuery = $favoriteThreadsQuery->filterR18Threads($isAdult);
-            }
+            $favoriteThreadsQuery = Thread::filterR18Threads(false);
             $favoriteThreads = $favoriteThreadsQuery
                 ->with('user')
                 ->join('thread_favorites', function($join) use ($uid) {
@@ -141,10 +130,7 @@ class ThreadController extends Controller
                 ->get();
 
             // 最近アクセス（最大5件に制限）- JOINを使用してパフォーマンス向上
-            $recentAccessThreadsQuery = Thread::query();
-            if ($isLoggedIn && !$isAdult) {
-                $recentAccessThreadsQuery = $recentAccessThreadsQuery->filterR18Threads($isAdult);
-            }
+            $recentAccessThreadsQuery = Thread::filterR18Threads(false);
             $recentAccessThreads = $recentAccessThreadsQuery
                 ->with('user')
                 ->join('thread_accesses', function($join) use ($uid) {
@@ -2837,7 +2823,7 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
-            'adNetwork' => $isR18Tag ? 'exoclick' : 'gam',
+            'adNetwork' => $isR18Tag ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork() : 'gam',
             'searchIncludesR18' => $isR18Tag,
         ])->render();
         
@@ -2944,7 +2930,7 @@ class ThreadController extends Controller
             'threadImageReportScoreData' => $threadImageReportScoreData,
             'lang' => $lang,
             'listRowOffset' => (int) $request->get('offset', 20),
-            'adNetwork' => $includeR18 ? 'exoclick' : 'gam',
+            'adNetwork' => $includeR18 ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork() : 'gam',
             'searchIncludesR18' => $includeR18,
         ])->render();
         

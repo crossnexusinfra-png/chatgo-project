@@ -6,13 +6,25 @@ use Tests\TestCase;
 
 class AdNetworkTagsTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'ads.arrow.enabled' => false,
+            'ads.arrow.spots.banner_l' => '',
+            'ads.arrow.spots.banner_m' => '',
+            'ads.arrow.spots.banner_s' => '',
+            'ads.arrow.spots.rail' => '',
+        ]);
+    }
+
     public function test_guide_page_has_labeled_gam_slots_without_live_tags(): void
     {
         config([
             'ads.gam.enabled' => false,
             'ads.gam.network_code' => '',
             'ads.gam.slots.rail' => '',
-            'ads.exoclick.enabled' => false,
         ]);
 
         $response = $this->get('/en/guide');
@@ -33,8 +45,6 @@ class AdNetworkTagsTest extends TestCase
             'ads.gam.enabled' => true,
             'ads.gam.network_code' => '1234567',
             'ads.gam.slots.rail' => 'chatgo_sfw_rail',
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.rail' => '111',
             'adsense.enabled' => true,
             'adsense.client' => 'ca-pub-1438145064622040',
             'adsense.slots.display_banner' => '999',
@@ -50,7 +60,8 @@ class AdNetworkTagsTest extends TestCase
         $response->assertDontSee('a.realsrv.com', false);
         $csp = (string) $response->headers->get('Content-Security-Policy');
         $this->assertStringContainsString('securepubads.g.doubleclick.net', $csp);
-        $this->assertStringContainsString('a.realsrv.com', $csp);
+        $this->assertStringNotContainsString('a.realsrv.com', $csp);
+        $this->assertStringNotContainsString('exoclick.com', $csp);
     }
 
     public function test_sfw_page_loads_gpt_interstitial_without_adsense_tag(): void
@@ -63,8 +74,6 @@ class AdNetworkTagsTest extends TestCase
             'adsense.client' => 'ca-pub-1438145064622040',
             'adsense.slots.display_banner' => '999',
             'adsense.slots.interstitial' => '888',
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.inline' => '222',
         ]);
 
         $response = $this->get('/en/guide');
@@ -78,17 +87,18 @@ class AdNetworkTagsTest extends TestCase
         $response->assertDontSee('a.realsrv.com/ad-provider.js', false);
     }
 
-    public function test_inline_banner_renders_gam_slot_on_sfw_and_exoclick_on_r18(): void
+    public function test_inline_banner_renders_gam_slot_on_sfw_pages(): void
     {
         config([
             'ads.gam.enabled' => true,
             'ads.gam.network_code' => '1234567',
+            'ads.gam.slots.banner_l' => '',
+            'ads.gam.slots.banner_m' => '',
+            'ads.gam.slots.banner_s' => '',
             'ads.gam.slots.inline' => 'chatgo_inline',
             'adsense.enabled' => true,
             'adsense.client' => 'ca-pub-1438145064622040',
             'adsense.slots.display_banner' => '999',
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.inline' => '222',
         ]);
 
         $sfw = view('components.adsense-inline-banner', [
@@ -101,42 +111,28 @@ class AdNetworkTagsTest extends TestCase
         $this->assertStringContainsString('/1234567/chatgo_inline', $sfw);
         $this->assertStringNotContainsString('adsbygoogle', $sfw);
         $this->assertStringNotContainsString('data-zoneid', $sfw);
-
-        $r18 = view('components.adsense-inline-banner', [
-            'instanceId' => 'listing-r18',
-            'network' => 'exoclick',
-            'isR18Thread' => true,
-        ])->render();
-
-        $this->assertStringContainsString('data-ad-network="exoclick"', $r18);
-        $this->assertStringContainsString('data-zoneid="222"', $r18);
-        $this->assertStringNotContainsString('data-gpt-slot', $r18);
-        $this->assertStringNotContainsString('adsbygoogle', $r18);
+        $this->assertStringNotContainsString('exoclick', $sfw);
     }
 
-    public function test_r18_rails_share_one_exoclick_zone(): void
+    public function test_inline_banner_uses_size_specific_units_when_configured(): void
     {
         config([
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.rail' => '111',
+            'ads.gam.enabled' => true,
+            'ads.gam.network_code' => '23386692786',
+            'ads.gam.slots.banner_l' => 'chatgo_sfw_banner_l',
+            'ads.gam.slots.banner_m' => 'chatgo_sfw_banner_m',
+            'ads.gam.slots.banner_s' => 'chatgo_sfw_banner_s',
+            'ads.gam.slots.inline' => 'chatgo_sfw_inline',
         ]);
 
-        $left = view('components.adsense-rail-unit', [
-            'side' => 'left',
-            'instanceId' => 'rail-left',
-            'network' => 'exoclick',
-            'isR18Thread' => true,
-        ])->render();
-        $right = view('components.adsense-rail-unit', [
-            'side' => 'right',
-            'instanceId' => 'rail-right',
-            'network' => 'exoclick',
-            'isR18Thread' => true,
+        $html = view('components.adsense-inline-banner', [
+            'instanceId' => 'listing-1',
+            'network' => 'gam',
         ])->render();
 
-        $this->assertStringContainsString('data-zoneid="111"', $left);
-        $this->assertStringContainsString('data-zoneid="111"', $right);
-        $this->assertStringContainsString('data-adsense-rail="left"', $left);
-        $this->assertStringContainsString('data-adsense-rail="right"', $right);
+        $this->assertStringContainsString('data-gpt-path-l="/23386692786/chatgo_sfw_banner_l"', $html);
+        $this->assertStringContainsString('data-gpt-path-m="/23386692786/chatgo_sfw_banner_m"', $html);
+        $this->assertStringContainsString('data-gpt-path-s="/23386692786/chatgo_sfw_banner_s"', $html);
+        $this->assertStringNotContainsString('chatgo_sfw_inline', $html);
     }
 }

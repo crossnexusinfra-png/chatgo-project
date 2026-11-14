@@ -17,13 +17,18 @@ class AdNetworkServiceTest extends TestCase
             'ads.gam.enabled' => false,
             'ads.gam.network_code' => '',
             'ads.gam.slots.rail' => '',
+            'ads.gam.slots.banner_l' => '',
+            'ads.gam.slots.banner_m' => '',
+            'ads.gam.slots.banner_s' => '',
             'ads.gam.slots.inline' => '',
             'ads.gam.slots.interstitial' => '',
             'ads.gam.slots.rewarded' => '',
             'ads.enabled' => false,
-            'ads.exoclick.enabled' => false,
-            'ads.exoclick.zones.rail' => '',
-            'ads.exoclick.zones.inline' => '',
+            'ads.arrow.enabled' => false,
+            'ads.arrow.spots.banner_l' => '',
+            'ads.arrow.spots.banner_m' => '',
+            'ads.arrow.spots.banner_s' => '',
+            'ads.arrow.spots.rail' => '',
         ]);
 
         $this->ads = new AdNetworkService();
@@ -32,9 +37,9 @@ class AdNetworkServiceTest extends TestCase
     public function test_empty_ids_keep_networks_disabled(): void
     {
         $this->assertFalse($this->ads->gamConfigured());
-        $this->assertFalse($this->ads->exoclickConfigured());
+        $this->assertFalse($this->ads->arrowConfigured());
         $this->assertFalse($this->ads->shouldLoadGpt('threads.show', false, false));
-        $this->assertFalse($this->ads->shouldLoadExoclick(true, false));
+        $this->assertFalse($this->ads->shouldLoadArrow(true, false));
         $this->assertSame([], array_filter($this->ads->extraCspSources()));
     }
 
@@ -102,44 +107,52 @@ class AdNetworkServiceTest extends TestCase
         $this->assertFalse($this->ads->shouldLoadGpt('admin.dashboard', false, false));
     }
 
-    public function test_exoclick_only_on_adult_pages(): void
-    {
-        config([
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.rail' => '111',
-            'ads.exoclick.zones.inline' => '222',
-        ]);
-
-        $this->assertTrue($this->ads->exoclickConfigured());
-        $this->assertSame('111', $this->ads->exoclickZone('rail'));
-        $this->assertTrue($this->ads->shouldLoadExoclick(true, false));
-        $this->assertTrue($this->ads->shouldLoadExoclick(false, true));
-        $this->assertFalse($this->ads->shouldLoadExoclick(false, false));
-        $this->assertTrue($this->ads->shouldServeExoclickInline(true, false));
-        $this->assertTrue($this->ads->shouldServeExoclickRail('left', true, false));
-        $this->assertTrue($this->ads->shouldServeExoclickRail('right', true, false));
-        $this->assertFalse($this->ads->shouldServeExoclickRail('right', false, false));
-        $this->assertContains('https://a.realsrv.com', $this->ads->extraCspSources()['script-src']);
-    }
-
-    public function test_gpt_and_exoclick_are_never_both_loaded(): void
+    public function test_banner_sizes_replace_the_legacy_inline_unit(): void
     {
         config([
             'ads.gam.enabled' => true,
             'ads.gam.network_code' => '1234567',
-            'ads.gam.slots.rail' => 'rail_left',
-            'ads.exoclick.enabled' => true,
-            'ads.exoclick.zones.inline' => '222',
+            'ads.gam.slots.banner_l' => 'chatgo_sfw_banner_l',
+            'ads.gam.slots.banner_m' => 'chatgo_sfw_banner_m',
+            'ads.gam.slots.banner_s' => 'chatgo_sfw_banner_s',
+            'ads.gam.slots.inline' => 'chatgo_sfw_inline',
         ]);
 
-        $sfwGpt = $this->ads->shouldLoadGpt('threads.show', false, false);
-        $sfwExo = $this->ads->shouldLoadExoclick(false, false);
-        $this->assertTrue($sfwGpt);
-        $this->assertFalse($sfwExo);
+        $this->assertSame([
+            'l' => '/1234567/chatgo_sfw_banner_l',
+            'm' => '/1234567/chatgo_sfw_banner_m',
+            's' => '/1234567/chatgo_sfw_banner_s',
+        ], $this->ads->gamBannerPaths());
+        $this->assertTrue($this->ads->shouldServeGamInline(false, false));
+        $this->assertTrue($this->ads->shouldLoadGpt('threads.index', false, false));
+        $this->assertFalse($this->ads->shouldServeGamInline(true, false));
+    }
 
-        $r18Gpt = $this->ads->shouldLoadGpt('threads.show', true, false);
-        $r18Exo = $this->ads->shouldLoadExoclick(true, false);
-        $this->assertFalse($r18Gpt);
-        $this->assertTrue($r18Exo);
+    public function test_arrow_is_used_on_adult_pages_and_gpt_is_not(): void
+    {
+        config([
+            'ads.gam.enabled' => true,
+            'ads.gam.network_code' => '1234567',
+            'ads.gam.slots.rail' => 'chatgo_sfw_rail',
+            'ads.arrow.enabled' => true,
+            'ads.arrow.spots.banner_s' => '14108',
+            'ads.arrow.spots.banner_m' => '14109',
+            'ads.arrow.spots.banner_l' => '14110',
+            'ads.arrow.spots.rail' => '14111',
+        ]);
+
+        $this->assertSame('arrow', $this->ads->adultDirectNetwork());
+        $this->assertTrue($this->ads->shouldLoadGpt('threads.show', false, false));
+        $this->assertFalse($this->ads->shouldLoadArrow(false, false));
+        $this->assertFalse($this->ads->shouldLoadGpt('threads.show', true, false));
+        $this->assertTrue($this->ads->shouldLoadArrow(true, false));
+        $this->assertTrue($this->ads->shouldLoadArrow(false, true));
+        $this->assertSame(14108, $this->ads->arrowSlotSpec('s')['id']);
+        $this->assertSame(300, $this->ads->arrowSlotSpec('rail')['width']);
+        $this->assertSame(250, $this->ads->arrowSlotSpec('rail')['height']);
+        $this->assertArrayHasKey('l', $this->ads->arrowInlineSources());
+        $this->assertNotNull($this->ads->arrowRailSource());
+        $this->assertContains("'self'", $this->ads->extraCspSources()['frame-src']);
+        $this->assertNotContains('https://a.realsrv.com', $this->ads->extraCspSources()['script-src']);
     }
 }

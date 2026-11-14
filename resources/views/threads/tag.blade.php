@@ -97,7 +97,7 @@
             <section class="tag-threads">
                 <h2>{{ str_replace('{tag}', $translatedTagName, \App\Services\LanguageService::trans('tag_threads_list', $lang)) }}</h2>
                 @include('threads.partials.list-row-ad-template', [
-                    'network' => (!empty($isR18Tag) || !empty($searchIncludesR18)) ? 'exoclick' : 'gam',
+                    'network' => (!empty($isR18Tag) || !empty($searchIncludesR18)) ? app(\App\Services\AdNetworkService::class)->adultDirectNetwork() : 'gam',
                 ])
                 <div class="posts-grid">
                     @php
